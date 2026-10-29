@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Painel de preços</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&display=swap">
+<style>
+:root{--bg:#f4f5f2;--card:#fff;--ink:#1b211e;--muted:#5f6a64;--line:#e0e4dd;--acc:#16734f;--acc-ink:#fff;--warn:#9a5b00;--warn-bg:#fff4e0;--ok-bg:#e6f4ec;--chg:#fff8e1;
+--f:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#121513;--card:#1b201d;--ink:#e8ede9;--muted:#9aa59f;--line:#2d3530;--warn:#f0b357;--warn-bg:#2d2414;--ok-bg:#16291f;--chg:#2a2614;color-scheme:dark}}
+*{box-sizing:border-box}html,body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f);padding:0 max(16px,env(safe-area-inset-left)) 120px max(16px,env(safe-area-inset-right))}
+.wrap{max-width:640px;margin:0 auto}
+header{padding:22px 0 10px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+a{color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+label{display:grid;gap:6px;font-size:14px;font-weight:600}
+input[type=text],input[type=search],input[type=password]{font:inherit;font-size:16px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{font:inherit;font-weight:700;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:12px 16px;cursor:pointer}
+button.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+button:disabled{opacity:.55;cursor:default}
+.stack{display:grid;gap:14px}
+.check{display:flex;gap:8px;align-items:center;font-weight:500}
+.msg{border-radius:12px;padding:12px 14px;font-size:14px}
+.msg.erro{background:var(--warn-bg);color:var(--warn)}.msg.ok{background:var(--ok-bg)}
+.msg:empty{display:none}
+.busca{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0}
+.cat{margin-top:18px}
+.cat h2{font-size:15px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.lista{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.it{display:grid;grid-template-columns:minmax(0,1fr) 116px auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.it:last-child{border-bottom:0}
+.it.mudou{background:var(--chg)}
+.it .n{min-width:0;font-weight:600;overflow-wrap:anywhere}
+.it .n small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.preco{position:relative}
+.preco span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
+.preco input{padding:10px 10px 10px 34px;text-align:right;font-variant-numeric:tabular-nums}
+.sw{display:grid;justify-items:center;gap:2px;font-size:11px;color:var(--muted);font-weight:600;cursor:pointer}
+.sw input{appearance:none;width:44px;height:26px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}
+.sw input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s}
+.sw input:checked{background:#c2410c}.sw input:checked::after{left:21px}
+@media (max-width:420px){.it{grid-template-columns:minmax(0,1fr) 104px auto}}
+.barra{position:fixed;left:0;right:0;bottom:0;padding:12px max(16px,env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right));background:var(--card);border-top:1px solid var(--line);z-index:10}
+.barra .in{max-width:640px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.barra .in span{flex:1;font-size:14px;color:var(--muted)}
+.vazio{color:var(--muted);text-align:center;padding:24px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><p class="eyebrow">Painel de preços</p><h1 id="titulo">Entrar</h1></div>
+    <a id="verSite" href="#" target="_blank" rel="noopener" hidden>Ver meu site</a>
+  </header>
+
+  <section id="login" class="card stack">
+    <p style="margin:0;color:var(--muted)">Digite o código de acesso que você recebeu para mudar os preços do seu site.</p>
+    <label>Código de acesso<input type="text" id="codigo" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx"></label>
+    <label class="check"><input type="checkbox" id="lembrar" checked> Lembrar neste aparelho</label>
+    <button class="pri" id="entrar">Entrar</button>
+    <div class="msg erro" id="loginMsg" role="alert"></div>
+  </section>
+
+  <section id="painel" hidden>
+    <div class="busca"><input type="search" id="busca" placeholder="Buscar produto" aria-label="Buscar produto"></div>
+    <div class="msg" id="painelMsg" role="status"></div>
+    <div id="lista"></div>
+    <p style="text-align:center;margin-top:24px"><button id="sair">Sair deste aparelho</button></p>
+  </section>
+</div>
+
+<div class="barra" id="barra" hidden>
+  <div class="in"><span id="pend">Nenhuma alteração</span><button class="pri" id="salvar" disabled>Salvar alterações</button></div>
+</div>
+
+<script>
+(function(){
+  var site=(new URLSearchParams(location.search).get("s")||"").toLowerCase().replace(/[^a-z0-9-]/g,"");
+  var K="painel-codigo-"+site, codigo="", dados=null, orig={}, atual={};
+  function $(id){return document.getElementById(id)}
+  function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function num(v){var t=String(v==null?"":v).replace(/[^\d,.]/g,"");if(!t)return NaN;if(t.indexOf(",")>-1)t=t.replace(/\./g,"").replace(",",".");return parseFloat(t)}
+  function fmt(v){var n=num(v);return isNaN(n)?"":n.toFixed(2).replace(".",",")}
+  function sobre(hex){var h=(hex||"#000").replace("#","");var L=(.299*parseInt(h.substr(0,2),16)+.587*parseInt(h.substr(2,2),16)+.114*parseInt(h.substr(4,2),16))/255;return L>.62?"#161616":"#ffffff"}
+  async function api(corpo){
+    var r=await fetch("/api/precos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({site:site,codigo:codigo},corpo))});
+    var j={};try{j=await r.json()}catch(e){}
+    if(!r.ok)throw Object.assign(new Error(j.erro||"Não foi possível conectar. Tente de novo."),{status:r.status});
+    return j;
+  }
+  if(!site){$("loginMsg").textContent="Link incompleto. Peça o link do painel para quem criou o seu site.";$("entrar").disabled=true;return}
+  $("verSite").href="/"+site;
+  try{var salvo=localStorage.getItem(K);if(salvo){$("codigo").value=salvo;entrar()}}catch(e){}
+
+  async function entrar(){
+    codigo=$("codigo").value.trim();
+    if(!codigo){$("loginMsg").textContent="Digite o código de acesso.";return}
+    $("entrar").disabled=true;$("loginMsg").textContent="";$("entrar").textContent="Entrando…";
+    try{
+      dados=await api({acao:"ler"});
+      try{if($("lembrar").checked)localStorage.setItem(K,codigo);else localStorage.removeItem(K)}catch(e){}
+      if(dados.cor){document.documentElement.style.setProperty("--acc",dados.cor);document.documentElement.style.setProperty("--acc-ink",sobre(dados.cor))}
+      $("titulo").textContent=dados.nome;document.title="Preços · "+dados.nome;
+      $("login").hidden=true;$("painel").hidden=false;$("barra").hidden=false;$("verSite").hidden=false;
+      orig={};atual={};dados.produtos.forEach(function(p){orig[p.id]={preco:fmt(p.preco)||p.preco,esgotado:p.esgotado};atual[p.id]={preco:orig[p.id].preco,esgotado:p.esgotado}});
+      desenhar();
+      if(dados.atualizadoEm)$("painelMsg").className="msg",$("painelMsg").textContent="";
+    }catch(e){
+      $("loginMsg").textContent=e.message;
+      if(e.status===401){try{localStorage.removeItem(K)}catch(_){}}
+    }finally{$("entrar").disabled=false;$("entrar").textContent="Entrar"}
+  }
+  $("entrar").onclick=entrar;
+  $("codigo").addEventListener("keydown",function(e){if(e.key==="Enter")entrar()});
+
+  function desenhar(){
+    var q=$("busca").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    var cats=(dados.categorias||[]).slice();
+    dados.produtos.forEach(function(p){if(cats.indexOf(p.cat)<0)cats.push(p.cat)});
+    var h="";
+    cats.forEach(function(c){
+      var itens=dados.produtos.filter(function(p){return p.cat===c&&(!q||p.nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").indexOf(q)>-1)});
+      if(!itens.length)return;
+      h+='<section class="cat"><h2>'+esc(c||"Outros")+'</h2><div class="lista">'+itens.map(function(p){var a=atual[p.id];
+        return '<div class="it'+(mudou(p.id)?" mudou":"")+'" data-id="'+esc(p.id)+'"><div class="n">'+esc(p.nome)+(a.esgotado?'<small>Esgotado no site</small>':'')+'</div>'+
+        '<label class="preco"><span>R$</span><input type="text" inputmode="decimal" id="pr-'+esc(p.id)+'" data-id="'+esc(p.id)+'" value="'+esc(a.preco)+'" placeholder="Consultar" aria-label="Preço de '+esc(p.nome)+'"></label>'+
+        '<label class="sw">Esgotado<input type="checkbox" id="es-'+esc(p.id)+'" data-id="'+esc(p.id)+'"'+(a.esgotado?" checked":"")+' aria-label="'+esc(p.nome)+' esgotado"></label></div>'}).join("")+'</div></section>';
+    });
+    $("lista").innerHTML=h||'<p class="vazio">Nenhum produto encontrado.</p>';
+    contar();
+  }
+  function mudou(id){return atual[id].preco!==orig[id].preco||atual[id].esgotado!==orig[id].esgotado}
+  function pendentes(){return Object.keys(atual).filter(mudou)}
+  function contar(){var n=pendentes().length;$("pend").textContent=n?n+(n>1?" produtos alterados":" produto alterado"):"Nenhuma alteração";$("salvar").disabled=!n}
+  $("busca").addEventListener("input",desenhar);
+  $("lista").addEventListener("input",function(e){
+    var id=e.target.dataset.id;if(!id)return;
+    if(e.target.type==="checkbox")atual[id].esgotado=e.target.checked;else atual[id].preco=e.target.value.trim();
+    e.target.closest(".it").classList.toggle("mudou",mudou(id));contar();
+  });
+  $("lista").addEventListener("change",function(e){
+    var id=e.target.dataset.id;if(!id||e.target.type==="checkbox")return;
+    var f=fmt(e.target.value);if(f){e.target.value=f;atual[id].preco=f}
+    e.target.closest(".it").classList.toggle("mudou",mudou(id));contar();
+  });
+  $("salvar").onclick=async function(){
+    var ids=pendentes(),ruim=ids.filter(function(id){return atual[id].preco&&isNaN(num(atual[id].preco))});
+    if(ruim.length){var p=dados.produtos.find(function(x){return x.id===ruim[0]});msg("erro","Confira o preço de \""+p.nome+"\". Use números, ex.: 25,90.");return}
+    $("salvar").disabled=true;$("salvar").textContent="Salvando…";
+    try{
+      var r=await api({acao:"salvar",alteracoes:ids.map(function(id){return{id:id,preco:atual[id].preco,esgotado:atual[id].esgotado}})});
+      ids.forEach(function(id){orig[id]={preco:atual[id].preco,esgotado:atual[id].esgotado}});
+      desenhar();
+      msg("ok","Salvo! "+r.alterados+(r.alterados>1?" produtos atualizados":" produto atualizado")+". O site mostra os novos preços em cerca de 1 minuto.");
+    }catch(e){msg("erro",e.message);if(e.status===401){$("painel").hidden=true;$("barra").hidden=true;$("login").hidden=false}}
+    finally{$("salvar").textContent="Salvar alterações";contar()}
+  };
+  function msg(tipo,t){var m=$("painelMsg");m.className="msg "+tipo;m.textContent=t;window.scrollTo({top:0,behavior:"smooth"})}
+  $("sair").onclick=function(){try{localStorage.removeItem(K)}catch(e){}location.reload()};
+  window.addEventListener("beforeunload",function(e){if(dados&&pendentes().length){e.preventDefault();e.returnValue=""}});
+})();
+</script>
+</body>
+</html>

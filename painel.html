@@ -112,11 +112,7 @@ button:disabled{opacity:.55;cursor:default}
       $("login").hidden=true;$("painel").hidden=false;$("barra").hidden=false;$("verSite").hidden=false;
       orig={};atual={};dados.produtos.forEach(function(p){orig[p.id]={preco:fmt(p.preco)||p.preco,esgotado:p.esgotado};atual[p.id]={preco:orig[p.id].preco,esgotado:p.esgotado}});
       desenhar();
-      if(dados.planilha){
-        $("barra").hidden=true;
-        document.querySelectorAll("#lista input").forEach(function(i){i.disabled=true});
-        msg("erro","Os preços deste site são atualizados pela planilha do Google. Faça as mudanças na planilha.");
-      }
+      if(dados.atualizadoEm)$("painelMsg").className="msg",$("painelMsg").textContent="";
     }catch(e){
       $("loginMsg").textContent=e.message;
       if(e.status===401){try{localStorage.removeItem(K)}catch(_){}}

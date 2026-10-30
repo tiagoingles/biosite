@@ -558,7 +558,7 @@ function bioRuntime(){
   function save(){try{localStorage.setItem(K,JSON.stringify(cart))}catch(e){}}
   function qtd(){var q=0;for(var i in cart)q+=cart[i];return q}
   function subtotal(){var t=0;for(var i in cart){var pr=num(P[i].preco);if(!isNaN(pr))t+=pr*cart[i]}return t}
-  function tipo(){var r=document.querySelector('input[name="tipo"]:checked');return r?r.value:(O.entrega?"entrega":(O.retirada?"retirada":""))}
+  function tipo(){var r=document.querySelector('input[name="tipo"]:checked');if(r)return r.value;return O.entrega&&!O.retirada?"entrega":(O.retirada&&!O.entrega?"retirada":"")}
   // Bairros de entrega (com taxa). Sem lista cadastrada, vale a taxa única.
   function bairros(){return Array.isArray(O.bairros)?O.bairros.filter(function(b){return b&&b.nome}):[]}
   function bairroSel(){var el=$("fBairro");if(!el||!bairros().length)return null;var v=el.value.trim().toLowerCase();return bairros().find(function(b){return b.nome.toLowerCase()===v})||null}
@@ -619,6 +619,7 @@ function bioRuntime(){
     var lr=document.querySelector('input[name="local"]:checked'),apto=!!lr&&lr.value==="apto",num_=$("fNum")?$("fNum").value.trim():"",cond=$("fCond")?$("fCond").value.trim():"",bloco=$("fBloco")?$("fBloco").value.trim():"",ap=$("fApto")?$("fApto").value.trim():"";
     var sub=subtotal(),min=num(O.minimo),err="";
     if(!nome)err="Informe seu nome.";
+    else if(!tp&&(O.entrega||O.retirada))err="Escolha como receber: entrega ou retirada.";
     else if(O.agendamento&&!quando)err="Informe o dia e o horário que você prefere.";
     else if(tp==="entrega"&&!bairro)err="Informe o bairro de entrega.";
     else if(tp==="entrega"&&bairros().length&&!bairroSel())err="Escolha um bairro da lista de entrega.";
@@ -717,8 +718,8 @@ ${grupos.map((g,i)=>`<section class="cat" id="cat-${i}">${grupos.length>1?`<h2>$
 <div class="campos">
 <label>Seu nome<input id="fNome" autocomplete="name"></label>
 ${ag?`<label>Dia e horário que você prefere<input id="fQuando" placeholder="Ex.: sábado, às 10h"></label>`:""}
-${O.entrega&&O.retirada?`<div class="tipos" role="radiogroup" aria-label="Como receber"><label><input type="radio" name="tipo" value="entrega" checked> Entrega</label><label><input type="radio" name="tipo" value="retirada"> Retirar no local</label></div>`:""}
-${O.entrega?`<div id="lEnd" class="ende"><p class="ende-t">Endereço de entrega</p>${bairrosTxt}
+${bairrosTxt}${O.entrega&&O.retirada?`<div class="tipos" role="radiogroup" aria-label="Como receber"><label><input type="radio" name="tipo" value="entrega"> Entrega</label><label><input type="radio" name="tipo" value="retirada"> Retirar no local</label></div>`:""}
+${O.entrega?`<div id="lEnd" class="ende"><p class="ende-t">Endereço de entrega</p>
 <label>Bairro<input id="fBairro" list="bairrosLista" autocomplete="off" placeholder="${bairrosLista.length?"Digite para buscar o bairro":"Seu bairro"}"></label>${bairrosLista.length?`<datalist id="bairrosLista">${bairrosLista.map(b=>`<option value="${esc(b.nome)}">`).join("")}</datalist>`:""}
 <label>Rua<input id="fRua" autocomplete="address-line1" placeholder="Nome da rua"></label>
 <label>Cidade<input id="fCidade" autocomplete="address-level2" placeholder="Cidade"></label>
@@ -933,7 +934,7 @@ function addBairro(nome,taxa){
 }
 function renderBairros(){
   const L=bairrosCfg();
-  $("bairrosCad").innerHTML=L.length?L.map((b,i)=>`<div class="row" style="justify-content:space-between;align-items:center"><span><b>${esc(b.nome)}</b> — ${b.taxa===""||b.taxa==null?"a combinar":(num(b.taxa)?brl(num(b.taxa)):"grátis")}</span><button type="button" class="small" data-bdel="${i}">Remover</button></div>`).join(""):`<p class="note" style="margin:0">Nenhum bairro cadastrado. Enquanto a lista estiver vazia, o site usa a taxa única acima.</p>`;
+  $("bairrosCad").innerHTML=L.length?`<div class="tabwrap"><table class="tab"><thead><tr><th>Bairro</th><th>Taxa de entrega</th><th></th></tr></thead><tbody>${L.map((b,i)=>`<tr><td>${esc(b.nome)}</td><td>${b.taxa===""||b.taxa==null?"a combinar":(num(b.taxa)?brl(num(b.taxa)):"grátis")}</td><td><button type="button" class="small" data-bdel="${i}">Remover</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="note" style="margin:0">Nenhum bairro cadastrado. Enquanto a lista estiver vazia, o site usa a taxa única acima.</p>`;
 }
 $("btnBairro").onclick=()=>{const e=addBairro($("bNome").value,$("bTaxa").value);if(e){toast(e);return}$("bNome").value="";$("bTaxa").value="";renderBairros();render()};
 $("btnBColar").onclick=()=>{
@@ -1054,7 +1055,7 @@ function renderProdutos(){
     </div>
     <div class="grid2">
       <label>Marca<input type="text" id="pm-${p.id}" data-i="${i}" data-f="marca" value="${esc(p.marca||"")}"></label>
-      <label>Unidade<select id="pu-${p.id}" data-i="${i}" data-f="unidade">${unidadeOptions(p.unidade)}</select></label>
+      <label>Medida<select id="pu-${p.id}" data-i="${i}" data-f="unidade">${unidadeOptions(p.unidade)}</select></label>
     </div>
     <label>Descrição<textarea rows="2" id="pd-${p.id}" data-i="${i}" data-f="desc">${esc(p.desc)}</textarea></label>
     <div class="row">
@@ -1285,12 +1286,12 @@ $("btnModelo").onclick=async()=>{
       ?origem.map(p=>[p.nome,isNaN(num(p.preco))?p.preco:num(p.preco),p.cat,p.desc,"",p.esgotado?"sim":"","",p.marca||"",p.unidade||""])
       :exemplo.map(l=>[...l,"","",""]);
     const cats=[...new Set([...(usarModelo?Object.keys(NICHOS[nk].cats):s.categorias),...linhas.map(l=>l[2]).filter(Boolean)])];
-    const cab=["nome","preco","categoria","descricao","foto","esgotado","codigo","marca","unidade"];
+    const cab=["nome","preco","categoria","descricao","foto","esgotado","codigo","marca","medida"];
     const ws=X.utils.aoa_to_sheet([["Catálogo: preencha a partir da linha 3. Não mude os títulos da linha 2."],cab,...linhas]);
     ws["!cols"]=[{wch:34},{wch:10},{wch:20},{wch:40},{wch:44},{wch:10},{wch:12},{wch:20},{wch:10}];
     for(let i=0;i<linhas.length;i++){const c=ws[X.utils.encode_cell({r:i+2,c:1})];if(c&&typeof c.v==="number")c.z="#,##0.00"}
     const catSheet=X.utils.aoa_to_sheet(cats.map(c=>[c]));
-    const ajuda=X.utils.aoa_to_sheet([["Como preencher"],[""],["nome","Obrigatório. Nome do produto ou serviço."],["preco","Número, ex.: 25,90. Deixe vazio para 'Consultar'."],["categoria","Ex.: Cortes, Lanches, Bebidas. Categorias novas são criadas sozinhas."],["descricao","Opcional. Uma ou duas frases."],["foto","Caminho da foto (C:\\Fotos\\x.jpg), só o nome do arquivo (x.jpg) ou um link https. Depois, escolha a pasta das fotos no criador."],["esgotado","Escreva 'sim' para marcar como esgotado."],["codigo","Deixe vazio. O sistema cria sozinho."],["marca","Opcional. Nome da marca do produto."],["unidade","Caixa, Peso, Unidade ou Litro. Deixe vazio se não quiser informar."],["Categorias","Lista do menu suspenso da coluna categoria na planilha do Google."],[""],["Para produtos que já existem, a carga atualiza pelo nome."]]);
+    const ajuda=X.utils.aoa_to_sheet([["Como preencher"],[""],["nome","Obrigatório. Nome do produto ou serviço."],["preco","Número, ex.: 25,90. Deixe vazio para 'Consultar'."],["categoria","Ex.: Cortes, Lanches, Bebidas. Categorias novas são criadas sozinhas."],["descricao","Opcional. Uma ou duas frases."],["foto","Caminho da foto (C:\\Fotos\\x.jpg), só o nome do arquivo (x.jpg) ou um link https. Depois, escolha a pasta das fotos no criador."],["esgotado","Escreva 'sim' para marcar como esgotado."],["codigo","Deixe vazio. O sistema cria sozinho."],["marca","Opcional. Nome da marca do produto."],["medida","Caixa, Peso, Unidade ou Litro. Deixe vazio se não quiser informar."],["Categorias","Lista do menu suspenso da coluna categoria na planilha do Google."],[""],["Para produtos que já existem, a carga atualiza pelo nome."]]);
     ajuda["!cols"]=[{wch:14},{wch:90}];
     const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Produtos");X.utils.book_append_sheet(wb,catSheet,"Categorias");X.utils.book_append_sheet(wb,ajuda,"como preencher");
     X.writeFile(wb,`produtos-${s.slug||"cliente"}.xlsx`);

@@ -383,7 +383,7 @@ const PRESETS = [
 const PEDIDO_PADRAO = {entrega:true, retirada:true, agendamento:false, taxa:"", minimo:"", pag:["Pix","Cartão","Dinheiro"], pix:"", botao:"Enviar pedido pelo WhatsApp", obsDica:"Ex.: sem cebola, troco para 50"};
 
 /* ---------- Modelos prontos por nicho (preços de exemplo) ---------- */
-const P_=(nome,preco,desc="")=>({nome,preco,desc});
+const P_=(nome,preco,desc="",unidade="")=>({nome,preco,desc,unidade});
 const NICHOS = {
   barbearia:{
     nome:"Barbearia", titulo:"Serviços",
@@ -448,10 +448,11 @@ const NICHOS = {
     visual:{modelo:"minimal",cor:"#4d7c0f",fundo:"#fbf8ef",texto:"#2a2414",fonteTitulo:"Lora",fonteTexto:"Nunito"},
     pedido:{entrega:true,retirada:true,agendamento:false,taxa:"5,00",minimo:"",pag:["Pix","Cartão","Dinheiro"],botao:"Enviar pedido pelo WhatsApp",obsDica:"Ex.: entregar depois das 14h"},
     cats:{
-      "Grãos":[P_("Feijão carioca 1 kg","8,90"),P_("Feijão preto 1 kg","9,50"),P_("Feijão macassar 1 kg","10,90"),P_("Arroz parboilizado 1 kg","6,50"),P_("Grão-de-bico 500 g","9,90"),P_("Lentilha 500 g","8,90")],
-      "Farinhas e cereais":[P_("Farinha de mandioca 1 kg","7,90"),P_("Flocão de milho 500 g","3,50"),P_("Aveia em flocos 500 g","9,90"),P_("Granola 500 g","16,90")],
-      "Castanhas e sementes":[P_("Castanha de caju 250 g","24,90"),P_("Amendoim torrado 500 g","12,90"),P_("Chia 250 g","9,90"),P_("Linhaça dourada 250 g","7,90")],
-      "Temperos":[P_("Colorau 100 g","3,50"),P_("Cominho moído 100 g","4,90"),P_("Pimenta-do-reino moída 100 g","7,90")]
+      "Grãos":[P_("Feijão carioca 1 kg","8,90","","Peso"),P_("Feijão preto 1 kg","9,50","","Peso"),P_("Feijão macassar 1 kg","10,90","","Peso"),P_("Arroz parboilizado 1 kg","6,50","","Peso"),P_("Grão-de-bico 500 g","9,90","","Peso"),P_("Lentilha 500 g","8,90","","Peso"),P_("Milho de pipoca 500 g","6,50","","Peso")],
+      "Farinhas e cereais":[P_("Farinha de mandioca 1 kg","7,90","","Peso"),P_("Flocão de milho 500 g","3,50","","Peso"),P_("Aveia em flocos 500 g","9,90","","Peso"),P_("Granola 500 g","16,90","","Peso")],
+      "Castanhas e sementes":[P_("Castanha de caju 250 g","24,90","","Peso"),P_("Amendoim torrado 500 g","12,90","","Peso"),P_("Chia 250 g","9,90","","Peso"),P_("Linhaça dourada 250 g","7,90","","Peso")],
+      "Temperos":[P_("Colorau 100 g","3,50","","Peso"),P_("Cominho moído 100 g","4,90","","Peso"),P_("Pimenta-do-reino moída 100 g","7,90","","Peso")],
+      "Óleos e azeites":[P_("Óleo de soja 900 ml","7,90","","Litro"),P_("Azeite de oliva extravirgem 500 ml","29,90","","Litro")]
     }
   }
 };
@@ -489,7 +490,7 @@ function normalizar(d){
   x.pedido=Object.assign({},PEDIDO_PADRAO,d?(d.pedido||{}):DEFAULT.pedido);
   if(!Array.isArray(x.produtos)) x.produtos=[];
   if(!Array.isArray(x.extras)) x.extras=[];
-  x.produtos.forEach(p=>{if(!p.id)p.id=uid();p.cat=(p.cat||"").trim()});
+  x.produtos.forEach(p=>{if(!p.id)p.id=uid();p.cat=(p.cat||"").trim();p.marca=p.marca||"";p.unidade=p.unidade||""});
   // Categorias: usa a lista salva e acrescenta as que só existem nos produtos
   const base=(d&&Array.isArray(d.categorias))?d.categorias:(d?[]:DEFAULT.categorias);
   x.categorias=[...new Set([...base.map(c=>String(c).trim()).filter(Boolean),...x.produtos.map(p=>p.cat).filter(Boolean)])];
@@ -662,7 +663,7 @@ function bioHTML(d=s, img=R){
   const busca=`<div class="busca"><input type="search" id="busca" placeholder="Buscar produto" aria-label="Buscar produto"><p class="busca-vazio" id="buscaVazia" hidden>Nenhum produto encontrado.</p></div>`;
   const chips=grupos.length>1?`<nav class="chips" aria-label="Categorias">${grupos.map((g,i)=>`<a href="#cat-${i}">${esc(g.nome)}</a>`).join("")}</nav>`:"";
   const card=p=>{const f=safeImg(img(p.foto));const pr=num(p.preco);return `<article class="prod${p.esgotado?" off":""}">
-${f?`<img class="pimg" src="${esc(f)}" alt="${esc(p.nome)}" loading="lazy">`:""}<div class="pinfo"><h3>${esc(p.nome)}</h3>${p.desc?`<p>${esc(p.desc)}</p>`:""}
+${f?`<img class="pimg" src="${esc(f)}" alt="${esc(p.nome)}" loading="lazy">`:""}<div class="pinfo"><h3>${esc(p.nome)}</h3>${(p.marca||p.unidade)?`<small class="pmeta">${esc([p.marca,p.unidade].filter(Boolean).join(" · "))}</small>`:""}${p.desc?`<p>${esc(p.desc)}</p>`:""}
 <div class="prow"><b class="preco" data-pid="${esc(p.id)}">${isNaN(pr)?"Consultar":brl(pr)}</b><span class="ctl" data-id="${esc(p.id)}">${p.esgotado?`<em class="esg">Esgotado</em>`:`<button type="button" class="add" data-add="${esc(p.id)}" aria-label="Adicionar ${esc(p.nome)}">+</button>`}</span></div></div></article>`};
   const catalogo=temCat?`<section class="catalogo">${grupos.length>1?"":`<h2 class="sec">${esc(d.catalogoTitulo||"Produtos")}</h2>`}${busca}${chips}
 ${grupos.map((g,i)=>`<section class="cat" id="cat-${i}">${grupos.length>1?`<h2>${esc(g.nome)}</h2>`:""}<div class="prods">${g.itens.map(card).join("")}</div></section>`).join("")}</section>`:"";
@@ -729,6 +730,7 @@ h1{font:700 28px/1.15 var(--ft);margin:10px 0 4px;text-wrap:balance}
 .busca{margin:18px 0 0}
 .busca input{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--linha);border-radius:12px;font:inherit;background:var(--fundo);color:inherit}
 .busca-vazio{padding:20px 0;text-align:center;opacity:.7}
+.pmeta{display:block;font-size:13px;opacity:.7;margin:2px 0}
 .prod[hidden],.cat[hidden],.chips[hidden],.busca-vazio[hidden]{display:none!important}
 .chips a{white-space:nowrap;text-decoration:none;border:1px solid var(--linha);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}
 .cat{scroll-margin-top:64px;margin-top:20px}
@@ -941,7 +943,7 @@ $("nicho").innerHTML=`<option value="">Escolha um nicho…</option>`+Object.entr
 function aplicarNicho(k,modo){
   const N=NICHOS[k];if(!N)return;
   const novos=[];
-  for(const cat in N.cats) for(const p of N.cats[cat]) novos.push({id:uid(),nome:p.nome,preco:p.preco,cat,desc:p.desc,foto:"",esgotado:false});
+  for(const cat in N.cats) for(const p of N.cats[cat]) novos.push({id:uid(),nome:p.nome,preco:p.preco,cat,desc:p.desc,marca:"",unidade:p.unidade||"",foto:"",esgotado:false});
   if(modo==="substituir"){s.produtos=novos;s.categorias=Object.keys(N.cats)}
   else{s.produtos=[...s.produtos,...novos];s.categorias=[...new Set([...s.categorias,...Object.keys(N.cats)])]}
   s.catalogoTitulo=N.titulo;
@@ -982,6 +984,10 @@ function renderProdutos(){
       <label>Categoria<select id="pc-${p.id}" data-i="${i}" data-f="cat">${catOptions(p.cat)}</select></label>
       <label>Foto<input type="file" accept="image/*" id="pf-${p.id}" data-i="${i}" data-foto="1"></label>
     </div>
+    <div class="grid2">
+      <label>Marca<input type="text" id="pm-${p.id}" data-i="${i}" data-f="marca" value="${esc(p.marca||"")}"></label>
+      <label>Unidade<select id="pu-${p.id}" data-i="${i}" data-f="unidade">${unidadeOptions(p.unidade)}</select></label>
+    </div>
     <label>Descrição<textarea rows="2" id="pd-${p.id}" data-i="${i}" data-f="desc">${esc(p.desc)}</textarea></label>
     <div class="row">
       <label class="check"><input type="checkbox" id="pe-${p.id}" data-i="${i}" data-f="esgotado"${p.esgotado?" checked":""}> Esgotado</label>
@@ -1020,13 +1026,13 @@ $("produtos").addEventListener("click",e=>{
 });
 $("btnAddProd").onclick=()=>{
   const ult=s.produtos[s.produtos.length-1];
-  const p={id:uid(),nome:"",preco:"",cat:ult?ult.cat:"",desc:"",foto:"",esgotado:false};
+  const p={id:uid(),nome:"",preco:"",cat:ult?ult.cat:"",desc:"",marca:"",unidade:"",foto:"",esgotado:false};
   s.produtos.push(p);abrirProd=p.id;renderCats();renderProdutos();render();
 };
 /* ---------- Carga por planilha (com fotos) ---------- */
 const carga={rows:null,origem:"",fotos:new Map(),temEsgotado:false};
 const normTxt=t=>String(t??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-const COLS=[["nome",/^(nome|produto|servico|item|descricao do produto)/],["preco",/^(preco|valor|vlr)/],["cat",/^(categ|secao|grupo)/],["desc",/^(desc|detalhe|obs)/],["foto",/^(foto|imagem|img|arquivo|caminho)/],["esgotado",/^(esgot|indisp)/]];
+const COLS=[["nome",/^(nome|produto|servico|item|descricao do produto)/],["preco",/^(preco|valor|vlr)/],["cat",/^(categ|secao|grupo)/],["desc",/^(desc|detalhe|obs)/],["foto",/^(foto|imagem|img|arquivo|caminho)/],["esgotado",/^(esgot|indisp)/],["marca",/^(marca|fabricante)/],["unidade",/^(unidade|medida|embalagem)/]];
 let xlsxPromise=null;
 function loadXLSX(){
   if(window.XLSX) return Promise.resolve(window.XLSX);
@@ -1039,6 +1045,9 @@ function precoDe(v){
   return String(v??"").replace(/^\s*R\$\s*/i,"").trim();
 }
 function simNao(v){const t=normTxt(v);return ["sim","s","x","1","true","verdadeiro","esgotado"].includes(t)}
+const UNIDADES=["Caixa","Peso","Unidade","Litro"];
+function unidadeDe(v){const t=normTxt(v);return UNIDADES.find(u=>normTxt(u)===t)||""}
+function unidadeOptions(sel){return `<option value="">Não informar</option>`+UNIDADES.map(u=>`<option${u===sel?" selected":""}>${u}</option>`).join("")}
 /* Converte uma tabela (linhas x colunas) em produtos, reconhecendo o cabeçalho */
 function linhasDeTabela(aoa){
   aoa=aoa.filter(r=>r&&r.some(c=>String(c??"").trim()!==""));
@@ -1057,7 +1066,7 @@ function linhasDeTabela(aoa){
     }
     if(!nome) continue;
     rows.push({nome,preco:precoDe(preco),cat:String(map.cat!=null?r[map.cat]??"":"").trim(),desc:String(map.desc!=null?r[map.desc]??"":"").trim(),
-      foto:String(map.foto!=null?r[map.foto]??"":"").trim().replace(/^"|"$/g,""),esgotado:map.esgotado!=null?simNao(r[map.esgotado]):undefined});
+      foto:String(map.foto!=null?r[map.foto]??"":"").trim().replace(/^"|"$/g,""),marca:String(map.marca!=null?r[map.marca]??"":"").trim(),unidade:unidadeDe(map.unidade!=null?r[map.unidade]:""),esgotado:map.esgotado!=null?simNao(r[map.esgotado]):undefined});
   }
   return {rows,temEsgotado:map.esgotado!=null};
 }
@@ -1178,9 +1187,10 @@ $("cargaResumo").addEventListener("click",async e=>{
     const ex=modo!=="substituir"&&lista.find(p=>normTxt(p.nome)===normTxt(r.nome));
     if(ex){
       if(r.preco)ex.preco=r.preco; if(r.cat)ex.cat=r.cat; if(r.desc)ex.desc=r.desc; if(foto)ex.foto=foto;
+      if(r.marca)ex.marca=r.marca; if(r.unidade)ex.unidade=r.unidade;
       if(carga.temEsgotado)ex.esgotado=!!r.esgotado; atual++;
     }else{
-      lista.push({id:uid(),nome:r.nome,preco:r.preco,cat:r.cat,desc:r.desc,foto,esgotado:!!r.esgotado});novos++;
+      lista.push({id:uid(),nome:r.nome,preco:r.preco,cat:r.cat,desc:r.desc,marca:r.marca||"",unidade:r.unidade||"",foto,esgotado:!!r.esgotado});novos++;
     }
   }
   s.produtos=lista;
@@ -1199,20 +1209,20 @@ $("btnModelo").onclick=async()=>{
     const nk=$("nicho").value;
     const usarModelo=!s.produtos.length&&!!NICHOS[nk];
     const origem=usarModelo
-      ?Object.entries(NICHOS[nk].cats).flatMap(([cat,lista])=>lista.map(p=>({nome:p.nome,preco:p.preco,cat,desc:p.desc,esgotado:false})))
+      ?Object.entries(NICHOS[nk].cats).flatMap(([cat,lista])=>lista.map(p=>({nome:p.nome,preco:p.preco,cat,desc:p.desc,marca:"",unidade:p.unidade||"",esgotado:false})))
       :s.produtos;
     const exemplo=[["Corte degradê",40,"Cortes","Degradê com navalhado.","C:\\Fotos\\Cliente\\corte-degrade.jpg",""],["Barba tradicional",25,"Barba","","barba.jpg",""],["Pomada modeladora",35,"Produtos","","",""]];
     // Mesmo layout da planilha do Google (planilha/Codigo.gs): título na linha 1, títulos na 2, produtos a partir da 3
     const linhas=origem.length
-      ?origem.map(p=>[p.nome,isNaN(num(p.preco))?p.preco:num(p.preco),p.cat,p.desc,"",p.esgotado?"sim":"",""])
-      :exemplo.map(l=>[...l,""]);
+      ?origem.map(p=>[p.nome,isNaN(num(p.preco))?p.preco:num(p.preco),p.cat,p.desc,"",p.esgotado?"sim":"","",p.marca||"",p.unidade||""])
+      :exemplo.map(l=>[...l,"","",""]);
     const cats=[...new Set([...(usarModelo?Object.keys(NICHOS[nk].cats):s.categorias),...linhas.map(l=>l[2]).filter(Boolean)])];
-    const cab=["nome","preco","categoria","descricao","foto","esgotado","codigo"];
+    const cab=["nome","preco","categoria","descricao","foto","esgotado","codigo","marca","unidade"];
     const ws=X.utils.aoa_to_sheet([["Catálogo: preencha a partir da linha 3. Não mude os títulos da linha 2."],cab,...linhas]);
-    ws["!cols"]=[{wch:34},{wch:10},{wch:20},{wch:40},{wch:44},{wch:10},{wch:12}];
+    ws["!cols"]=[{wch:34},{wch:10},{wch:20},{wch:40},{wch:44},{wch:10},{wch:12},{wch:20},{wch:10}];
     for(let i=0;i<linhas.length;i++){const c=ws[X.utils.encode_cell({r:i+2,c:1})];if(c&&typeof c.v==="number")c.z="#,##0.00"}
     const catSheet=X.utils.aoa_to_sheet(cats.map(c=>[c]));
-    const ajuda=X.utils.aoa_to_sheet([["Como preencher"],[""],["nome","Obrigatório. Nome do produto ou serviço."],["preco","Número, ex.: 25,90. Deixe vazio para 'Consultar'."],["categoria","Ex.: Cortes, Lanches, Bebidas. Categorias novas são criadas sozinhas."],["descricao","Opcional. Uma ou duas frases."],["foto","Caminho da foto (C:\\Fotos\\x.jpg), só o nome do arquivo (x.jpg) ou um link https. Depois, escolha a pasta das fotos no criador."],["esgotado","Escreva 'sim' para marcar como esgotado."],["codigo","Deixe vazio. O sistema cria sozinho."],["Categorias","Lista do menu suspenso da coluna categoria na planilha do Google."],[""],["Para produtos que já existem, a carga atualiza pelo nome."]]);
+    const ajuda=X.utils.aoa_to_sheet([["Como preencher"],[""],["nome","Obrigatório. Nome do produto ou serviço."],["preco","Número, ex.: 25,90. Deixe vazio para 'Consultar'."],["categoria","Ex.: Cortes, Lanches, Bebidas. Categorias novas são criadas sozinhas."],["descricao","Opcional. Uma ou duas frases."],["foto","Caminho da foto (C:\\Fotos\\x.jpg), só o nome do arquivo (x.jpg) ou um link https. Depois, escolha a pasta das fotos no criador."],["esgotado","Escreva 'sim' para marcar como esgotado."],["codigo","Deixe vazio. O sistema cria sozinho."],["marca","Opcional. Nome da marca do produto."],["unidade","Caixa, Peso, Unidade ou Litro. Deixe vazio se não quiser informar."],["Categorias","Lista do menu suspenso da coluna categoria na planilha do Google."],[""],["Para produtos que já existem, a carga atualiza pelo nome."]]);
     ajuda["!cols"]=[{wch:14},{wch:90}];
     const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Produtos");X.utils.book_append_sheet(wb,catSheet,"Categorias");X.utils.book_append_sheet(wb,ajuda,"como preencher");
     X.writeFile(wb,`produtos-${s.slug||"cliente"}.xlsx`);

@@ -8,6 +8,7 @@ const S = require("../lib/servidor");
 const G = require("../lib/gerador");
 
 const CHAVE = /^d-[A-Za-z0-9_-]{10,80}-[a-z0-9]{4,14}$/;
+const UNIDADES = ["Caixa", "Peso", "Unidade", "Litro"];
 
 function tipoImagem(b64) {
   const ini = Buffer.from(b64.slice(0, 24), "base64");
@@ -32,7 +33,7 @@ module.exports = async (req, res) => {
       return res.json({
         nome: c.nome,
         categorias: c.categorias || [],
-        produtos: (c.produtos || []).map((p) => ({ id: p.id, nome: p.nome, preco: p.preco || "", cat: p.cat || "", desc: p.desc || "", esgotado: !!p.esgotado, temFoto: !!p.foto })),
+        produtos: (c.produtos || []).map((p) => ({ id: p.id, nome: p.nome, preco: p.preco || "", cat: p.cat || "", desc: p.desc || "", marca: p.marca || "", unidade: p.unidade || "", esgotado: !!p.esgotado, temFoto: !!p.foto })),
       });
     }
 
@@ -84,6 +85,8 @@ module.exports = async (req, res) => {
           id, nome, preco,
           cat: String(r.cat || "").trim().slice(0, 60),
           desc: String(r.desc || "").trim().slice(0, 400),
+          marca: String(r.marca || "").trim().slice(0, 60),
+          unidade: UNIDADES.includes(r.unidade) ? r.unidade : "",
           foto, esgotado: !!r.esgotado,
         });
       }

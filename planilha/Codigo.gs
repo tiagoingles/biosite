@@ -13,7 +13,7 @@ var ABA = 'Produtos';
 var ABA_CONFIG = 'Configuração';
 var ABA_CATEGORIAS = 'Categorias';
 var LINHA_CAB = 2;               // linha dos títulos das colunas
-var C = { nome: 1, preco: 2, cat: 3, desc: 4, foto: 5, esgotado: 6, id: 7 };
+var C = { nome: 1, preco: 2, cat: 3, desc: 4, foto: 5, esgotado: 6, id: 7, marca: 8, unidade: 9 };
 
 /* ---------- Menu ---------- */
 function onOpen() {
@@ -150,7 +150,7 @@ function sincronizar() {
     var n = sh.getLastRow() - LINHA_CAB;
     if (n < 1) { status('Nenhum produto na planilha.', true); return; }
 
-    var vals = sh.getRange(LINHA_CAB + 1, 1, n, C.id).getValues();
+    var vals = sh.getRange(LINHA_CAB + 1, 1, n, C.unidade).getValues();
 
     // Código interno de cada produto (mantém carrinho e fotos ligados ao produto certo)
     var vistos = {}, mudou = false;
@@ -181,6 +181,7 @@ function sincronizar() {
       linhas.push({
         id: String(r[C.id - 1]), nome: nome, preco: preco,
         cat: String(r[C.cat - 1]).trim(), desc: String(r[C.desc - 1]).trim(),
+        marca: String(r[C.marca - 1]).trim(), unidade: String(r[C.unidade - 1]).trim(),
         foto: foto, esgotado: e === true || /^(sim|s|x)$/i.test(String(e).trim())
       });
     });
@@ -224,14 +225,14 @@ function importarDoSite() {
   if (sh.getLastRow() > LINHA_CAB) {
     var ok = ui.alert('Trazer produtos do site', 'A aba Produtos já tem linhas. Elas serão substituídas pelos ' + r.produtos.length + ' produtos do site. Continuar?', ui.ButtonSet.YES_NO);
     if (ok !== ui.Button.YES) return;
-    sh.getRange(LINHA_CAB + 1, 1, sh.getLastRow() - LINHA_CAB, C.id).clearContent();
+    sh.getRange(LINHA_CAB + 1, 1, sh.getLastRow() - LINHA_CAB, C.unidade).clearContent();
   }
   if (!r.produtos.length) { ui.alert('O site ainda não tem produtos.'); return; }
   var linhas = r.produtos.map(function (p) {
     var n = parseFloat(String(p.preco).replace(/\./g, '').replace(',', '.'));
-    return [p.nome, isNaN(n) ? p.preco : n, p.cat, p.desc, '', !!p.esgotado, p.id];
+    return [p.nome, isNaN(n) ? p.preco : n, p.cat, p.desc, '', !!p.esgotado, p.id, p.marca || '', p.unidade || ''];
   });
-  sh.getRange(LINHA_CAB + 1, 1, linhas.length, C.id).setValues(linhas);
+  sh.getRange(LINHA_CAB + 1, 1, linhas.length, C.unidade).setValues(linhas);
   prepararAbas();
   status('Produtos trazidos do site. As fotos atuais continuam no site; para trocar uma foto, coloque o nome do arquivo na coluna Foto.', false);
   ui.alert(linhas.length + ' produtos trazidos do site.');

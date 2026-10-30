@@ -320,14 +320,13 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
               <label>Usuário do GitHub<input type="text" id="ghOwner" placeholder="tiagoingles"></label>
               <label>Repositório<input type="text" id="ghRepo" placeholder="biosite"></label>
             </div>
-            <label>Token do GitHub <small>(fica salvo só neste navegador)</small><input type="password" id="ghToken" placeholder="github_pat_..."></label>
+            <label>Senha de acesso <small>(só nesta aba; o token do GitHub fica na Vercel)</small><input type="password" id="ghSenha" placeholder="senha"></label>
             <label>Endereço do site <small>(o da Vercel ou o seu domínio)</small><input type="url" id="ghBase" placeholder="https://biosite-dusky.vercel.app"></label>
             <div class="row"><button id="btnGhSalvar">Salvar e testar conexão</button></div>
             <div id="ghMsg"></div>
             <ol>
               <li>Repositório <code>tiagoingles/biosite</code> e projeto <code>biosite</code> na Vercel já estão criados e ligados.</li>
-              <li>Crie um token em GitHub → Settings → Developer settings → <b>Fine-grained tokens</b>: acesso só ao repositório <code>biosite</code>, permissão <b>Contents: Read and write</b>.</li>
-              <li>Cole o token acima e clique em Salvar e testar.</li>
+              <li>Digite a senha de acesso e clique em Salvar e testar. A senha é a que foi definida na Vercel (CRIADOR_SENHA).</li>
               <li>Quando ligar um domínio próprio, troque o "Endereço do site".</li>
             </ol>
           </div>
@@ -1322,26 +1321,30 @@ $("codigoBox").addEventListener("click",async e=>{
 });
 
 /* ---------- GitHub / Vercel ---------- */
-function ghCfg(){return Object.assign({owner:"tiagoingles",repo:"biosite",token:"",base:"https://biosite-dusky.vercel.app"},load("bio_gh")||{})}
-function ghFill(){const g=ghCfg();$("ghOwner").value=g.owner||"";$("ghRepo").value=g.repo||"biosite";$("ghToken").value=g.token||"";$("ghBase").value=g.base||""}
-function ghReady(){const g=ghCfg();return g.owner&&g.repo&&g.token}
+function ghCfg(){return Object.assign({owner:"tiagoingles",repo:"biosite",base:"https://biosite-dusky.vercel.app"},load("bio_gh")||{})}
+// Versões antigas guardavam o token no navegador: ele sai daqui e fica só na Vercel
+(function(){const v=load("bio_gh");if(v&&v.token){delete v.token;save("bio_gh",v)}})();
+// A senha fica só nesta aba do navegador (some ao fechar)
+function senhaAcesso(){try{return sessionStorage.getItem("criador_senha")||""}catch(e){return ""}}
+function ghFill(){const g=ghCfg();$("ghOwner").value=g.owner||"";$("ghRepo").value=g.repo||"biosite";$("ghSenha").value=senhaAcesso();$("ghBase").value=g.base||""}
+function ghReady(){const g=ghCfg();return g.owner&&g.repo&&senhaAcesso()}
 function ghErr(status,j){
-  if(status===401) return "Token inválido ou expirado. Gere um novo no GitHub.";
-  if(status===403) return "O token não tem permissão de escrita. No token, dê acesso ao repositório e marque Contents: Read and write.";
-  if(status===404) return "Repositório não encontrado. Confira usuário e nome do repositório, e se o token tem acesso a ele.";
+  if(status===403) return "O token guardado na Vercel não tem permissão de escrita. Gere um token com Contents: Read and write e atualize a variável GITHUB_TOKEN.";
+  if(status===404) return "Repositório não encontrado. Confira o nome do repositório e o GITHUB_REPO na Vercel.";
   if(status===409) return "O GitHub recusou por conflito. Clique em Publicar de novo.";
   if(status===422) return "O GitHub recusou os dados: "+(j.message||"dados inválidos")+".";
   return `Erro do GitHub (${status}): ${j.message||"sem detalhes"}.`;
 }
+// Todas as chamadas ao GitHub passam pelo servidor (api/criador-gh.js), que guarda o token
 async function gh(path,opt={}){
-  const g=ghCfg();
   let r;
   try{
-    r=await fetch(`https://api.github.com/repos/${encodeURIComponent(g.owner)}/${encodeURIComponent(g.repo)}${path}`,{
-      method:opt.method||"GET", body:opt.body, cache:"no-store",
-      headers:{Authorization:`Bearer ${g.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.body?{"Content-Type":"application/json"}:{})}
+    r=await fetch("/api/criador-gh",{
+      method:"POST", cache:"no-store", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({senha:senhaAcesso(),caminho:path,metodo:opt.method||"GET",corpo:opt.body||null})
     });
-  }catch(e){throw new Error("Sem conexão com o GitHub. Verifique a internet.")}
+  }catch(e){throw new Error("Sem conexão com o servidor. Verifique a internet.")}
+  if(r.status===401){try{sessionStorage.removeItem("criador_senha")}catch(e){}throw new Error("Senha de acesso incorreta.")}
   const j=await r.json().catch(()=>({}));
   if(opt.allowMissing&&(r.status===404||r.status===409)) return null;
   if(!r.ok) throw new Error(ghErr(r.status,j));
@@ -1359,9 +1362,12 @@ async function ghText(path){
 }
 
 $("btnGhSalvar").onclick=async()=>{
-  const g={owner:$("ghOwner").value.trim().replace(/^@/,""),repo:$("ghRepo").value.trim()||"biosite",token:$("ghToken").value.trim(),base:$("ghBase").value.trim().replace(/\/+$/,"")};
-  save("bio_gh",g); showUrl(); renderProdutos(); render();
-  if(!g.owner||!g.token){msg("ghMsg","Preencha o usuário e o token do GitHub.");return}
+  const g={owner:$("ghOwner").value.trim().replace(/^@/,""),repo:$("ghRepo").value.trim()||"biosite",base:$("ghBase").value.trim().replace(/\/+$/,"")};
+  const senha=$("ghSenha").value.trim();
+  save("bio_gh",g);
+  try{if(senha)sessionStorage.setItem("criador_senha",senha)}catch(e){}
+  showUrl(); renderProdutos(); render();
+  if(!g.owner||!senha){msg("ghMsg","Preencha o usuário e a senha de acesso.");return}
   $("ghMsg").innerHTML=`<p class="note">Testando…</p>`;
   try{
     const repo=await gh("");

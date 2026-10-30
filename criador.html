@@ -248,8 +248,24 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
           <label class="check"><input type="checkbox" id="pAgenda"> Pedir dia e horário (agendamento)</label>
         </div>
         <div class="grid2">
-          <label>Taxa de entrega <small>(deixe vazio se varia)</small><input type="text" inputmode="decimal" id="pTaxa" placeholder="5,00"></label>
+          <label>Taxa única <small>(só se não cadastrar bairros)</small><input type="text" inputmode="decimal" id="pTaxa" placeholder="5,00"></label>
           <label>Pedido mínimo <small>(opcional)</small><input type="text" inputmode="decimal" id="pMin" placeholder="20,00"></label>
+        </div>
+        <div class="stack" id="bairrosBox">
+          <p class="note" style="margin:0 0 6px;font-weight:600;color:var(--ink)">Bairros atendidos e taxa de entrega</p>
+          <p class="note" style="margin:0">Cada bairro com sua taxa. O cliente escolhe o bairro numa lista de busca. Taxa <b>0</b> = grátis; sem taxa = "a combinar".</p>
+          <div class="grid2">
+            <label>Bairro<input type="text" id="bNome" placeholder="Ex.: Janga"></label>
+            <label>Taxa <small>(opcional)</small><input type="text" inputmode="decimal" id="bTaxa" placeholder="5,00"></label>
+          </div>
+          <div class="row"><button type="button" class="small" id="btnBairro">Adicionar bairro</button></div>
+          <div id="bairrosCad" class="stack"></div>
+          <details>
+            <summary>Colar vários de uma vez</summary>
+            <p class="note" style="margin:6px 0">Um por linha, no formato: Bairro ; taxa</p>
+            <textarea id="bColar" rows="4" placeholder="Janga ; 5,00&#10;Centro ; 0&#10;Boa Viagem ; 8,00"></textarea>
+            <div class="row"><button type="button" class="small" id="btnBColar">Importar lista</button></div>
+          </details>
         </div>
         <div>
           <p class="note" style="margin:0 0 6px;font-weight:600;color:var(--ink)">Formas de pagamento</p>
@@ -380,7 +396,7 @@ const PRESETS = [
   {cor:"#facc15",fundo:"#111111",texto:"#f5f5f5"},
   {cor:"#4d7c0f",fundo:"#f7fbef",texto:"#1d2a0c"}
 ];
-const PEDIDO_PADRAO = {entrega:true, retirada:true, agendamento:false, taxa:"", minimo:"", pag:["Pix","Cartão","Dinheiro"], pix:"", botao:"Enviar pedido pelo WhatsApp", obsDica:"Ex.: sem cebola, troco para 50"};
+const PEDIDO_PADRAO = {entrega:true, retirada:true, agendamento:false, taxa:"", minimo:"", pag:["Pix","Cartão","Dinheiro"], pix:"", bairros:[], botao:"Enviar pedido pelo WhatsApp", obsDica:"Ex.: sem cebola, troco para 50"};
 
 /* ---------- Modelos prontos por nicho (preços de exemplo) ---------- */
 const P_=(nome,preco,desc="",unidade="")=>({nome,preco,desc,unidade});
@@ -543,7 +559,12 @@ function bioRuntime(){
   function qtd(){var q=0;for(var i in cart)q+=cart[i];return q}
   function subtotal(){var t=0;for(var i in cart){var pr=num(P[i].preco);if(!isNaN(pr))t+=pr*cart[i]}return t}
   function tipo(){var r=document.querySelector('input[name="tipo"]:checked');return r?r.value:(O.entrega?"entrega":(O.retirada?"retirada":""))}
-  function taxa(){var t=num(O.taxa);return tipo()==="entrega"&&!isNaN(t)?t:0}
+  // Bairros de entrega (com taxa). Sem lista cadastrada, vale a taxa única.
+  function bairros(){return Array.isArray(O.bairros)?O.bairros.filter(function(b){return b&&b.nome}):[]}
+  function bairroSel(){var el=$("fBairro");if(!el||!bairros().length)return null;var v=el.value.trim().toLowerCase();return bairros().find(function(b){return b.nome.toLowerCase()===v})||null}
+  function taxa(){if(tipo()!=="entrega")return 0;var t=bairros().length?num((bairroSel()||{}).taxa):num(O.taxa);return isNaN(t)?0:t}
+  function taxaTxt(){if(tipo()!=="entrega")return "";if(bairros().length&&!bairroSel())return "escolha o bairro";var t=bairros().length?num(bairroSel().taxa):num(O.taxa);return isNaN(t)?"a combinar":(t?brl(t):"grátis")}
+  function aoTrocarLocal(){var r=document.querySelector('input[name="local"]:checked');var apto=!!r&&r.value==="apto";$("eCasa").hidden=apto;$("eApto").hidden=!apto}
   function ctl(id){var q=cart[id]||0;if(!q)return '<button type="button" class="add" data-add="'+id+'" aria-label="Adicionar">+</button>';return '<span class="step"><button type="button" data-sub="'+id+'" aria-label="Tirar um">−</button><b>'+q+'</b><button type="button" data-add="'+id+'" aria-label="Mais um">+</button></span>'}
   function renderSheet(){
     var h="";for(var i in cart){var p=P[i],pr=num(p.preco);
@@ -551,7 +572,7 @@ function bioRuntime(){
     $("itens").innerHTML=h;
     var sub=subtotal(),tx=taxa(),t="";
     t+='<div><span>Subtotal</span><span>'+brl(sub)+'</span></div>';
-    if(tipo()==="entrega")t+='<div><span>Entrega</span><span>'+(isNaN(num(O.taxa))?"a combinar":(tx?brl(tx):"grátis"))+'</span></div>';
+    if(tipo()==="entrega")t+='<div><span>Entrega</span><span>'+esc(taxaTxt())+'</span></div>';
     t+='<div class="final"><span>Total</span><span>'+brl(sub+tx)+'</span></div>';
     $("totais").innerHTML=t;
     var le=$("lEnd");if(le)le.hidden=tipo()!=="entrega";
@@ -590,23 +611,31 @@ function bioRuntime(){
       var vazia=document.getElementById("buscaVazia");if(vazia)vazia.hidden=!q||achou>0;
     });
   }
-  document.addEventListener("change",function(e){if(e.target.name==="tipo")renderSheet()});
+  document.addEventListener("change",function(e){if(e.target.name==="tipo")renderSheet();if(e.target.name==="local")aoTrocarLocal()});
+  document.addEventListener("input",function(e){if(e.target.id==="fBairro")renderSheet()});
   $("enviar").addEventListener("click",function(){
-    var nome=$("fNome").value.trim(),tp=tipo(),end=$("fEnd")?$("fEnd").value.trim():"",pag=$("fPag")?$("fPag").value:"",obs=$("fObs").value.trim(),quando=$("fQuando")?$("fQuando").value.trim():"";
+    var nome=$("fNome").value.trim(),tp=tipo(),pag=$("fPag")?$("fPag").value:"",obs=$("fObs").value.trim(),quando=$("fQuando")?$("fQuando").value.trim():"";
+    var bairro=$("fBairro")?$("fBairro").value.trim():"",rua=$("fRua")?$("fRua").value.trim():"",cidade=$("fCidade")?$("fCidade").value.trim():"",ref=$("fRef")?$("fRef").value.trim():"";
+    var lr=document.querySelector('input[name="local"]:checked'),apto=!!lr&&lr.value==="apto",num_=$("fNum")?$("fNum").value.trim():"",cond=$("fCond")?$("fCond").value.trim():"",bloco=$("fBloco")?$("fBloco").value.trim():"",ap=$("fApto")?$("fApto").value.trim():"";
     var sub=subtotal(),min=num(O.minimo),err="";
     if(!nome)err="Informe seu nome.";
     else if(O.agendamento&&!quando)err="Informe o dia e o horário que você prefere.";
-    else if(tp==="entrega"&&!end)err="Informe o endereço de entrega.";
+    else if(tp==="entrega"&&!bairro)err="Informe o bairro de entrega.";
+    else if(tp==="entrega"&&bairros().length&&!bairroSel())err="Escolha um bairro da lista de entrega.";
+    else if(tp==="entrega"&&!rua)err="Informe a rua.";
+    else if(tp==="entrega"&&!apto&&!num_)err="Informe o número da casa.";
+    else if(tp==="entrega"&&apto&&(!cond||!bloco||!ap))err="Informe o condomínio, o bloco e o apartamento.";
     else if(!isNaN(min)&&sub<min)err="O pedido mínimo é "+brl(min)+".";
     $("erro").textContent=err;if(err)return;
     var L=["*"+(O.agendamento?"Agendamento":"Pedido")+" pelo site - "+C.nome+"*",""];
     for(var i in cart){var p=P[i],pr=num(p.preco);L.push(cart[i]+"x "+p.nome+(isNaN(pr)?"":" — "+brl(pr*cart[i])))}
     L.push("");L.push("Subtotal: "+brl(sub));
-    if(tp==="entrega")L.push("Entrega: "+(isNaN(num(O.taxa))?"a combinar":brl(taxa())));
+    if(tp==="entrega")L.push("Entrega ("+bairro+"): "+taxaTxt());
     L.push("*Total: "+brl(sub+taxa())+"*");L.push("");
     L.push("Nome: "+nome);
     if(quando)L.push("Dia e horário: "+quando);
-    if(tp)L.push(tp==="entrega"?"Entrega em: "+end:"Vou retirar no local");
+    if(tp==="entrega"){L.push("*Endereço de entrega*");L.push("Bairro: "+bairro);L.push("Rua: "+rua);if(cidade)L.push("Cidade: "+cidade);if(apto){L.push("Condomínio: "+cond);L.push("Bloco: "+bloco);L.push("Apto: "+ap)}else L.push("Nº: "+num_);if(ref)L.push("Referência: "+ref)}
+    else if(tp)L.push("Vou retirar no local");
     if(pag)L.push("Pagamento: "+pag);
     if(obs)L.push("Obs.: "+obs);
     var w=String(C.whatsapp||"").replace(/\D/g,"");if(w.indexOf("55")!==0)w="55"+w;
@@ -678,6 +707,9 @@ ${grupos.map((g,i)=>`<section class="cat" id="cat-${i}">${grupos.length>1?`<h2>$
 
   const pags=(O.pag||[]);
   const ag=!!O.agendamento;
+  // Bairros cadastrados: lista de busca no pedido e aviso claro de onde se entrega
+  const bairrosLista=((O.bairros)||[]).filter(b=>b&&b.nome).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  const bairrosTxt=bairrosLista.length?`<p class="cobertura"><b>Entregamos nestes bairros:</b> ${bairrosLista.map(b=>esc(b.nome)).join(", ")}. Fora desses bairros não entregamos.</p>`:"";
   const sheet=temCat?`<button type="button" class="cartbar" id="cartbar" hidden>${svg("bag")}<span id="cbQtd"></span><b>${ag?"Continuar agendamento":"Ver pedido"}</b><span id="cbTot"></span></button>
 <dialog id="cart" aria-labelledby="ctitle"><div class="sheet">
 <div class="sh-top"><h2 id="ctitle">${ag?"Seu agendamento":"Seu pedido"}</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div>
@@ -686,7 +718,15 @@ ${grupos.map((g,i)=>`<section class="cat" id="cat-${i}">${grupos.length>1?`<h2>$
 <label>Seu nome<input id="fNome" autocomplete="name"></label>
 ${ag?`<label>Dia e horário que você prefere<input id="fQuando" placeholder="Ex.: sábado, às 10h"></label>`:""}
 ${O.entrega&&O.retirada?`<div class="tipos" role="radiogroup" aria-label="Como receber"><label><input type="radio" name="tipo" value="entrega" checked> Entrega</label><label><input type="radio" name="tipo" value="retirada"> Retirar no local</label></div>`:""}
-${O.entrega?`<label id="lEnd">Endereço de entrega<textarea id="fEnd" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro e ponto de referência"></textarea></label>`:""}
+${O.entrega?`<div id="lEnd" class="ende"><p class="ende-t">Endereço de entrega</p>${bairrosTxt}
+<label>Bairro<input id="fBairro" list="bairrosLista" autocomplete="off" placeholder="${bairrosLista.length?"Digite para buscar o bairro":"Seu bairro"}"></label>${bairrosLista.length?`<datalist id="bairrosLista">${bairrosLista.map(b=>`<option value="${esc(b.nome)}">`).join("")}</datalist>`:""}
+<label>Rua<input id="fRua" autocomplete="address-line1" placeholder="Nome da rua"></label>
+<label>Cidade<input id="fCidade" autocomplete="address-level2" placeholder="Cidade"></label>
+<div class="tipos" role="radiogroup" aria-label="Tipo de endereço"><label><input type="radio" name="local" value="casa" checked> Casa</label><label><input type="radio" name="local" value="apto"> Apartamento</label></div>
+<div id="eCasa"><label>Número da casa<input id="fNum" inputmode="numeric" placeholder="Ex.: 123"></label></div>
+<div id="eApto" hidden><label>Condomínio / prédio<input id="fCond" placeholder="Nome do condomínio"></label><div class="duas"><label>Bloco<input id="fBloco" placeholder="Ex.: B"></label><label>Apto<input id="fApto" inputmode="numeric" placeholder="Ex.: 302"></label></div></div>
+<label>Ponto de referência <small>(opcional)</small><input id="fRef" placeholder="Ex.: em frente à padaria"></label>
+</div>`:""}
 ${pags.length?`<label>Pagamento<select id="fPag">${pags.map(p=>`<option>${esc(p)}</option>`).join("")}</select></label>`:""}
 ${O.pix?`<p class="pix">Chave Pix: <b>${esc(O.pix)}</b></p>`:""}
 <label>Observação<textarea id="fObs" rows="2" placeholder="${esc(O.obsDica||"")}"></textarea></label>
@@ -731,6 +771,10 @@ h1{font:700 28px/1.15 var(--ft);margin:10px 0 4px;text-wrap:balance}
 .busca input{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--linha);border-radius:12px;font:inherit;background:var(--fundo);color:inherit}
 .busca-vazio{padding:20px 0;text-align:center;opacity:.7}
 .pmeta{display:block;font-size:13px;opacity:.7;margin:2px 0}
+.ende-t{font-weight:700;margin:4px 0 0}
+.cobertura{font-size:14px;background:var(--suave);border-radius:10px;padding:10px 12px;margin:0}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.campos [hidden]{display:none!important}
 .prod[hidden],.cat[hidden],.chips[hidden],.busca-vazio[hidden]{display:none!important}
 .chips a{white-space:nowrap;text-decoration:none;border:1px solid var(--linha);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}
 .cat{scroll-margin-top:64px;margin-top:20px}
@@ -865,6 +909,7 @@ function toForm(){
   for(const id in pedidoCampos) $(id).value=s.pedido[pedidoCampos[id]]??"";
   for(const id in pedidoChecks) $(id).checked=!!s.pedido[pedidoChecks[id]];
   for(const id in pagChecks) $(id).checked=(s.pedido.pag||[]).includes(pagChecks[id]);
+  renderBairros();
   showUrl();
   document.querySelectorAll(".model").forEach(b=>b.setAttribute("aria-pressed",b.dataset.model===s.modelo));
   renderExtras(); renderCats(); renderProdutos();
@@ -875,6 +920,29 @@ $("mostrarNota").onchange=()=>{s.mostrarNota=$("mostrarNota").checked;render()};
 for(const id in pedidoCampos) $(id).addEventListener("input",()=>{s.pedido[pedidoCampos[id]]=$(id).value;render()});
 for(const id in pedidoChecks) $(id).addEventListener("change",()=>{s.pedido[pedidoChecks[id]]=$(id).checked;render()});
 for(const id in pagChecks) $(id).addEventListener("change",()=>{s.pedido.pag=Object.keys(pagChecks).filter(k=>$(k).checked).map(k=>pagChecks[k]);render()});
+
+/* ---------- Bairros de entrega ---------- */
+function bairrosCfg(){return Array.isArray(s.pedido.bairros)?s.pedido.bairros:[]}
+function addBairro(nome,taxa){
+  nome=String(nome||"").trim();taxa=String(taxa==null?"":taxa).trim();
+  if(!nome) return "Digite o nome do bairro.";
+  if(bairrosCfg().some(b=>b.nome.toLowerCase()===nome.toLowerCase())) return `"${nome}" já está na lista.`;
+  if(taxa&&isNaN(num(taxa))) return "Taxa inválida. Use um valor como 5,00 ou 0.";
+  s.pedido.bairros=[...bairrosCfg(),{nome,taxa}].sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  return "";
+}
+function renderBairros(){
+  const L=bairrosCfg();
+  $("bairrosCad").innerHTML=L.length?L.map((b,i)=>`<div class="row" style="justify-content:space-between;align-items:center"><span><b>${esc(b.nome)}</b> — ${b.taxa===""||b.taxa==null?"a combinar":(num(b.taxa)?brl(num(b.taxa)):"grátis")}</span><button type="button" class="small" data-bdel="${i}">Remover</button></div>`).join(""):`<p class="note" style="margin:0">Nenhum bairro cadastrado. Enquanto a lista estiver vazia, o site usa a taxa única acima.</p>`;
+}
+$("btnBairro").onclick=()=>{const e=addBairro($("bNome").value,$("bTaxa").value);if(e){toast(e);return}$("bNome").value="";$("bTaxa").value="";renderBairros();render()};
+$("btnBColar").onclick=()=>{
+  let n=0,erro="";
+  $("bColar").value.split(/\r?\n/).forEach(l=>{if(!l.trim())return;const [a,b]=l.split(";");const e=addBairro(a,b==null?"":b);if(e)erro=erro||e;else n++});
+  $("bColar").value="";renderBairros();render();
+  toast(`${n} bairro${n===1?"":"s"} importado${n===1?"":"s"}.`+(erro?" "+erro:""));
+};
+$("bairrosCad").addEventListener("click",e=>{const i=e.target.dataset.bdel;if(i==null)return;s.pedido.bairros=bairrosCfg().filter((_,j)=>String(j)!==i);renderBairros();render()});
 document.querySelectorAll(".model").forEach(b=>b.onclick=()=>{s.modelo=b.dataset.model;toForm();render()});
 
 /* ---------- Links extras ---------- */
@@ -947,7 +1015,7 @@ function aplicarNicho(k,modo){
   if(modo==="substituir"){s.produtos=novos;s.categorias=Object.keys(N.cats)}
   else{s.produtos=[...s.produtos,...novos];s.categorias=[...new Set([...s.categorias,...Object.keys(N.cats)])]}
   s.catalogoTitulo=N.titulo;
-  s.pedido=Object.assign({},PEDIDO_PADRAO,N.pedido,{pix:s.pedido.pix||""});
+  s.pedido=Object.assign({},PEDIDO_PADRAO,N.pedido,{pix:s.pedido.pix||"",bairros:s.pedido.bairros||[]});
   if($("nichoVisual").checked) Object.assign(s,N.visual);
   $("nichoConfirm").innerHTML="";
   toForm();render();

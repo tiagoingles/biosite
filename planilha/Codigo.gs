@@ -11,6 +11,7 @@
 var API_PADRAO = 'https://biosite-dusky.vercel.app/api/sincronizar';
 var ABA = 'Produtos';
 var ABA_CONFIG = 'Configuração';
+var ABA_CATEGORIAS = 'Categorias';
 var LINHA_CAB = 2;               // linha dos títulos das colunas
 var C = { nome: 1, preco: 2, cat: 3, desc: 4, foto: 5, esgotado: 6, id: 7 };
 
@@ -85,6 +86,21 @@ function prepararAbas() {
   var n = Math.max(sh.getMaxRows() - LINHA_CAB, 1);
   sh.getRange(LINHA_CAB + 1, C.esgotado, n, 1).insertCheckboxes();
   sh.getRange(LINHA_CAB + 1, C.preco, n, 1).setNumberFormat('"R$" #,##0.00');
+  prepararCategorias();
+}
+
+// Lista suspensa na coluna Categoria, com as categorias da aba "Categorias".
+// Permite digitar outra categoria, se preciso.
+function prepararCategorias() {
+  var ss = SpreadsheetApp.getActive();
+  var lista = ss.getSheetByName(ABA_CATEGORIAS) || ss.insertSheet(ABA_CATEGORIAS);
+  var sh = ss.getSheetByName(ABA);
+  var n = Math.max(sh.getMaxRows() - LINHA_CAB, 1);
+  var regra = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(lista.getRange('A1:A200'), true)
+    .setAllowInvalid(true)
+    .build();
+  sh.getRange(LINHA_CAB + 1, C.cat, n, 1).setDataValidation(regra);
 }
 
 /* ---------- Gatilhos ---------- */

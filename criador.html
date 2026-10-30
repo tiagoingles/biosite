@@ -1,0 +1,1534 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Criador de Bio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: editor em coluna à esquerda, celular com a prévia ao vivo à direita; empilha no celular */
+:root{
+  --bg:#f2f3ef; --panel:#ffffff; --ink:#1c2420; --muted:#5d6862; --line:#dde1da;
+  --accent:#16734f; --accent-ink:#ffffff; --warn:#9a5b00; --warn-bg:#fff4e0; --ok-bg:#e6f4ec;
+  --ui:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141816; --panel:#1c211e; --ink:#e7ece8; --muted:#9aa59f; --line:#2e3631;
+  --accent:#3fbf8a; --accent-ink:#0d1a14; --warn:#f0b357; --warn-bg:#2d2414; --ok-bg:#16291f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141816; --panel:#1c211e; --ink:#e7ece8; --muted:#9aa59f; --line:#2e3631;
+  --accent:#3fbf8a; --accent-ink:#0d1a14; --warn:#f0b357; --warn-bg:#2d2414; --ok-bg:#16291f; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--ui);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;align-items:start}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}}
+header.top{max-width:1180px;margin:0 auto 18px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+header.top h1{margin:0;font-size:24px;letter-spacing:-.01em}
+header.top p{margin:0;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 20px;min-width:0}
+.stack{display:grid;gap:16px}
+.panel h2{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+label{display:grid;gap:4px;font-size:13px;font-weight:600;min-width:0}
+label small{font-weight:400;color:var(--muted)}
+input[type=text],input[type=tel],input[type=url],input[type=password],textarea,select{
+  width:100%;font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+textarea{resize:vertical;min-height:64px}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;font-size:14px;font-weight:600;border-radius:9px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.big{font-size:16px;padding:12px 20px}
+button.small{padding:6px 10px;font-size:13px}
+button:disabled{opacity:.55;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row > input{flex:1 1 220px}
+.note{font-size:13px;color:var(--muted);margin:6px 0 0}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:9px;padding:9px 12px;font-size:13px;margin-top:10px}
+.okbox{background:var(--ok-bg);border-radius:9px;padding:12px 14px;font-size:14px;display:grid;gap:8px}
+.okbox a{color:var(--accent);font-weight:700;word-break:break-all}
+.okbox small{color:var(--muted)}
+.results{display:grid;gap:8px;margin-top:10px}
+.result{text-align:left;display:grid;gap:2px;font-weight:400}
+.result b{font-weight:700}
+.result span{color:var(--muted);font-size:13px}
+.models{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.model{display:grid;gap:8px;justify-items:center;padding:12px 8px;font-weight:600}
+.model[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.mini{width:54px;height:84px;border-radius:8px;border:1px solid var(--line);overflow:hidden;display:grid;align-content:start;gap:4px;padding:5px;background:var(--bg)}
+.mini i{display:block;height:8px;border-radius:4px;background:var(--muted);opacity:.5}
+.mini.vitrine{grid-template-columns:1fr 1fr}
+.mini.vitrine::before{content:"";grid-column:1/-1;height:18px;margin:-5px -5px 2px;background:var(--accent);opacity:.7}
+.mini.vitrine i{height:18px}
+.mini.cartao{background:var(--accent)}.mini.cartao i{background:#fff;opacity:.9;height:12px}
+.mini.minimal i{border-radius:0;background:transparent;border-bottom:1px solid var(--muted);height:12px}
+.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+input[type=color]{width:100%;height:40px;border:1px solid var(--line);border-radius:9px;background:var(--bg);padding:3px}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.preset{width:34px;height:34px;padding:0;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line)}
+.extra{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px}
+@media (max-width:520px){.extra{grid-template-columns:1fr}}
+.check{display:flex;gap:8px;align-items:center;font-weight:500}
+.checks{display:flex;gap:16px;flex-wrap:wrap}
+.preview{position:sticky;top:max(16px, env(safe-area-inset-top,0px));display:grid;gap:12px;justify-items:center}
+.phone{width:min(360px,100%);aspect-ratio:9/18.5;max-width:100%;border-radius:38px;border:10px solid #111;background:#111;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.phone iframe{width:100%;height:100%;border:0;background:#fff;display:block}
+.toast{min-height:20px;font-size:13px;color:var(--accent);text-align:center}
+details summary{cursor:pointer;font-weight:600;font-size:13px}
+details ol{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--muted);display:grid;gap:4px}
+details code{background:var(--bg);padding:1px 5px;border-radius:4px}
+.sep{border:0;border-top:1px solid var(--line);margin:4px 0}
+.publist{display:grid}
+.pub{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
+.pub:last-child{border-bottom:0}
+.pub b{flex:1 1 180px;min-width:0;word-break:break-all;font-weight:600}
+.pub a{font-size:13px;color:var(--accent)}
+/* Produtos no editor */
+.plist{display:grid;gap:8px}
+.pe{border:1px solid var(--line);border-radius:11px;background:var(--bg)}
+.pe > summary{display:flex;gap:12px;align-items:center;padding:8px 12px;list-style:none;font-size:14px}
+.pe > summary::-webkit-details-marker{display:none}
+.pe[open] > summary{border-bottom:1px solid var(--line)}
+.th{width:44px;height:44px;border-radius:8px;background:var(--line);overflow:hidden;flex:none}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.pn{display:grid;min-width:0;flex:1}
+.pn b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pn small{color:var(--muted);font-size:12px}
+.pe-body{padding:12px;display:grid;gap:12px}
+.subtit{margin:0;font-size:13px;font-weight:700;color:var(--ink)}
+.cats{display:grid;gap:6px}
+.catrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto;gap:6px;align-items:center}
+.catrow small{color:var(--muted);font-size:12px;white-space:nowrap;padding:0 4px}
+.nicho{background:var(--ok-bg);border-radius:11px;padding:14px;display:grid;gap:10px}
+.nicho .row > select{flex:1 1 200px;width:auto}
+.passos{margin:0;padding-left:22px;display:grid;gap:14px;font-size:14px}
+.passos li::marker{font-weight:700;color:var(--accent)}
+.passos code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px;word-break:break-all}
+.resumo{border:1px solid var(--line);border-radius:11px;padding:14px;display:grid;gap:10px;font-size:14px}
+.resumo .nums{display:flex;gap:18px;flex-wrap:wrap}
+.resumo .nums div{display:grid}.resumo .nums b{font-size:20px;font-variant-numeric:tabular-nums}
+.resumo .nums small{color:var(--muted);font-size:12px}
+.resumo ul{margin:0;padding-left:18px;color:var(--warn);font-size:13px;max-height:140px;overflow:auto}
+.tabwrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px;max-height:260px}
+.tab{border-collapse:collapse;width:100%;font-size:13px}
+.tab th,.tab td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.tab th{position:sticky;top:0;background:var(--panel);font-size:12px;color:var(--muted)}
+.tab td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px}
+.tag.ok{background:var(--ok-bg);color:var(--accent)}.tag.no{background:var(--warn-bg);color:var(--warn)}.tag.na{background:var(--bg);color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Criador de Bio</h1>
+  <p>Busque a empresa, cadastre os produtos e publique o mini site.</p>
+</header>
+
+<div class="wrap">
+  <main class="stack">
+
+    <section class="panel">
+      <h2>1 · Buscar no Google</h2>
+      <div class="row">
+        <input type="text" id="q" placeholder="Ex.: Dom Manolo Barbearia Paulista PE">
+        <button class="primary" id="btnBuscar">Buscar</button>
+      </div>
+      <div class="results" id="results"></div>
+      <div id="googleMsg"></div>
+      <details style="margin-top:12px">
+        <summary>Chave da Google Places API</summary>
+        <div class="row" style="margin-top:8px">
+          <input type="password" id="apiKey" placeholder="Cole aqui sua chave (fica salva só neste navegador)">
+          <button id="btnSalvarChave">Salvar chave</button>
+        </div>
+        <ol>
+          <li>No Google Cloud, ative <b>Maps JavaScript API</b> e <b>Places API (New)</b>.</li>
+          <li>Na chave: Restrições do aplicativo = Nenhum; Restrições de API = só essas duas.</li>
+        </ol>
+      </details>
+    </section>
+
+    <section class="panel">
+      <h2>2 · Dados da empresa</h2>
+      <div class="stack">
+        <div class="grid2">
+          <label>Nome<input type="text" id="nome"></label>
+          <label>Cidade / bairro <small>(entra no título, ajuda no Google)</small><input type="text" id="cidade"></label>
+        </div>
+        <label>Frase de apresentação<textarea id="descricao" rows="2"></textarea></label>
+        <div class="grid2">
+          <label>WhatsApp <small>(recebe os pedidos)</small><input type="tel" id="whatsapp" placeholder="81 99999-9999"></label>
+          <label>Mensagem do botão de WhatsApp<input type="text" id="whatsMsg"></label>
+        </div>
+        <div class="grid2">
+          <label>Instagram <small>(só o @)</small><input type="text" id="instagram" placeholder="@dommanolo"></label>
+          <label>Link de avaliação no Google <small>(preenchido pela busca)</small><input type="url" id="review"></label>
+        </div>
+        <div class="grid2">
+          <label>Endereço<input type="text" id="endereco"></label>
+          <label>Link do Google Maps<input type="url" id="maps"></label>
+        </div>
+        <label>Horário de funcionamento <small>(uma linha por dia)</small><textarea id="horario" rows="3"></textarea></label>
+        <div class="grid2">
+          <label>Logo<input type="file" id="logoFile" accept="image/*"></label>
+          <label>Foto de capa<input type="file" id="capaFile" accept="image/*"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="mostrarNota" checked> Mostrar nota do Google</label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>3 · Produtos</h2>
+      <div class="stack">
+        <div class="nicho">
+          <p class="subtit">Modelo pronto por nicho</p>
+          <div class="row">
+            <select id="nicho" aria-label="Nicho"></select>
+            <button class="primary" id="btnNicho">Aplicar modelo</button>
+          </div>
+          <label class="check"><input type="checkbox" id="nichoVisual" checked> Usar também as cores, fontes e o layout sugeridos</label>
+          <div id="nichoConfirm"></div>
+          <p class="note" style="margin:0">Traz categorias, produtos com preços de exemplo e as opções de pedido do nicho. Ajuste os preços com o cliente.</p>
+        </div>
+        <div class="grid2">
+          <label>Nome da seção <small>(ex.: Cardápio, Serviços)</small><input type="text" id="catalogoTitulo"></label>
+        </div>
+        <div class="stack" style="gap:8px">
+          <p class="subtit">Categorias <small style="font-weight:400;color:var(--muted)">(a ordem daqui é a ordem no site)</small></p>
+          <div class="cats" id="cats"></div>
+          <div class="row">
+            <input type="text" id="novaCat" placeholder="Nova categoria, ex.: Combos">
+            <button id="btnAddCat">Adicionar categoria</button>
+          </div>
+        </div>
+        <p class="subtit">Produtos</p>
+        <div class="plist" id="produtos"></div>
+        <div class="row">
+          <button class="primary" id="btnAddProd">+ Adicionar produto</button>
+        </div>
+        <details id="cargaBox">
+          <summary>Carga por planilha (com fotos)</summary>
+          <div class="stack" style="margin-top:12px">
+            <ol class="passos">
+              <li><div><b>Baixe a planilha modelo</b> e preencha uma linha por produto. Se o cliente já tem produtos, eles vêm na planilha para você editar.
+                <div class="row" style="margin-top:6px"><button class="small" id="btnModelo">Baixar planilha modelo (.xlsx)</button></div>
+                <p class="note">Na coluna <b>foto</b>, coloque o caminho da foto (ex.: <code>C:\Fotos\Dom Manolo\corte-degrade.jpg</code>), só o nome do arquivo (<code>corte-degrade.jpg</code>) ou um link https.</p></div></li>
+              <li><label>Escolha a planilha preenchida <small>(.xlsx, .xls ou .csv)</small><input type="file" id="cargaPlan" accept=".xlsx,.xls,.csv,.txt"></label></li>
+              <li><div class="stack" style="gap:6px"><label>Escolha a pasta onde estão as fotos<input type="file" id="cargaPasta" webkitdirectory directory multiple></label>
+                <label>ou selecione as fotos soltas<input type="file" id="cargaArquivos" accept="image/*" multiple></label></div></li>
+            </ol>
+            <div id="cargaResumo"></div>
+            <details>
+              <summary>Ou cole as linhas aqui</summary>
+              <div class="stack" style="margin-top:10px">
+                <label>Copie as células do Excel e cole, ou digite: <small>nome ; preço ; categoria ; descrição ; foto</small>
+                  <textarea id="colar" rows="5" placeholder="Corte degradê ; 35,00 ; Cortes ; Inclui lavagem ; corte-degrade.jpg&#10;Barba ; 25,00 ; Barba&#10;Pão francês - 0,80"></textarea></label>
+                <div class="row"><button id="btnColar">Conferir estas linhas</button></div>
+              </div>
+            </details>
+            <p class="note" style="margin:0">O navegador não abre fotos do computador só pelo endereço, por segurança. Por isso você escolhe a pasta, e o criador encontra cada foto pelo nome do arquivo. Fotos HEIC do iPhone precisam ser convertidas para JPG antes.</p>
+          </div>
+        </details>
+        <p class="note">Sem produtos, o site mostra só os botões grandes, como uma bio comum.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>4 · Pedidos pelo WhatsApp</h2>
+      <div class="stack">
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="pEntrega"> Faz entrega</label>
+          <label class="check"><input type="checkbox" id="pRetirada"> Retirada no local</label>
+          <label class="check"><input type="checkbox" id="pAgenda"> Pedir dia e horário (agendamento)</label>
+        </div>
+        <div class="grid2">
+          <label>Taxa de entrega <small>(deixe vazio se varia)</small><input type="text" inputmode="decimal" id="pTaxa" placeholder="5,00"></label>
+          <label>Pedido mínimo <small>(opcional)</small><input type="text" inputmode="decimal" id="pMin" placeholder="20,00"></label>
+        </div>
+        <div>
+          <p class="note" style="margin:0 0 6px;font-weight:600;color:var(--ink)">Formas de pagamento</p>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="pagPix"> Pix</label>
+            <label class="check"><input type="checkbox" id="pagCartao"> Cartão</label>
+            <label class="check"><input type="checkbox" id="pagDinheiro"> Dinheiro</label>
+          </div>
+        </div>
+        <div class="grid2">
+          <label>Chave Pix <small>(aparece no carrinho)</small><input type="text" id="pPix"></label>
+          <label>Texto do botão final<input type="text" id="pBotao"></label>
+        </div>
+        <label>Exemplo no campo de observação <small>(ajuda o cliente a saber o que escrever)</small><input type="text" id="pObs"></label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>5 · Links extras</h2>
+      <div class="stack" id="extras"></div>
+      <div class="row" style="margin-top:12px"><button id="btnAddExtra">+ Adicionar link</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>6 · Visual</h2>
+      <div class="stack">
+        <div class="models" role="group" aria-label="Modelo">
+          <button class="model" data-model="vitrine" aria-pressed="true"><span class="mini vitrine"><i></i><i></i><i></i><i></i></span>Vitrine</button>
+          <button class="model" data-model="cartao" aria-pressed="false"><span class="mini cartao"><i></i><i></i><i></i></span>Cartão</button>
+          <button class="model" data-model="minimal" aria-pressed="false"><span class="mini minimal"><i></i><i></i><i></i></span>Minimal</button>
+        </div>
+        <div>
+          <div class="colors">
+            <label>Cor principal<input type="color" id="cor"></label>
+            <label>Fundo<input type="color" id="fundo"></label>
+            <label>Texto<input type="color" id="texto"></label>
+          </div>
+          <div class="presets" id="presets"></div>
+        </div>
+        <div class="grid2">
+          <label>Fonte dos títulos<select id="fonteTitulo"></select></label>
+          <label>Fonte do texto<select id="fonteTexto"></select></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>7 · Publicar</h2>
+      <div class="stack">
+        <label>Endereço do site <small>(fica: <span id="urlShow"></span>)</small><input type="text" id="slug"></label>
+        <div class="row">
+          <button class="primary big" id="btnPublicar">Publicar na Vercel</button>
+        </div>
+        <div id="pubConfirm"></div>
+        <div id="pubResult"></div>
+
+        <div class="nicho">
+          <p class="subtit">Painel do dono (mudar preços pelo celular)</p>
+          <p class="note" style="margin:0">O dono abre um link, digita o código de acesso e muda preços e "esgotado" sozinho. O site atualiza em cerca de 1 minuto.</p>
+          <div class="row"><button id="btnCodigo">Gerar código de acesso</button></div>
+          <div id="codigoBox"></div>
+        </div>
+
+        <details id="ghDetails">
+          <summary>Configurar GitHub e Vercel (uma vez só)</summary>
+          <div class="stack" style="margin-top:12px">
+            <div class="grid2">
+              <label>Usuário do GitHub<input type="text" id="ghOwner" placeholder="tiagoingles"></label>
+              <label>Repositório<input type="text" id="ghRepo" placeholder="biosite"></label>
+            </div>
+            <label>Token do GitHub <small>(fica salvo só neste navegador)</small><input type="password" id="ghToken" placeholder="github_pat_..."></label>
+            <label>Endereço do site <small>(o da Vercel ou o seu domínio)</small><input type="url" id="ghBase" placeholder="https://biosite-dusky.vercel.app"></label>
+            <div class="row"><button id="btnGhSalvar">Salvar e testar conexão</button></div>
+            <div id="ghMsg"></div>
+            <ol>
+              <li>Repositório <code>tiagoingles/biosite</code> e projeto <code>biosite</code> na Vercel já estão criados e ligados.</li>
+              <li>Crie um token em GitHub → Settings → Developer settings → <b>Fine-grained tokens</b>: acesso só ao repositório <code>biosite</code>, permissão <b>Contents: Read and write</b>.</li>
+              <li>Cole o token acima e clique em Salvar e testar.</li>
+              <li>Quando ligar um domínio próprio, troque o "Endereço do site".</li>
+            </ol>
+          </div>
+        </details>
+
+        <hr class="sep">
+        <div class="row">
+          <button id="btnExport">Baixar .html</button>
+          <button id="btnSaveJson">Salvar cliente (.json)</button>
+          <input type="file" id="openJson" accept="application/json" hidden>
+          <button id="btnOpenJson" type="button">Abrir .json</button>
+          <button id="btnNovo">Novo cliente</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>8 · Sites publicados</h2>
+      <div class="row" style="justify-content:space-between">
+        <p class="note" style="margin:0">Clique em Editar para carregar, mudar e publicar de novo.</p>
+        <button id="btnLista">Atualizar lista</button>
+      </div>
+      <div class="publist" id="publist"><p class="note">Configure o GitHub na seção 7 para ver a lista.</p></div>
+    </section>
+  </main>
+
+  <aside class="preview">
+    <div class="phone"><iframe id="frame" title="Prévia do site"></iframe></div>
+    <div class="toast" id="toast" role="status"></div>
+  </aside>
+</div>
+
+<script>
+const FONTS = {
+  "Poppins":"Poppins:wght@400;600;700",
+  "Montserrat":"Montserrat:wght@400;600;800",
+  "Playfair Display":"Playfair+Display:wght@500;700",
+  "Lora":"Lora:wght@400;600",
+  "Nunito":"Nunito:wght@400;600;800",
+  "DM Sans":"DM+Sans:wght@400;600;700",
+  "Bebas Neue":"Bebas+Neue",
+  "Pacifico":"Pacifico",
+  "Oswald":"Oswald:wght@400;600"
+};
+const PRESETS = [
+  {cor:"#c2410c",fundo:"#fff8f1",texto:"#2a1a10"},
+  {cor:"#b91c1c",fundo:"#ffffff",texto:"#1f1f1f"},
+  {cor:"#0f766e",fundo:"#f0fdfa",texto:"#123331"},
+  {cor:"#9d174d",fundo:"#fff1f6",texto:"#3b0f22"},
+  {cor:"#1e3a8a",fundo:"#f5f7ff",texto:"#111a33"},
+  {cor:"#facc15",fundo:"#111111",texto:"#f5f5f5"},
+  {cor:"#4d7c0f",fundo:"#f7fbef",texto:"#1d2a0c"}
+];
+const PEDIDO_PADRAO = {entrega:true, retirada:true, agendamento:false, taxa:"", minimo:"", pag:["Pix","Cartão","Dinheiro"], pix:"", botao:"Enviar pedido pelo WhatsApp", obsDica:"Ex.: sem cebola, troco para 50"};
+
+/* ---------- Modelos prontos por nicho (preços de exemplo) ---------- */
+const P_=(nome,preco,desc="")=>({nome,preco,desc});
+const NICHOS = {
+  barbearia:{
+    nome:"Barbearia", titulo:"Serviços",
+    visual:{modelo:"minimal",cor:"#b08d57",fundo:"#121212",texto:"#f2efe9",fonteTitulo:"Oswald",fonteTexto:"DM Sans"},
+    pedido:{entrega:false,retirada:false,agendamento:true,taxa:"",minimo:"",pag:["Pix","Cartão","Dinheiro"],botao:"Agendar pelo WhatsApp",obsDica:"Ex.: prefiro com o barbeiro João"},
+    cats:{
+      "Cortes":[P_("Corte social","35,00","Máquina e tesoura, acabamento na navalha."),P_("Corte degradê","40,00","Degradê com navalhado."),P_("Corte na tesoura","45,00"),P_("Corte infantil","30,00","Até 10 anos.")],
+      "Barba":[P_("Barba tradicional","25,00"),P_("Barba com toalha quente","30,00","Toalha quente, óleo e navalha."),P_("Pezinho / acabamento","10,00")],
+      "Combos":[P_("Corte + barba","60,00"),P_("Corte + barba + sobrancelha","70,00")],
+      "Química e extras":[P_("Sobrancelha","10,00"),P_("Pigmentação","25,00"),P_("Hidratação capilar","30,00"),P_("Luzes ou platinado","120,00","A partir de. Valor final na avaliação.")],
+      "Produtos":[P_("Pomada modeladora","35,00"),P_("Óleo para barba","30,00")]
+    }
+  },
+  embalagens:{
+    nome:"Embalagens", titulo:"Produtos",
+    visual:{modelo:"cartao",cor:"#1d4ed8",fundo:"#f5f8ff",texto:"#0f1b33",fonteTitulo:"Montserrat",fonteTexto:"DM Sans"},
+    pedido:{entrega:true,retirada:true,agendamento:false,taxa:"",minimo:"30,00",pag:["Pix","Cartão","Dinheiro"],botao:"Enviar pedido pelo WhatsApp",obsDica:"Ex.: preciso para sábado de manhã"},
+    cats:{
+      "Descartáveis":[P_("Copo descartável 200 ml (100 un.)","6,50"),P_("Prato descartável raso (10 un.)","4,00"),P_("Talher descartável (50 un.)","7,00"),P_("Guardanapo de papel (50 un.)","3,50")],
+      "Delivery e marmitex":[P_("Marmitex de alumínio nº 8 (100 un.)","55,00"),P_("Pote plástico 500 ml com tampa (25 un.)","22,00"),P_("Embalagem de isopor para hambúrguer (100 un.)","30,00"),P_("Sacola kraft para delivery (50 un.)","35,00")],
+      "Festa e confeitaria":[P_("Forminha para doces nº 4 (100 un.)","4,50"),P_("Caixa para bolo 25x25 (5 un.)","18,00"),P_("Saco de celofane 15x20 (100 un.)","9,00"),P_("Fita de cetim (rolo 10 m)","5,00")],
+      "Limpeza":[P_("Saco de lixo 100 L (10 un.)","9,50"),P_("Papel toalha interfolha (fardo)","22,00"),P_("Luva descartável (caixa com 100)","28,00")]
+    }
+  },
+  farmacia:{
+    nome:"Farmácia", titulo:"Produtos",
+    visual:{modelo:"cartao",cor:"#0f766e",fundo:"#f0fdfa",texto:"#123331",fonteTitulo:"Nunito",fonteTexto:"Nunito"},
+    pedido:{entrega:true,retirada:true,agendamento:false,taxa:"3,00",minimo:"",pag:["Pix","Cartão","Dinheiro"],botao:"Enviar pedido pelo WhatsApp",obsDica:"Ex.: troco para 50"},
+    cats:{
+      "Medicamentos sem receita":[P_("Dipirona 500 mg (10 comprimidos)","6,90","Isento de prescrição. Leia a bula."),P_("Paracetamol 750 mg (20 comprimidos)","9,90","Isento de prescrição. Leia a bula."),P_("Antiácido efervescente (2 envelopes)","4,50","Isento de prescrição. Leia a bula."),P_("Soro fisiológico 0,9% 500 ml","8,50")],
+      "Higiene":[P_("Creme dental 90 g","5,99"),P_("Escova dental","7,90"),P_("Desodorante aerossol","14,90"),P_("Sabonete líquido 250 ml","12,90")],
+      "Infantil":[P_("Fralda infantil tamanho M (pacote)","49,90"),P_("Lenço umedecido (50 un.)","9,90"),P_("Pomada para assaduras 45 g","19,90")],
+      "Beleza e cuidados":[P_("Protetor solar FPS 50 (200 ml)","49,90"),P_("Hidratante corporal 400 ml","24,90"),P_("Shampoo 350 ml","16,90")],
+      "Primeiros socorros":[P_("Curativo adesivo (caixa com 40)","9,90"),P_("Álcool 70% 1 L","9,90"),P_("Gaze estéril (10 un.)","4,50")]
+    }
+  },
+  roupas:{
+    nome:"Loja de roupas", titulo:"Coleção",
+    visual:{modelo:"vitrine",cor:"#9d174d",fundo:"#fff7f9",texto:"#2b0d1a",fonteTitulo:"Playfair Display",fonteTexto:"DM Sans"},
+    pedido:{entrega:true,retirada:true,agendamento:false,taxa:"",minimo:"",pag:["Pix","Cartão","Dinheiro"],botao:"Enviar pedido pelo WhatsApp",obsDica:"Ex.: tamanho M, cor preta"},
+    cats:{
+      "Feminino":[P_("Vestido midi","129,90","Tamanhos P ao GG."),P_("Blusa cropped","49,90","Tamanhos P ao G."),P_("Calça wide leg","139,90","Tamanhos 36 ao 44."),P_("Saia jeans","89,90","Tamanhos 36 ao 44.")],
+      "Masculino":[P_("Camiseta básica 100% algodão","39,90","Tamanhos P ao GG."),P_("Camisa polo","69,90","Tamanhos P ao GG."),P_("Bermuda de sarja","79,90","Tamanhos 38 ao 46."),P_("Calça jeans slim","129,90","Tamanhos 38 ao 46.")],
+      "Infantil":[P_("Conjunto infantil","59,90","Tamanhos 2 ao 10."),P_("Vestido infantil","49,90","Tamanhos 2 ao 10.")],
+      "Acessórios":[P_("Boné","39,90"),P_("Bolsa transversal","89,90"),P_("Cinto de couro","49,90")]
+    }
+  },
+  hamburgueria:{
+    nome:"Hamburgueria", titulo:"Cardápio",
+    visual:{modelo:"vitrine",cor:"#dc2626",fundo:"#fff8ec",texto:"#1f130a",fonteTitulo:"Bebas Neue",fonteTexto:"Poppins"},
+    pedido:{entrega:true,retirada:true,agendamento:false,taxa:"5,00",minimo:"20,00",pag:["Pix","Cartão","Dinheiro"],botao:"Enviar pedido pelo WhatsApp",obsDica:"Ex.: sem cebola, troco para 50"},
+    cats:{
+      "Hambúrgueres":[P_("Clássico","24,90","Pão brioche, blend 150 g, queijo, alface, tomate e molho da casa."),P_("Cheddar bacon","29,90","Blend 150 g, cheddar cremoso e bacon crocante."),P_("Duplo smash","32,90","Dois smash de 90 g, queijo prato duplo e cebola caramelizada."),P_("Frango crispy","26,90","Filé de frango empanado, alface e maionese temperada."),P_("Vegetariano","27,90","Hambúrguer de grão-de-bico, queijo e salada.")],
+      "Combos":[P_("Combo clássico","36,90","Clássico + batata frita P + refrigerante lata."),P_("Combo casal","74,90","2 hambúrgueres + batata grande + 2 refrigerantes lata.")],
+      "Acompanhamentos":[P_("Batata frita P","12,90"),P_("Batata com cheddar e bacon","22,90"),P_("Onion rings","18,90")],
+      "Bebidas":[P_("Refrigerante lata","6,00"),P_("Refrigerante 1 L","10,00"),P_("Suco natural 400 ml","9,00"),P_("Água mineral","4,00")],
+      "Sobremesas":[P_("Milkshake 400 ml","16,90","Chocolate, morango ou baunilha. Informe o sabor na observação."),P_("Brownie","12,90")]
+    }
+  },
+  graos:{
+    nome:"Loja de grãos", titulo:"Produtos",
+    visual:{modelo:"minimal",cor:"#4d7c0f",fundo:"#fbf8ef",texto:"#2a2414",fonteTitulo:"Lora",fonteTexto:"Nunito"},
+    pedido:{entrega:true,retirada:true,agendamento:false,taxa:"5,00",minimo:"",pag:["Pix","Cartão","Dinheiro"],botao:"Enviar pedido pelo WhatsApp",obsDica:"Ex.: entregar depois das 14h"},
+    cats:{
+      "Grãos":[P_("Feijão carioca 1 kg","8,90"),P_("Feijão preto 1 kg","9,50"),P_("Feijão macassar 1 kg","10,90"),P_("Arroz parboilizado 1 kg","6,50"),P_("Grão-de-bico 500 g","9,90"),P_("Lentilha 500 g","8,90")],
+      "Farinhas e cereais":[P_("Farinha de mandioca 1 kg","7,90"),P_("Flocão de milho 500 g","3,50"),P_("Aveia em flocos 500 g","9,90"),P_("Granola 500 g","16,90")],
+      "Castanhas e sementes":[P_("Castanha de caju 250 g","24,90"),P_("Amendoim torrado 500 g","12,90"),P_("Chia 250 g","9,90"),P_("Linhaça dourada 250 g","7,90")],
+      "Temperos":[P_("Colorau 100 g","3,50"),P_("Cominho moído 100 g","4,90"),P_("Pimenta-do-reino moída 100 g","7,90")]
+    }
+  }
+};
+function nichoDoTipo(t){
+  t=(t||"").toLowerCase();
+  if(/barbe/.test(t)) return "barbearia";
+  if(/embalag|descart/.test(t)) return "embalagens";
+  if(/farm|drogar/.test(t)) return "farmacia";
+  if(/roupa|vestu|moda|boutique|confec/.test(t)) return "roupas";
+  if(/hamb|burger|lanch/.test(t)) return "hamburgueria";
+  if(/grão|grao|cereal|empório|emporio|granel|mercearia/.test(t)) return "graos";
+  return "";
+}
+const DEFAULT = {
+  modelo:"vitrine", nome:"Padaria Pão Dourado (exemplo)", cidade:"Paulista - PE",
+  descricao:"Pão quentinho a cada 2 horas, bolos caseiros e café da manhã completo.",
+  whatsapp:"81999999999", whatsMsg:"Olá! Vim pelo site.",
+  instagram:"@paodourado.exemplo", review:"https://search.google.com/local/writereview?placeid=exemplo", endereco:"Av. Exemplo, 123 - Janga, Paulista - PE", maps:"",
+  horario:"Seg a Sáb: 5h às 20h\nDom: 6h às 12h", logo:"", capa:"", nota:4.8, totalAval:213, mostrarNota:true,
+  extras:[],
+  catalogoTitulo:"Cardápio",
+  categorias:["Pães","Bolos","Bebidas"],
+  produtos:[
+    {id:"ex1",nome:"Pão francês (10 un.)",preco:"8,00",cat:"Pães",desc:"Saindo do forno a cada 2 horas.",foto:"",esgotado:false},
+    {id:"ex2",nome:"Pão de queijo (6 un.)",preco:"9,00",cat:"Pães",desc:"",foto:"",esgotado:false},
+    {id:"ex3",nome:"Bolo de rolo (fatia)",preco:"7,50",cat:"Bolos",desc:"Goiabada, receita da casa.",foto:"",esgotado:false},
+    {id:"ex4",nome:"Bolo de macaxeira",preco:"28,00",cat:"Bolos",desc:"Inteiro, serve 10 pessoas.",foto:"",esgotado:true},
+    {id:"ex5",nome:"Café com leite",preco:"5,00",cat:"Bebidas",desc:"",foto:"",esgotado:false}
+  ],
+  pedido:{...PEDIDO_PADRAO, taxa:"5,00"},
+  cor:"#c2410c", fundo:"#fff8f1", texto:"#2a1a10", fonteTitulo:"Playfair Display", fonteTexto:"Nunito", slug:"pao-dourado"
+};
+function normalizar(d){
+  const x=Object.assign(structuredClone(DEFAULT),d||{});
+  x.pedido=Object.assign({},PEDIDO_PADRAO,d?(d.pedido||{}):DEFAULT.pedido);
+  if(!Array.isArray(x.produtos)) x.produtos=[];
+  if(!Array.isArray(x.extras)) x.extras=[];
+  x.produtos.forEach(p=>{if(!p.id)p.id=uid();p.cat=(p.cat||"").trim()});
+  // Categorias: usa a lista salva e acrescenta as que só existem nos produtos
+  const base=(d&&Array.isArray(d.categorias))?d.categorias:(d?[]:DEFAULT.categorias);
+  x.categorias=[...new Set([...base.map(c=>String(c).trim()).filter(Boolean),...x.produtos.map(p=>p.cat).filter(Boolean)])];
+  return x;
+}
+function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+let s = normalizar(load("bio_rascunho"));
+
+function load(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+const $ = id => document.getElementById(id);
+const esc = t => String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl = u => /^(https?:|data:image\/)/i.test(u||"") ? u : "";
+const safeImg = u => /^(https?:|data:image\/|\/img\/)/i.test(u||"") ? u : "";
+function toast(m){$("toast").textContent=m;clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").textContent="",4500)}
+function slugify(t){return String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)||"cliente"}
+function num(v){let t=String(v==null?"":v).replace(/[^\d,.]/g,"");if(!t)return NaN;if(t.indexOf(",")>-1)t=t.replace(/\./g,"").replace(",",".");return parseFloat(t)}
+function brl(n){return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function precoTxt(v){const n=num(v);return isNaN(n)?"sem preço":brl(n)}
+function sobre(hex){const h=(hex||"#000").replace("#","");const r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);const L=(0.299*r+0.587*g+0.114*b)/255;return L>0.62?"#161616":"#ffffff"}
+/* Resolve caminhos /img/... publicados para mostrar na prévia */
+function siteBase(){const g=ghCfg();return (g.base||"").replace(/\/+$/,"")}
+function R(u){if(!u)return "";if(u.startsWith("/img/"))return siteBase()?siteBase()+u:"";return u}
+
+/* ---------- Ícones ---------- */
+const ICON = {
+  star:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/>',
+  whats:'<path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/>',
+  insta:'<path d="M7.5 3h9A4.5 4.5 0 0 1 21 7.5v9a4.5 4.5 0 0 1-4.5 4.5h-9A4.5 4.5 0 0 1 3 16.5v-9A4.5 4.5 0 0 1 7.5 3zm0 1.8A2.7 2.7 0 0 0 4.8 7.5v9a2.7 2.7 0 0 0 2.7 2.7h9a2.7 2.7 0 0 0 2.7-2.7v-9a2.7 2.7 0 0 0-2.7-2.7zM12 7.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zm0 1.8a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2zm4.7-2.3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>',
+  pin:'<path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 7 12 7 12s7-6.9 7-12a7 7 0 0 0-7-7zm0 4.3a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z"/>',
+  link:'<path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.4-3.4a1 1 0 1 1 1.4 1.4L12 13.4a1 1 0 0 1-1.4 0zM8.2 18.6a3.6 3.6 0 0 1-2.6-6.1l2.1-2.1a1 1 0 1 1 1.4 1.4L7 13.9a1.6 1.6 0 0 0 2.3 2.3l2.1-2.1a1 1 0 1 1 1.4 1.4l-2.1 2.1a3.6 3.6 0 0 1-2.5 1zm8.1-5.6a1 1 0 0 1-.7-1.7l2.1-2.1a1.6 1.6 0 0 0-2.3-2.3l-2.1 2.1a1 1 0 1 1-1.4-1.4L14 5.5a3.6 3.6 0 0 1 5.1 5.1L17 12.7a1 1 0 0 1-.7.3z"/>',
+  bag:'<path d="M7 7V6a5 5 0 0 1 10 0v1h2.2a1 1 0 0 1 1 .9l1.1 12a1.9 1.9 0 0 1-1.9 2.1H4.6a1.9 1.9 0 0 1-1.9-2.1l1.1-12a1 1 0 0 1 1-.9zm1.8 0h6.4V6a3.2 3.2 0 0 0-6.4 0z"/>'
+};
+const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${ICON[k]}</svg>`;
+
+/* ---------- Script que roda dentro do site publicado (carrinho + pedido) ---------- */
+function bioRuntime(){
+  var C=JSON.parse(document.getElementById("bio-config").textContent);
+  var P={};(C.produtos||[]).forEach(function(p){P[p.id]=p});
+  var O=C.pedido||{};
+  var K="carrinho-"+(C.slug||"site"),cart={};
+  try{cart=JSON.parse(localStorage.getItem(K))||{}}catch(e){}
+  for(var k in cart){if(!P[k]||P[k].esgotado)delete cart[k]}
+  var dlg=document.getElementById("cart");
+  function $(id){return document.getElementById(id)}
+  function num(v){var t=String(v==null?"":v).replace(/[^\d,.]/g,"");if(!t)return NaN;if(t.indexOf(",")>-1)t=t.replace(/\./g,"").replace(",",".");return parseFloat(t)}
+  function brl(n){return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+  function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function save(){try{localStorage.setItem(K,JSON.stringify(cart))}catch(e){}}
+  function qtd(){var q=0;for(var i in cart)q+=cart[i];return q}
+  function subtotal(){var t=0;for(var i in cart){var pr=num(P[i].preco);if(!isNaN(pr))t+=pr*cart[i]}return t}
+  function tipo(){var r=document.querySelector('input[name="tipo"]:checked');return r?r.value:(O.entrega?"entrega":(O.retirada?"retirada":""))}
+  function taxa(){var t=num(O.taxa);return tipo()==="entrega"&&!isNaN(t)?t:0}
+  function ctl(id){var q=cart[id]||0;if(!q)return '<button type="button" class="add" data-add="'+id+'" aria-label="Adicionar">+</button>';return '<span class="step"><button type="button" data-sub="'+id+'" aria-label="Tirar um">−</button><b>'+q+'</b><button type="button" data-add="'+id+'" aria-label="Mais um">+</button></span>'}
+  function renderSheet(){
+    var h="";for(var i in cart){var p=P[i],pr=num(p.preco);
+      h+='<div class="it"><div class="it-n"><b>'+esc(p.nome)+'</b><small>'+(isNaN(pr)?"Preço a combinar":brl(pr*cart[i]))+'</small></div>'+ctl(i)+'</div>'}
+    $("itens").innerHTML=h;
+    var sub=subtotal(),tx=taxa(),t="";
+    t+='<div><span>Subtotal</span><span>'+brl(sub)+'</span></div>';
+    if(tipo()==="entrega")t+='<div><span>Entrega</span><span>'+(isNaN(num(O.taxa))?"a combinar":(tx?brl(tx):"grátis"))+'</span></div>';
+    t+='<div class="final"><span>Total</span><span>'+brl(sub+tx)+'</span></div>';
+    $("totais").innerHTML=t;
+    var le=$("lEnd");if(le)le.hidden=tipo()!=="entrega";
+  }
+  function sync(){
+    var els=document.querySelectorAll(".prods .ctl[data-id]");
+    for(var j=0;j<els.length;j++){var id=els[j].getAttribute("data-id");if(!P[id])continue;
+      els[j].innerHTML=P[id].esgotado?'<em class="esg">Esgotado</em>':ctl(id);
+      var card=els[j].closest(".prod");if(card)card.classList.toggle("off",!!P[id].esgotado)}
+    var q=qtd();$("cartbar").hidden=!q;$("cbQtd").textContent=q+(q>1?" itens":" item");$("cbTot").textContent=brl(subtotal());
+    save();
+    if(dlg.open){if(!q)dlg.close();else renderSheet()}
+  }
+  document.addEventListener("click",function(e){
+    var a=e.target.closest("[data-add]"),r=e.target.closest("[data-sub]");
+    if(a){var id=a.getAttribute("data-add");cart[id]=(cart[id]||0)+1;sync()}
+    else if(r){var id2=r.getAttribute("data-sub");cart[id2]=(cart[id2]||0)-1;if(cart[id2]<=0)delete cart[id2];sync()}
+    else if(e.target.closest("[data-close]")||e.target===dlg){dlg.close()}
+  });
+  // Preços sempre conforme os dados (o dono pode ter alterado pelo painel)
+  var pe=document.querySelectorAll(".preco[data-pid]");
+  for(var z=0;z<pe.length;z++){var pp=P[pe[z].getAttribute("data-pid")];if(pp){var nn=num(pp.preco);pe[z].textContent=isNaN(nn)?"Consultar":brl(nn)}}
+  $("cartbar").addEventListener("click",function(){$("erro").textContent="";renderSheet();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")});
+  document.addEventListener("change",function(e){if(e.target.name==="tipo")renderSheet()});
+  $("enviar").addEventListener("click",function(){
+    var nome=$("fNome").value.trim(),tp=tipo(),end=$("fEnd")?$("fEnd").value.trim():"",pag=$("fPag")?$("fPag").value:"",obs=$("fObs").value.trim(),quando=$("fQuando")?$("fQuando").value.trim():"";
+    var sub=subtotal(),min=num(O.minimo),err="";
+    if(!nome)err="Informe seu nome.";
+    else if(O.agendamento&&!quando)err="Informe o dia e o horário que você prefere.";
+    else if(tp==="entrega"&&!end)err="Informe o endereço de entrega.";
+    else if(!isNaN(min)&&sub<min)err="O pedido mínimo é "+brl(min)+".";
+    $("erro").textContent=err;if(err)return;
+    var L=["*"+(O.agendamento?"Agendamento":"Pedido")+" pelo site - "+C.nome+"*",""];
+    for(var i in cart){var p=P[i],pr=num(p.preco);L.push(cart[i]+"x "+p.nome+(isNaN(pr)?"":" — "+brl(pr*cart[i])))}
+    L.push("");L.push("Subtotal: "+brl(sub));
+    if(tp==="entrega")L.push("Entrega: "+(isNaN(num(O.taxa))?"a combinar":brl(taxa())));
+    L.push("*Total: "+brl(sub+taxa())+"*");L.push("");
+    L.push("Nome: "+nome);
+    if(quando)L.push("Dia e horário: "+quando);
+    if(tp)L.push(tp==="entrega"?"Entrega em: "+end:"Vou retirar no local");
+    if(pag)L.push("Pagamento: "+pag);
+    if(obs)L.push("Obs.: "+obs);
+    var w=String(C.whatsapp||"").replace(/\D/g,"");if(w.indexOf("55")!==0)w="55"+w;
+    var a=document.createElement("a");a.href="https://wa.me/"+w+"?text="+encodeURIComponent(L.join("\n"));a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
+  });
+  sync();
+}
+
+/* ---------- Gera o HTML do site ---------- */
+function bigLinks(d){
+  const L=[];
+  if(d.review) L.push({k:"star",t:"Avalie a gente no Google",u:d.review,destaque:true});
+  const w=waLink(d); if(w) L.push({k:"whats",t:"Fale no WhatsApp",u:w});
+  const ig=igLink(d); if(ig) L.push({k:"insta",t:"Siga no Instagram",u:ig});
+  if(d.maps) L.push({k:"pin",t:"Como chegar",u:d.maps});
+  (d.extras||[]).forEach(e=>{if(e.titulo&&safeUrl(e.url))L.push({k:"link",t:e.titulo,u:e.url})});
+  return L.filter(l=>safeUrl(l.u));
+}
+function waLink(d){const w=(d.whatsapp||"").replace(/\D/g,"");if(!w)return "";const n=w.startsWith("55")?w:"55"+w;return `https://wa.me/${n}${d.whatsMsg?"?text="+encodeURIComponent(d.whatsMsg):""}`}
+function igLink(d){const ig=(d.instagram||"").replace(/^@/,"").replace(/https?:\/\/(www\.)?instagram\.com\//,"").replace(/\/.*/,"").trim();return ig?`https://instagram.com/${ig}`:""}
+function configJSON(d){
+  const c={};for(const k in d){if(!k.startsWith("_"))c[k]=d[k]}
+  const strip=u=>String(u||"").startsWith("data:")?"":u;
+  c.logo=strip(c.logo);c.capa=strip(c.capa);
+  c.produtos=(c.produtos||[]).map(p=>({...p,foto:strip(p.foto)}));
+  return JSON.stringify(c).replace(/</g,"\\u003c");
+}
+function bioHTML(d=s, img=R){
+  const fT=d.fonteTitulo, fB=d.fonteTexto;
+  const fam=[...new Set([fT,fB])].map(f=>"family="+FONTS[f]).join("&");
+  const titulo=d.nome+(d.cidade?" | "+d.cidade:"");
+  const desc=d.descricao||`${d.nome} em ${d.cidade}`;
+  const logo=safeImg(img(d.logo)), capa=safeImg(img(d.capa));
+  const iniciais=esc((d.nome||"?").split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join("").toUpperCase());
+  const prods=(d.produtos||[]).filter(p=>p.nome);
+  const temCat=prods.length>0;
+  const O=d.pedido||PEDIDO_PADRAO;
+
+  const notaTxt=(d.mostrarNota&&d.nota)?`${svg("star")}<b>${String(d.nota).replace(".",",")}</b>${d.totalAval?` · ${d.totalAval} avaliações`:""} no Google`:"";
+  const nota=notaTxt?(d.review?`<a class="nota" href="${esc(d.review)}" target="_blank" rel="noopener">${notaTxt}</a>`:`<p class="nota">${notaTxt}</p>`):"";
+
+  const acoesList=[];
+  const w=waLink(d); if(w) acoesList.push(["whats","WhatsApp",w]);
+  const ig=igLink(d); if(ig) acoesList.push(["insta","Instagram",ig]);
+  if(safeUrl(d.review)) acoesList.push(["star","Avaliar",d.review]);
+  if(safeUrl(d.maps)) acoesList.push(["pin","Como chegar",d.maps]);
+  const acoes=acoesList.length?`<nav class="acoes" aria-label="Contato">${acoesList.map(a=>`<a class="acao" href="${esc(a[2])}" target="_blank" rel="noopener"><span class="ic">${svg(a[0])}</span><small>${a[1]}</small></a>`).join("")}</nav>`:"";
+
+  // Catálogo agrupado na ordem das categorias; sem categoria vai para "Outros"
+  const ordem=(d.categorias||[]);
+  const grupos=ordem.map(c=>({nome:c,itens:prods.filter(p=>(p.cat||"").trim()===c)})).filter(g=>g.itens.length);
+  const soltos=prods.filter(p=>!ordem.includes((p.cat||"").trim()));
+  if(soltos.length) grupos.push({nome:grupos.length?"Outros":(d.catalogoTitulo||"Produtos"),itens:soltos});
+  const chips=grupos.length>1?`<nav class="chips" aria-label="Categorias">${grupos.map((g,i)=>`<a href="#cat-${i}">${esc(g.nome)}</a>`).join("")}</nav>`:"";
+  const card=p=>{const f=safeImg(img(p.foto));const pr=num(p.preco);return `<article class="prod${p.esgotado?" off":""}">
+${f?`<img class="pimg" src="${esc(f)}" alt="${esc(p.nome)}" loading="lazy">`:""}<div class="pinfo"><h3>${esc(p.nome)}</h3>${p.desc?`<p>${esc(p.desc)}</p>`:""}
+<div class="prow"><b class="preco" data-pid="${esc(p.id)}">${isNaN(pr)?"Consultar":brl(pr)}</b><span class="ctl" data-id="${esc(p.id)}">${p.esgotado?`<em class="esg">Esgotado</em>`:`<button type="button" class="add" data-add="${esc(p.id)}" aria-label="Adicionar ${esc(p.nome)}">+</button>`}</span></div></div></article>`};
+  const catalogo=temCat?`<section class="catalogo">${grupos.length>1?"":`<h2 class="sec">${esc(d.catalogoTitulo||"Produtos")}</h2>`}${chips}
+${grupos.map((g,i)=>`<section class="cat" id="cat-${i}">${grupos.length>1?`<h2>${esc(g.nome)}</h2>`:""}<div class="prods">${g.itens.map(card).join("")}</div></section>`).join("")}</section>`:"";
+
+  const extras=(d.extras||[]).filter(e=>e.titulo&&safeUrl(e.url));
+  const mais=temCat&&extras.length?`<section class="mais bloco"><h2>Links</h2>${extras.map(e=>`<a href="${esc(e.url)}" target="_blank" rel="noopener">${svg("link")}<span>${esc(e.titulo)}</span><em aria-hidden="true">→</em></a>`).join("")}</section>`:"";
+  const avaliar=temCat&&safeUrl(d.review)?`<a class="avaliar" href="${esc(d.review)}" target="_blank" rel="noopener">${svg("star")}<span>Gostou? Avalie a gente no Google<small>Leva menos de 1 minuto</small></span></a>`:"";
+  const links=!temCat?`<nav class="links">${bigLinks(d).map(l=>`<a class="btn${l.destaque?" destaque":""}" href="${esc(l.u)}" target="_blank" rel="noopener">${svg(l.k)}<span>${esc(l.t)}</span><em aria-hidden="true">→</em></a>`).join("")}</nav>`:"";
+  const horario=d.horario?`<details class="info"><summary>Horário de funcionamento</summary><p>${esc(d.horario).replace(/\n/g,"<br>")}</p></details>`:"";
+  const endereco=d.endereco?`<p class="end">${svg("pin")}<span>${esc(d.endereco)}</span></p>`:"";
+  const infoBloco=(horario||endereco)?`<section class="bloco infos">${horario}${endereco}</section>`:"";
+
+  const pags=(O.pag||[]);
+  const ag=!!O.agendamento;
+  const sheet=temCat?`<button type="button" class="cartbar" id="cartbar" hidden>${svg("bag")}<span id="cbQtd"></span><b>${ag?"Continuar agendamento":"Ver pedido"}</b><span id="cbTot"></span></button>
+<dialog id="cart" aria-labelledby="ctitle"><div class="sheet">
+<div class="sh-top"><h2 id="ctitle">${ag?"Seu agendamento":"Seu pedido"}</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div>
+<div id="itens"></div>
+<div class="campos">
+<label>Seu nome<input id="fNome" autocomplete="name"></label>
+${ag?`<label>Dia e horário que você prefere<input id="fQuando" placeholder="Ex.: sábado, às 10h"></label>`:""}
+${O.entrega&&O.retirada?`<div class="tipos" role="radiogroup" aria-label="Como receber"><label><input type="radio" name="tipo" value="entrega" checked> Entrega</label><label><input type="radio" name="tipo" value="retirada"> Retirar no local</label></div>`:""}
+${O.entrega?`<label id="lEnd">Endereço de entrega<textarea id="fEnd" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro e ponto de referência"></textarea></label>`:""}
+${pags.length?`<label>Pagamento<select id="fPag">${pags.map(p=>`<option>${esc(p)}</option>`).join("")}</select></label>`:""}
+${O.pix?`<p class="pix">Chave Pix: <b>${esc(O.pix)}</b></p>`:""}
+<label>Observação<textarea id="fObs" rows="2" placeholder="${esc(O.obsDica||"")}"></textarea></label>
+</div>
+<div class="tot" id="totais"></div>
+<p class="erro" id="erro" role="alert"></p>
+<button type="button" class="enviar" id="enviar">${svg("whats")}<span>${esc(O.botao||PEDIDO_PADRAO.botao)}</span></button>
+</div></dialog>`:"";
+
+  return `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${esc(titulo)}</title>
+<meta name="description" content="${esc(desc)}">
+<meta property="og:title" content="${esc(titulo)}">
+<meta property="og:description" content="${esc(desc)}">
+<meta name="theme-color" content="${esc(d.cor)}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fam}&display=swap">
+<style>
+:root{--cor:${d.cor};--sobre:${sobre(d.cor)};--fundo:${d.fundo};--texto:${d.texto};--ft:"${fT}",Georgia,serif;--fb:"${fB}",system-ui,sans-serif;
+--linha:color-mix(in srgb,var(--texto) 14%,transparent);--suave:color-mix(in srgb,var(--texto) 6%,var(--fundo))}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--fundo);color:var(--texto);font:16px/1.5 var(--fb);min-height:100vh}
+body.tem-cat{padding-bottom:96px}
+.pg{max-width:560px;margin:0 auto;padding:0 16px 40px}
+svg{width:20px;height:20px;flex:none}
+a{color:inherit}
+.capa{height:150px;margin:0 -16px;background:var(--cor) center/cover no-repeat}
+.topo{display:grid;justify-items:center;text-align:center;padding-top:28px}
+.logo{width:92px;height:92px;border-radius:50%;object-fit:cover;background:var(--cor);color:var(--sobre);display:grid;place-items:center;font:700 30px var(--ft);border:4px solid var(--fundo)}
+h1{font:700 28px/1.15 var(--ft);margin:10px 0 4px;text-wrap:balance}
+.sub{margin:0 0 8px;opacity:.8;max-width:42ch}
+.nota{display:inline-flex;align-items:center;gap:6px;margin:2px 0 0;font-size:13px;text-decoration:none;background:var(--suave);padding:4px 12px;border-radius:999px}
+.nota svg{color:#f5b301;width:16px;height:16px}
+.acoes{display:flex;justify-content:center;gap:20px;margin:18px 0 4px;flex-wrap:wrap}
+.acao{display:grid;justify-items:center;gap:5px;text-decoration:none;font-size:12px;font-weight:600}
+.acao .ic{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--suave);color:var(--cor);border:1px solid var(--linha)}
+.sec{font:700 22px var(--ft);margin:26px 0 12px}
+.chips{position:sticky;top:0;z-index:5;display:flex;gap:8px;overflow-x:auto;padding:12px 16px;margin:18px -16px 0;background:var(--fundo);scrollbar-width:none;border-bottom:1px solid var(--linha)}
+.chips::-webkit-scrollbar{display:none}
+.chips a{white-space:nowrap;text-decoration:none;border:1px solid var(--linha);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}
+.cat{scroll-margin-top:64px;margin-top:20px}
+.cat h2{font:700 20px var(--ft);margin:0 0 10px}
+.prods{display:grid;gap:10px}
+.prod{display:flex;gap:12px;background:var(--suave);border-radius:14px;padding:10px;min-width:0}
+.pimg{width:96px;height:96px;object-fit:cover;border-radius:10px;order:2;flex:none;background:var(--linha)}
+.pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pinfo h3{margin:0;font:700 16px/1.3 var(--fb)}
+.pinfo p{margin:0;font-size:13px;opacity:.72;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prow{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:8px}
+.preco{font-size:15px;font-variant-numeric:tabular-nums}
+.add{width:34px;height:34px;border-radius:50%;border:0;background:var(--cor);color:var(--sobre);font:600 22px/1 var(--fb);cursor:pointer;flex:none}
+.step{display:inline-flex;align-items:center;gap:6px;background:var(--cor);color:var(--sobre);border-radius:999px;padding:2px}
+.step b{min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
+.step button{width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:inherit;font:600 20px/1 var(--fb);cursor:pointer}
+.off .pimg,.off h3,.off .preco{opacity:.5}.esg{font-style:normal;font-size:12px;font-weight:700;opacity:.7}
+.bloco{margin-top:24px}
+.mais h2,.infos h2{font:700 18px var(--ft);margin:0 0 8px}
+.mais a{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--linha);text-decoration:none;font-weight:600}
+.mais a span{flex:1}.mais a em{font-style:normal;opacity:.5}
+.avaliar{display:flex;gap:14px;align-items:center;margin-top:26px;padding:16px 18px;border-radius:16px;background:var(--cor);color:var(--sobre);text-decoration:none;font-weight:700}
+.avaliar svg{width:28px;height:28px;color:#f5b301}
+.avaliar span{display:grid}.avaliar small{font-weight:500;opacity:.85}
+.info summary{cursor:pointer;font-weight:600}
+.end{display:flex;gap:8px;align-items:flex-start;font-size:14px;opacity:.85;margin:14px 0 0}
+.end svg{width:18px;height:18px;margin-top:2px}
+.infos{border-top:1px solid var(--linha);padding-top:16px}
+footer{margin-top:28px;font-size:12px;opacity:.5;text-align:center}
+/* Botões grandes (quando não há produtos) */
+.links{display:grid;gap:12px;margin-top:22px}
+.btn{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:600;padding:15px 18px;background:var(--cor);color:var(--sobre);border-radius:999px}
+.btn span{flex:1}.btn em{font-style:normal;opacity:.6}
+.btn.destaque{font-size:17px;padding:18px 20px;box-shadow:0 6px 18px color-mix(in srgb,var(--cor) 40%,transparent)}
+/* Carrinho */
+.cartbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(528px,calc(100% - 24px));display:flex;align-items:center;gap:10px;padding:14px 18px;border:0;border-radius:14px;background:var(--cor);color:var(--sobre);font:700 15px var(--fb);box-shadow:0 10px 30px rgba(0,0,0,.25);cursor:pointer;z-index:20}
+.cartbar #cbQtd{opacity:.85;font-weight:500}.cartbar b{flex:1;text-align:center}
+.cartbar[hidden]{display:none}
+dialog{border:0;padding:0;width:100%;max-width:560px;max-height:92vh;margin:auto auto 0;border-radius:20px 20px 0 0;background:var(--fundo);color:var(--texto)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.sheet{padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+.sh-top{display:flex;justify-content:space-between;align-items:center}
+.sh-top h2{margin:0;font:700 22px var(--ft)}
+.x{width:36px;height:36px;border-radius:50%;border:0;background:var(--suave);color:inherit;font-size:22px;cursor:pointer}
+.it{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--linha)}
+.it-n{display:grid;min-width:0}.it-n small{opacity:.7;font-variant-numeric:tabular-nums}
+.campos{display:grid;gap:10px}
+.campos label{display:grid;gap:4px;font-size:14px;font-weight:600}
+.campos input:not([type=radio]),.campos textarea,.campos select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--suave);color:var(--texto);width:100%}
+.campos [hidden]{display:none}
+.tipos{display:flex;gap:8px}
+.tipos label{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--linha);border-radius:10px;padding:10px 12px;cursor:pointer}
+.pix{margin:0;font-size:14px;background:var(--suave);padding:10px 12px;border-radius:10px;word-break:break-all}
+.tot{display:grid;gap:4px;font-variant-numeric:tabular-nums}
+.tot div{display:flex;justify-content:space-between}.tot .final{font-size:18px;font-weight:800;margin-top:4px}
+.erro{color:#c0392b;margin:0;font-size:14px;font-weight:600;min-height:0}
+.erro:empty{display:none}
+.enviar{display:flex;align-items:center;justify-content:center;gap:10px;background:#25d366;color:#08311a;border:0;border-radius:12px;padding:15px;font:800 16px var(--fb);cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--cor);outline-offset:2px}
+/* Modelo Vitrine: capa e produtos em grade */
+.t-vitrine .topo{margin-top:-46px;padding-top:0}
+.t-vitrine .prods{grid-template-columns:repeat(2,minmax(0,1fr))}
+.t-vitrine .prod{flex-direction:column;padding:0;overflow:hidden;background:var(--fundo);border:1px solid var(--linha);gap:0}
+.t-vitrine .pimg{order:0;width:100%;height:auto;aspect-ratio:1;border-radius:0}
+.t-vitrine .pinfo{padding:10px 10px 12px}
+.t-vitrine .prow{flex-wrap:wrap;row-gap:6px}
+.t-vitrine .step button{width:28px;height:28px}
+/* Modelo Cartão: fundo na cor da marca e blocos claros */
+.t-cartao{background:var(--cor)}
+.t-cartao .pg{padding-top:20px}
+.t-cartao .topo,.t-cartao .bloco,.t-cartao .catalogo{background:var(--fundo);border-radius:22px;padding:22px 16px}
+.t-cartao .acoes{margin-bottom:0}
+.t-cartao .catalogo{margin-top:16px;padding-top:6px}
+.t-cartao .bloco{margin-top:16px}
+.t-cartao .chips{margin:12px -16px 0;border-radius:0}
+.t-cartao .prod{background:var(--suave)}
+.t-cartao .avaliar{background:var(--fundo);color:var(--texto);border:2px solid var(--fundo)}
+.t-cartao footer{color:var(--sobre);opacity:.75}
+.t-cartao .infos{border-top:0}
+/* Modelo Minimal: lista com linhas finas */
+.t-minimal .topo{justify-items:start;text-align:left;padding-top:36px}
+.t-minimal .logo{width:68px;height:68px;border-radius:16px;border:0}
+.t-minimal h1{font-size:34px;margin-top:14px}
+.t-minimal .acoes{justify-content:flex-start}
+.t-minimal .prods{gap:0}
+.t-minimal .prod{background:transparent;border-radius:0;padding:14px 0;border-bottom:1px solid var(--linha)}
+.t-minimal .btn{background:transparent;color:var(--texto);border:1.5px solid var(--texto);border-radius:4px}
+.t-minimal .btn.destaque{background:var(--texto);color:var(--fundo);box-shadow:none}
+.t-minimal .avaliar{border-radius:6px}
+</style>
+<script type="application/json" id="bio-config">${configJSON(d)}<\/script>
+</head>
+<body class="t-${esc(d.modelo)}${temCat?" tem-cat":""}"><div class="pg">
+${d.modelo==="vitrine"?`<div class="capa"${capa?` style="background-image:url('${esc(capa)}')"`:""}></div>`:""}
+<header class="topo">
+${logo?`<img class="logo" src="${esc(logo)}" alt="Logo ${esc(d.nome)}">`:`<div class="logo" aria-hidden="true">${iniciais}</div>`}
+<h1>${esc(d.nome)}</h1>
+${d.descricao?`<p class="sub">${esc(d.descricao)}</p>`:""}
+${nota}
+${temCat?acoes:""}
+</header>
+${links}
+${catalogo}
+${avaliar}
+${mais}
+${infoBloco}
+<footer>${esc(d.nome)}${d.cidade?" · "+esc(d.cidade):""}</footer>
+</div>
+${sheet}
+${temCat?`<script>(${bioRuntime.toString()})()<\/script>`:""}
+</body></html>`;
+}
+function redirectHTML(url){
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${esc(url)}"><title>Avaliar no Google</title><script>location.replace(${JSON.stringify(url)})<\/script></head><body><p><a href="${esc(url)}">Abrir avaliação no Google</a></p></body></html>`;
+}
+
+/* ---------- Editor: campos simples ---------- */
+const campos=["nome","cidade","descricao","whatsapp","whatsMsg","instagram","review","endereco","maps","horario","cor","fundo","texto","fonteTitulo","fonteTexto","slug","catalogoTitulo"];
+const pedidoCampos={pTaxa:"taxa",pMin:"minimo",pPix:"pix",pBotao:"botao",pObs:"obsDica"};
+const pedidoChecks={pEntrega:"entrega",pRetirada:"retirada",pAgenda:"agendamento"};
+const pagChecks={pagPix:"Pix",pagCartao:"Cartão",pagDinheiro:"Dinheiro"};
+function fillFonts(){for(const id of ["fonteTitulo","fonteTexto"]) $(id).innerHTML=Object.keys(FONTS).map(f=>`<option>${f}</option>`).join("")}
+function fillPresets(){
+  $("presets").innerHTML=PRESETS.map((p,i)=>`<button class="preset" data-i="${i}" aria-label="Aplicar paleta ${i+1}" style="background:linear-gradient(135deg,${p.cor} 50%,${p.fundo} 50%)"></button>`).join("");
+  $("presets").onclick=e=>{const b=e.target.closest(".preset");if(!b)return;Object.assign(s,PRESETS[b.dataset.i]);toForm();render()};
+}
+function bioUrl(slug){const b=siteBase();return b?`${b}/${slug}`:`seudominio.com.br/${slug}`}
+function showUrl(){$("urlShow").textContent=bioUrl(s.slug||"cliente")}
+function toForm(){
+  campos.forEach(c=>{if($(c))$(c).value=s[c]??""});
+  $("mostrarNota").checked=!!s.mostrarNota;
+  for(const id in pedidoCampos) $(id).value=s.pedido[pedidoCampos[id]]??"";
+  for(const id in pedidoChecks) $(id).checked=!!s.pedido[pedidoChecks[id]];
+  for(const id in pagChecks) $(id).checked=(s.pedido.pag||[]).includes(pagChecks[id]);
+  showUrl();
+  document.querySelectorAll(".model").forEach(b=>b.setAttribute("aria-pressed",b.dataset.model===s.modelo));
+  renderExtras(); renderCats(); renderProdutos();
+}
+campos.forEach(c=>$(c)&&$(c).addEventListener("input",()=>{s[c]=$(c).value;if(c==="slug"){showUrl();clearPub()}render()}));
+$("slug").addEventListener("change",()=>{s.slug=slugify($("slug").value);$("slug").value=s.slug;showUrl();render()});
+$("mostrarNota").onchange=()=>{s.mostrarNota=$("mostrarNota").checked;render()};
+for(const id in pedidoCampos) $(id).addEventListener("input",()=>{s.pedido[pedidoCampos[id]]=$(id).value;render()});
+for(const id in pedidoChecks) $(id).addEventListener("change",()=>{s.pedido[pedidoChecks[id]]=$(id).checked;render()});
+for(const id in pagChecks) $(id).addEventListener("change",()=>{s.pedido.pag=Object.keys(pagChecks).filter(k=>$(k).checked).map(k=>pagChecks[k]);render()});
+document.querySelectorAll(".model").forEach(b=>b.onclick=()=>{s.modelo=b.dataset.model;toForm();render()});
+
+/* ---------- Links extras ---------- */
+function renderExtras(){
+  $("extras").innerHTML=(s.extras||[]).map((e,i)=>`<div class="extra">
+    <input type="text" id="ext-t-${i}" data-i="${i}" data-f="titulo" placeholder="Texto do botão" value="${esc(e.titulo)}">
+    <input type="url" id="ext-u-${i}" data-i="${i}" data-f="url" placeholder="https://..." value="${esc(e.url)}">
+    <button data-del="${i}" aria-label="Remover link">Remover</button></div>`).join("")||`<p class="note">iFood, agendamento online, catálogo em PDF, site... Com produtos, aparecem numa seção "Links" no fim da página.</p>`;
+}
+$("extras").addEventListener("input",e=>{const t=e.target;if(t.dataset.i==null)return;s.extras[t.dataset.i][t.dataset.f]=t.value;render()});
+$("extras").addEventListener("click",e=>{const d=e.target.dataset.del;if(d==null)return;s.extras.splice(d,1);renderExtras();render()});
+$("btnAddExtra").onclick=()=>{s.extras.push({titulo:"",url:""});renderExtras();$("ext-t-"+(s.extras.length-1)).focus()};
+
+/* ---------- Produtos ---------- */
+function prodSummary(p){
+  const f=R(p.foto);
+  return `<span class="th">${f?`<img src="${esc(f)}" alt="">`:""}</span><span class="pn"><b>${esc(p.nome||"Novo produto")}</b><small>${esc(p.cat||"Sem categoria")} · ${precoTxt(p.preco)}${p.esgotado?" · esgotado":""}</small></span>`;
+}
+/* ---------- Categorias ---------- */
+function renderCats(){
+  const C=s.categorias;
+  $("cats").innerHTML=C.length?C.map((c,i)=>{const n=s.produtos.filter(p=>p.cat===c).length;return `<div class="catrow">
+    <input type="text" id="cat-${i}" data-ci="${i}" value="${esc(c)}" aria-label="Nome da categoria">
+    <small>${n} produto${n===1?"":"s"}</small>
+    <button type="button" class="small" data-cact="up" data-ci="${i}" aria-label="Subir categoria"${i===0?" disabled":""}>↑</button>
+    <button type="button" class="small" data-cact="down" data-ci="${i}" aria-label="Descer categoria"${i===C.length-1?" disabled":""}>↓</button>
+    <button type="button" class="small" data-cact="del" data-ci="${i}">Excluir</button></div>`}).join(""):`<p class="note" style="margin:0">Nenhuma categoria. Sem categorias, os produtos aparecem numa lista só.</p>`;
+}
+$("cats").addEventListener("input",e=>{
+  const i=e.target.dataset.ci;if(i==null)return;
+  const velho=s.categorias[i],novo=e.target.value.trim();
+  if(!novo||novo===velho)return;
+  if(s.categorias.some((c,j)=>c===novo&&j!=i))return;
+  s.produtos.forEach(p=>{if(p.cat===velho)p.cat=novo});
+  s.categorias[i]=novo;
+  renderProdutos();render();
+});
+$("cats").addEventListener("change",e=>{
+  const i=e.target.dataset.ci;if(i==null)return;
+  const novo=e.target.value.trim();
+  if(!novo||s.categorias.some((c,j)=>c===novo&&j!=i)){toast(!novo?"O nome da categoria não pode ficar vazio.":"Já existe uma categoria com esse nome.");}
+  renderCats();
+});
+$("cats").addEventListener("click",e=>{
+  const b=e.target.closest("[data-cact]");if(!b)return;
+  const i=+b.dataset.ci,a=b.dataset.cact,C=s.categorias;
+  if(a==="up"&&i>0)[C[i-1],C[i]]=[C[i],C[i-1]];
+  if(a==="down"&&i<C.length-1)[C[i+1],C[i]]=[C[i],C[i+1]];
+  if(a==="del"){
+    const nome=C[i],n=s.produtos.filter(p=>p.cat===nome).length;
+    s.produtos.forEach(p=>{if(p.cat===nome)p.cat=""});C.splice(i,1);
+    toast(n?`Categoria excluída. ${n} produto${n>1?"s ficaram":" ficou"} sem categoria.`:"Categoria excluída.");
+  }
+  renderCats();renderProdutos();render();
+});
+function addCategoria(nome){
+  nome=(nome||"").trim();if(!nome)return false;
+  if(s.categorias.includes(nome)){toast("Essa categoria já existe.");return false}
+  s.categorias.push(nome);return true;
+}
+$("btnAddCat").onclick=()=>{if(addCategoria($("novaCat").value)){$("novaCat").value="";renderCats();renderProdutos();render()}else $("novaCat").focus()};
+$("novaCat").addEventListener("keydown",e=>{if(e.key==="Enter")$("btnAddCat").click()});
+
+/* ---------- Modelos por nicho ---------- */
+$("nicho").innerHTML=`<option value="">Escolha um nicho…</option>`+Object.entries(NICHOS).map(([k,n])=>`<option value="${k}">${n.nome}</option>`).join("");
+function aplicarNicho(k,modo){
+  const N=NICHOS[k];if(!N)return;
+  const novos=[];
+  for(const cat in N.cats) for(const p of N.cats[cat]) novos.push({id:uid(),nome:p.nome,preco:p.preco,cat,desc:p.desc,foto:"",esgotado:false});
+  if(modo==="substituir"){s.produtos=novos;s.categorias=Object.keys(N.cats)}
+  else{s.produtos=[...s.produtos,...novos];s.categorias=[...new Set([...s.categorias,...Object.keys(N.cats)])]}
+  s.catalogoTitulo=N.titulo;
+  s.pedido=Object.assign({},PEDIDO_PADRAO,N.pedido,{pix:s.pedido.pix||""});
+  if($("nichoVisual").checked) Object.assign(s,N.visual);
+  $("nichoConfirm").innerHTML="";
+  toForm();render();
+  toast(`Modelo ${N.nome} aplicado: ${novos.length} produtos. Ajuste os preços e coloque as fotos.`);
+}
+$("btnNicho").onclick=()=>{
+  const k=$("nicho").value;
+  if(!k){toast("Escolha um nicho na lista.");$("nicho").focus();return}
+  if(!s.produtos.length){aplicarNicho(k,"substituir");return}
+  $("nichoConfirm").innerHTML=`<div class="warn" style="margin:0">Este cliente já tem ${s.produtos.length} produto${s.produtos.length>1?"s":""}. O que fazer com eles?
+    <div class="row" style="margin-top:8px"><button class="primary small" data-nm="substituir">Substituir pelos do modelo</button><button class="small" data-nm="adicionar">Manter e adicionar os do modelo</button><button class="small" data-nm="cancelar">Cancelar</button></div></div>`;
+};
+$("nichoConfirm").addEventListener("click",e=>{
+  const m=e.target.dataset.nm;if(!m)return;
+  if(m==="cancelar"){$("nichoConfirm").innerHTML="";return}
+  aplicarNicho($("nicho").value,m);
+});
+
+let abrirProd=null;
+function catOptions(sel){
+  return `<option value=""${!sel?" selected":""}>Sem categoria</option>`+s.categorias.map(c=>`<option${c===sel?" selected":""}>${esc(c)}</option>`).join("");
+}
+function renderProdutos(){
+  const open=new Set([...document.querySelectorAll("#produtos details[open]")].map(d=>d.dataset.id));
+  if(abrirProd){open.add(abrirProd);}
+  $("produtos").innerHTML=s.produtos.length?s.produtos.map((p,i)=>`<details class="pe" data-id="${esc(p.id)}"${open.has(p.id)?" open":""}>
+  <summary>${prodSummary(p)}</summary>
+  <div class="pe-body">
+    <div class="grid2">
+      <label>Nome<input type="text" id="pn-${p.id}" data-i="${i}" data-f="nome" value="${esc(p.nome)}"></label>
+      <label>Preço <small>(ex.: 25,90)</small><input type="text" inputmode="decimal" id="pp-${p.id}" data-i="${i}" data-f="preco" value="${esc(p.preco)}"></label>
+    </div>
+    <div class="grid2">
+      <label>Categoria<select id="pc-${p.id}" data-i="${i}" data-f="cat">${catOptions(p.cat)}</select></label>
+      <label>Foto<input type="file" accept="image/*" id="pf-${p.id}" data-i="${i}" data-foto="1"></label>
+    </div>
+    <label>Descrição<textarea rows="2" id="pd-${p.id}" data-i="${i}" data-f="desc">${esc(p.desc)}</textarea></label>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="pe-${p.id}" data-i="${i}" data-f="esgotado"${p.esgotado?" checked":""}> Esgotado</label>
+      <span style="flex:1"></span>
+      <button type="button" class="small" data-act="up" data-i="${i}" aria-label="Mover para cima"${i===0?" disabled":""}>↑</button>
+      <button type="button" class="small" data-act="down" data-i="${i}" aria-label="Mover para baixo"${i===s.produtos.length-1?" disabled":""}>↓</button>
+      <button type="button" class="small" data-act="dup" data-i="${i}">Duplicar</button>
+      ${p.foto?`<button type="button" class="small" data-act="semfoto" data-i="${i}">Tirar foto</button>`:""}
+      <button type="button" class="small" data-act="del" data-i="${i}">Remover</button>
+    </div>
+  </div></details>`).join(""):`<p class="note">Nenhum produto ainda.</p>`;
+  if(abrirProd){const el=$("pn-"+abrirProd);abrirProd=null;if(el)el.focus()}
+}
+$("produtos").addEventListener("input",e=>{
+  const t=e.target,i=t.dataset.i,f=t.dataset.f;if(i==null||!f)return;
+  const p=s.produtos[i];p[f]=t.type==="checkbox"?t.checked:t.value;
+  t.closest("details").querySelector("summary").innerHTML=prodSummary(p);
+  render();
+});
+$("produtos").addEventListener("change",async e=>{
+  const t=e.target;
+  if(t.dataset.f==="cat") renderCats();
+  if(!t.dataset.foto||!t.files[0])return;
+  const p=s.produtos[t.dataset.i];
+  try{p.foto=await fileToData(t.files[0],700);renderProdutos();render()}catch(_){toast("Não consegui ler essa imagem. Tente outra foto.")}
+});
+$("produtos").addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;
+  const i=+b.dataset.i,a=b.dataset.act,L=s.produtos;
+  if(a==="up"&&i>0)[L[i-1],L[i]]=[L[i],L[i-1]];
+  if(a==="down"&&i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]];
+  if(a==="dup"){const c={...L[i],id:uid(),nome:L[i].nome+" (cópia)"};L.splice(i+1,0,c);abrirProd=c.id}
+  if(a==="semfoto")L[i].foto="";
+  if(a==="del")L.splice(i,1);
+  renderCats();renderProdutos();render();
+});
+$("btnAddProd").onclick=()=>{
+  const ult=s.produtos[s.produtos.length-1];
+  const p={id:uid(),nome:"",preco:"",cat:ult?ult.cat:"",desc:"",foto:"",esgotado:false};
+  s.produtos.push(p);abrirProd=p.id;renderCats();renderProdutos();render();
+};
+/* ---------- Carga por planilha (com fotos) ---------- */
+const carga={rows:null,origem:"",fotos:new Map(),temEsgotado:false};
+const normTxt=t=>String(t??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+const COLS=[["nome",/^(nome|produto|servico|item|descricao do produto)/],["preco",/^(preco|valor|vlr)/],["cat",/^(categ|secao|grupo)/],["desc",/^(desc|detalhe|obs)/],["foto",/^(foto|imagem|img|arquivo|caminho)/],["esgotado",/^(esgot|indisp)/]];
+let xlsxPromise=null;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(xlsxPromise) return xlsxPromise;
+  xlsxPromise=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";sc.onload=()=>res(window.XLSX);sc.onerror=()=>{xlsxPromise=null;rej(new Error("Não consegui carregar o leitor de Excel. Verifique a internet ou salve a planilha como .csv."))};document.head.appendChild(sc)});
+  return xlsxPromise;
+}
+function precoDe(v){
+  if(typeof v==="number") return v.toFixed(2).replace(".",",");
+  return String(v??"").replace(/^\s*R\$\s*/i,"").trim();
+}
+function simNao(v){const t=normTxt(v);return ["sim","s","x","1","true","verdadeiro","esgotado"].includes(t)}
+/* Converte uma tabela (linhas x colunas) em produtos, reconhecendo o cabeçalho */
+function linhasDeTabela(aoa){
+  aoa=aoa.filter(r=>r&&r.some(c=>String(c??"").trim()!==""));
+  if(!aoa.length) return {rows:[],temEsgotado:false};
+  let map=null,ini=0;
+  for(let i=0;i<Math.min(aoa.length,5);i++){
+    const m={};aoa[i].forEach((c,j)=>{const t=normTxt(c);for(const [k,re] of COLS){if(re.test(t)&&!(k in m)){m[k]=j;break}}});
+    if("nome" in m){map=m;ini=i+1;break}
+  }
+  if(!map) map={nome:0,preco:1,cat:2,desc:3,foto:4};
+  const rows=[];
+  for(const r of aoa.slice(ini)){
+    let nome=String(r[map.nome]??"").trim(),preco=map.preco!=null?r[map.preco]:"";
+    if(nome&&(preco===""||preco==null)&&r.filter(c=>String(c??"").trim()).length===1){
+      const m=nome.match(/^(.*?)[\s\-–—:]+(?:R\$\s*)?(\d[\d.,]*)\s*$/);if(m){nome=m[1].trim();preco=m[2]}
+    }
+    if(!nome) continue;
+    rows.push({nome,preco:precoDe(preco),cat:String(map.cat!=null?r[map.cat]??"":"").trim(),desc:String(map.desc!=null?r[map.desc]??"":"").trim(),
+      foto:String(map.foto!=null?r[map.foto]??"":"").trim().replace(/^"|"$/g,""),esgotado:map.esgotado!=null?simNao(r[map.esgotado]):undefined});
+  }
+  return {rows,temEsgotado:map.esgotado!=null};
+}
+function textoParaTabela(txt){
+  return txt.split(/\r?\n/).map(l=>l.includes("\t")?l.split("\t"):l.includes(";")?l.split(";"):[l]).map(r=>r.map(c=>c.trim()));
+}
+/* Fotos escolhidas: índice pelo nome do arquivo (com e sem extensão) */
+function indexarFotos(files){
+  let n=0;
+  for(const f of files){
+    if(!/^image\//.test(f.type)&&!/\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name)) continue;
+    const nome=f.name.toLowerCase();
+    for(const k of [nome,nome.replace(/\.[^.]+$/,"")]){if(!carga.fotos.has(k))carga.fotos.set(k,[]);carga.fotos.get(k).push(f)}
+    n++;
+  }
+  return n;
+}
+function acharFoto(ref){
+  if(!ref||/^https?:/i.test(ref)) return null;
+  const caminho=ref.replace(/\\/g,"/").toLowerCase();
+  const base=caminho.split("/").pop();
+  const lista=carga.fotos.get(base)||carga.fotos.get(base.replace(/\.[^.]+$/,""));
+  if(!lista) return null;
+  if(lista.length===1) return lista[0];
+  // Mesmo nome em pastas diferentes: escolhe a que bate com o final do caminho
+  return lista.find(f=>(f.webkitRelativePath||"").toLowerCase().split("/").slice(1).join("/")&&caminho.endsWith((f.webkitRelativePath||"").toLowerCase().split("/").slice(1).join("/")))||lista[0];
+}
+function statusFoto(r){
+  if(!r.foto) return ["na","sem foto"];
+  if(/^https?:/i.test(r.foto)) return ["ok","link"];
+  const f=acharFoto(r.foto);
+  if(!f) return ["no","não encontrada"];
+  if(/\.(heic|heif)$/i.test(f.name)) return ["no","HEIC: converta"];
+  return ["ok","encontrada"];
+}
+function renderResumo(){
+  const R_=carga.rows;
+  if(!R_){$("cargaResumo").innerHTML="";return}
+  if(!R_.length){$("cargaResumo").innerHTML=`<div class="warn" style="margin:0">Não achei produtos em ${esc(carga.origem)}. Confira se a primeira linha tem o cabeçalho "nome".</div>`;return}
+  const st=R_.map(statusFoto);
+  const comFoto=st.filter(x=>x[0]==="ok").length, faltando=R_.filter((r,i)=>st[i][0]==="no");
+  const pedemFoto=R_.filter(r=>r.foto&&!/^https?:/i.test(r.foto)).length;
+  const novasCats=[...new Set(R_.map(r=>r.cat).filter(c=>c&&!s.categorias.includes(c)))];
+  const existentes=R_.filter(r=>s.produtos.some(p=>normTxt(p.nome)===normTxt(r.nome))).length;
+  $("cargaResumo").innerHTML=`<div class="resumo">
+    <div><b>${esc(carga.origem)}</b></div>
+    <div class="nums">
+      <div><b>${R_.length}</b><small>produtos</small></div>
+      <div><b>${comFoto}</b><small>com foto pronta</small></div>
+      <div><b>${faltando.length}</b><small>foto não encontrada</small></div>
+      <div><b>${novasCats.length}</b><small>categorias novas</small></div>
+    </div>
+    ${pedemFoto&&!carga.fotos.size?`<div class="warn" style="margin:0">A planilha aponta ${pedemFoto} foto${pedemFoto>1?"s":""}. Escolha a pasta das fotos no passo 3 antes de importar.</div>`:""}
+    ${faltando.length&&carga.fotos.size?`<div>Fotos não encontradas na pasta escolhida:<ul>${faltando.map((r,i)=>`<li>${esc(r.nome)}: ${esc(r.foto)}</li>`).join("")}</ul></div>`:""}
+    <div class="tabwrap"><table class="tab"><thead><tr><th>Produto</th><th>Preço</th><th>Categoria</th><th>Foto</th></tr></thead><tbody>
+      ${R_.map((r,i)=>`<tr><td>${esc(r.nome)}</td><td class="num">${esc(precoTxt(r.preco))}</td><td>${esc(r.cat||"—")}</td><td><span class="tag ${st[i][0]}">${st[i][1]}</span></td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="row">
+      <button class="primary" data-imp="atualizar">${existentes?`Importar: atualizar ${existentes} e adicionar ${R_.length-existentes}`:"Importar e adicionar aos atuais"}</button>
+      ${s.produtos.length?`<button data-imp="substituir">Importar e substituir todos os atuais</button>`:""}
+      <button data-imp="cancelar">Cancelar</button>
+    </div>
+    <p class="note" style="margin:0">Atualizar: produtos com o mesmo nome recebem o preço, a categoria, a descrição e a foto da planilha.</p>
+  </div>`;
+}
+async function lerPlanilha(file){
+  const nome=file.name.toLowerCase();
+  if(/\.(csv|txt)$/.test(nome)){
+    const buf=await file.arrayBuffer();
+    let txt=new TextDecoder("utf-8").decode(buf);
+    if(txt.includes("\uFFFD")) txt=new TextDecoder("windows-1252").decode(buf);
+    try{const X=await loadXLSX();const wb=X.read(txt,{type:"string"});return X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""})}
+    catch(_){return textoParaTabela(txt.replace(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/g,";"))}
+  }
+  const X=await loadXLSX();
+  const wb=X.read(await file.arrayBuffer(),{type:"array"});
+  return X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""});
+}
+$("cargaPlan").onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  $("cargaResumo").innerHTML=`<p class="note">Lendo a planilha…</p>`;
+  try{const t=linhasDeTabela(await lerPlanilha(f));carga.rows=t.rows;carga.temEsgotado=t.temEsgotado;carga.origem=f.name;renderResumo()}
+  catch(err){$("cargaResumo").innerHTML="";msg("cargaResumo",err.message||"Não consegui ler essa planilha.")}
+  e.target.value="";
+};
+function escolheuFotos(e){
+  const n=indexarFotos(e.target.files);
+  toast(n?`${n} foto${n>1?"s":""} disponíve${n>1?"is":"l"} para a carga.`:"Nenhuma imagem nessa seleção.");
+  e.target.value="";renderResumo();
+}
+$("cargaPasta").onchange=escolheuFotos;
+$("cargaArquivos").onchange=escolheuFotos;
+$("btnColar").onclick=()=>{
+  const t=linhasDeTabela(textoParaTabela($("colar").value));
+  if(!t.rows.length){toast("Nenhuma linha reconhecida. Use: nome ; preço ; categoria ; descrição ; foto");return}
+  carga.rows=t.rows;carga.temEsgotado=t.temEsgotado;carga.origem="Linhas coladas";renderResumo();
+  $("cargaResumo").scrollIntoView({behavior:"smooth",block:"nearest"});
+};
+$("cargaResumo").addEventListener("click",async e=>{
+  const modo=e.target.dataset.imp;if(!modo)return;
+  if(modo==="cancelar"){carga.rows=null;renderResumo();return}
+  const rows=carga.rows;
+  const lista=modo==="substituir"?[]:s.produtos.slice();
+  const falhas=[];let novos=0,atual=0,fotos=0;
+  $("cargaResumo").querySelectorAll("button").forEach(b=>b.disabled=true);
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    $("cargaResumo").querySelector(".row").innerHTML=`<p class="note" style="margin:0">Importando ${i+1} de ${rows.length}…</p>`;
+    let foto="";
+    if(r.foto){
+      try{
+        const f=acharFoto(r.foto);
+        if(f) foto=await fileToData(f,700);
+        else if(/^https?:/i.test(r.foto)) foto=await imgToData(r.foto,700);
+        if(foto) fotos++;
+      }catch(_){falhas.push(`${r.nome}: ${/^https?:/i.test(r.foto)?"o site do link não permite baixar a foto":"não consegui abrir a imagem"}`)}
+    }
+    const ex=modo!=="substituir"&&lista.find(p=>normTxt(p.nome)===normTxt(r.nome));
+    if(ex){
+      if(r.preco)ex.preco=r.preco; if(r.cat)ex.cat=r.cat; if(r.desc)ex.desc=r.desc; if(foto)ex.foto=foto;
+      if(carga.temEsgotado)ex.esgotado=!!r.esgotado; atual++;
+    }else{
+      lista.push({id:uid(),nome:r.nome,preco:r.preco,cat:r.cat,desc:r.desc,foto,esgotado:!!r.esgotado});novos++;
+    }
+  }
+  s.produtos=lista;
+  const catsPlan=[...new Set(rows.map(r=>r.cat).filter(Boolean))];
+  s.categorias=modo==="substituir"?catsPlan:[...new Set([...s.categorias,...catsPlan])];
+  carga.rows=null;
+  renderCats();renderProdutos();render();
+  $("cargaResumo").innerHTML=`<div class="okbox">Carga concluída: ${novos} adicionado${novos===1?"":"s"}, ${atual} atualizado${atual===1?"":"s"}, ${fotos} foto${fotos===1?"":"s"} importada${fotos===1?"":"s"}.
+    ${falhas.length?`<div class="warn" style="margin:0">Fotos com problema:<ul style="margin:4px 0 0;padding-left:18px">${falhas.map(f=>`<li>${esc(f)}</li>`).join("")}</ul></div>`:""}</div>`;
+  if(!save("bio_rascunho",s)) toast("Muitas fotos para o rascunho automático. Clique em Salvar cliente (.json) para não perder nada.");
+});
+$("btnModelo").onclick=async()=>{
+  try{
+    const X=await loadXLSX();
+    // Sem produtos no cliente, a planilha vem com os produtos e categorias do nicho escolhido
+    const nk=$("nicho").value;
+    const usarModelo=!s.produtos.length&&!!NICHOS[nk];
+    const origem=usarModelo
+      ?Object.entries(NICHOS[nk].cats).flatMap(([cat,lista])=>lista.map(p=>({nome:p.nome,preco:p.preco,cat,desc:p.desc,esgotado:false})))
+      :s.produtos;
+    const exemplo=[["Corte degradê",40,"Cortes","Degradê com navalhado.","C:\\Fotos\\Cliente\\corte-degrade.jpg",""],["Barba tradicional",25,"Barba","","barba.jpg",""],["Pomada modeladora",35,"Produtos","","",""]];
+    // Mesmo layout da planilha do Google (planilha/Codigo.gs): título na linha 1, títulos na 2, produtos a partir da 3
+    const linhas=origem.length
+      ?origem.map(p=>[p.nome,isNaN(num(p.preco))?p.preco:num(p.preco),p.cat,p.desc,"",p.esgotado?"sim":"",""])
+      :exemplo.map(l=>[...l,""]);
+    const cats=[...new Set([...(usarModelo?Object.keys(NICHOS[nk].cats):s.categorias),...linhas.map(l=>l[2]).filter(Boolean)])];
+    const cab=["nome","preco","categoria","descricao","foto","esgotado","codigo"];
+    const ws=X.utils.aoa_to_sheet([["Catálogo: preencha a partir da linha 3. Não mude os títulos da linha 2."],cab,...linhas]);
+    ws["!cols"]=[{wch:34},{wch:10},{wch:20},{wch:40},{wch:44},{wch:10},{wch:12}];
+    for(let i=0;i<linhas.length;i++){const c=ws[X.utils.encode_cell({r:i+2,c:1})];if(c&&typeof c.v==="number")c.z="#,##0.00"}
+    const catSheet=X.utils.aoa_to_sheet(cats.map(c=>[c]));
+    const ajuda=X.utils.aoa_to_sheet([["Como preencher"],[""],["nome","Obrigatório. Nome do produto ou serviço."],["preco","Número, ex.: 25,90. Deixe vazio para 'Consultar'."],["categoria","Ex.: Cortes, Lanches, Bebidas. Categorias novas são criadas sozinhas."],["descricao","Opcional. Uma ou duas frases."],["foto","Caminho da foto (C:\\Fotos\\x.jpg), só o nome do arquivo (x.jpg) ou um link https. Depois, escolha a pasta das fotos no criador."],["esgotado","Escreva 'sim' para marcar como esgotado."],["codigo","Deixe vazio. O sistema cria sozinho."],["Categorias","Lista do menu suspenso da coluna categoria na planilha do Google."],[""],["Para produtos que já existem, a carga atualiza pelo nome."]]);
+    ajuda["!cols"]=[{wch:14},{wch:90}];
+    const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Produtos");X.utils.book_append_sheet(wb,catSheet,"Categorias");X.utils.book_append_sheet(wb,ajuda,"como preencher");
+    X.writeFile(wb,`produtos-${s.slug||"cliente"}.xlsx`);
+    toast(usarModelo?`Planilha do modelo ${NICHOS[nk].nome} baixada: ${origem.length} produtos.`:s.produtos.length?"Planilha baixada com os produtos atuais.":"Planilha modelo baixada.");
+  }catch(err){toast(err.message||"Não consegui gerar a planilha.")}
+};
+
+/* ---------- Imagens ---------- */
+function imgToData(src,max){return new Promise((res,rej)=>{const img=new Image();img.crossOrigin="anonymous";img.onload=()=>{try{const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.8))}catch(e){rej(e)}};img.onerror=rej;img.src=src})}
+function fileToData(file,max){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>imgToData(r.result,max).then(res,rej);r.onerror=rej;r.readAsDataURL(file)})}
+$("logoFile").onchange=async e=>{const f=e.target.files[0];if(f){s.logo=await fileToData(f,400);render()}};
+$("capaFile").onchange=async e=>{const f=e.target.files[0];if(f){s.capa=await fileToData(f,1200);render()}};
+
+let rt, avisouCheio=false;
+function render(){clearTimeout(rt);rt=setTimeout(()=>{
+  const y=(()=>{try{return $("frame").contentWindow.scrollY}catch(_){return 0}})();
+  $("frame").srcdoc=bioHTML();
+  $("frame").onload=()=>{try{$("frame").contentWindow.scrollTo(0,y)}catch(_){}};
+  if(!save("bio_rascunho",s)&&!avisouCheio){avisouCheio=true;toast("Muitas fotos para o rascunho automático. Use Salvar cliente (.json) para não perder nada.")}
+},150)}
+
+/* ---------- Google Places ---------- */
+$("apiKey").value=load("bio_api_key")||"";
+$("btnSalvarChave").onclick=()=>{save("bio_api_key",$("apiKey").value.trim());mapsPromise=null;toast("Chave salva neste navegador.")};
+let mapsPromise=null;
+function loadMaps(key){
+  if(window.google?.maps?.importLibrary) return Promise.resolve();
+  if(mapsPromise) return mapsPromise;
+  mapsPromise=new Promise((res,rej)=>{
+    window.__mapsOk=res;
+    window.gm_authFailure=()=>rej(new Error("Chave recusada pelo Google. Confira se as APIs estão ativas e se o faturamento está configurado."));
+    const sc=document.createElement("script");
+    sc.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&libraries=places&language=pt-BR&region=BR&loading=async&callback=__mapsOk`;
+    sc.onerror=()=>rej(new Error("Não foi possível carregar o Google Maps. Abra este arquivo direto no Chrome do seu computador."));
+    document.head.appendChild(sc);
+    setTimeout(()=>rej(new Error("O Google Maps não respondeu. Verifique a internet e a chave.")),15000);
+  });
+  mapsPromise.catch(()=>{mapsPromise=null});
+  return mapsPromise;
+}
+function msg(el,t){$(el).innerHTML=t?`<div class="warn">${esc(t)}</div>`:""}
+let lastPlaces=[];
+async function buscar(){
+  const q=$("q").value.trim(); if(!q){$("q").focus();return}
+  const key=($("apiKey").value||"").trim()||load("bio_api_key");
+  if(!key){msg("googleMsg","Cole a chave da Google Places API em \"Chave da Google Places API\" logo abaixo.");return}
+  msg("googleMsg",""); $("results").innerHTML=`<p class="note">Buscando…</p>`; $("btnBuscar").disabled=true;
+  try{
+    await loadMaps(key);
+    const {Place}=await google.maps.importLibrary("places");
+    const {places}=await Place.searchByText({
+      textQuery:q, language:"pt-BR", region:"br", maxResultCount:5,
+      fields:["id","displayName","formattedAddress","nationalPhoneNumber","internationalPhoneNumber","rating","userRatingCount","regularOpeningHours","websiteURI","googleMapsURI","photos","editorialSummary","primaryTypeDisplayName"]
+    });
+    lastPlaces=places||[];
+    $("results").innerHTML=lastPlaces.length?lastPlaces.map((p,i)=>`<button class="result" data-i="${i}"><b>${esc(p.displayName)}</b><span>${esc(p.formattedAddress||"")}${p.rating?` · ★ ${p.rating} (${p.userRatingCount||0})`:""}</span></button>`).join(""):`<p class="note">Nada encontrado. Tente nome + bairro + cidade.</p>`;
+  }catch(err){$("results").innerHTML="";msg("googleMsg",err.message||String(err))}
+  finally{$("btnBuscar").disabled=false}
+}
+$("btnBuscar").onclick=buscar;
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter")buscar()});
+$("results").onclick=async e=>{
+  const b=e.target.closest(".result"); if(!b)return;
+  const p=lastPlaces[b.dataset.i];
+  // Começa um cliente novo, sem os produtos de exemplo
+  s=normalizar({...DEFAULT,produtos:[],categorias:[],extras:[],pedido:{...PEDIDO_PADRAO},modelo:s.modelo,cor:s.cor,fundo:s.fundo,texto:s.texto,fonteTitulo:s.fonteTitulo,fonteTexto:s.fonteTexto,whatsMsg:"Olá! Vim pelo site.",instagram:"",descricao:"",horario:"",endereco:"",maps:"",review:""});
+  s.nome=p.displayName||"";
+  const end=p.formattedAddress||"";
+  s.endereco=end;
+  const cid=end.split(",").map(x=>x.trim()).find(x=>/ - [A-Z]{2}$/.test(x));
+  s.cidade=cid||"";
+  s.whatsapp=(p.internationalPhoneNumber||p.nationalPhoneNumber||"").replace(/\D/g,"");
+  s.review=`https://search.google.com/local/writereview?placeid=${p.id}`;
+  s.maps=p.googleMapsURI||"";
+  s.nota=p.rating||""; s.totalAval=p.userRatingCount||"";
+  if(p.regularOpeningHours?.weekdayDescriptions) s.horario=p.regularOpeningHours.weekdayDescriptions.join("\n");
+  s.descricao=p.editorialSummary||(p.primaryTypeDisplayName?`${p.primaryTypeDisplayName} em ${s.cidade||"sua região"}`:"");
+  const tipo=(p.primaryTypeDisplayName||"").toLowerCase();
+  s.catalogoTitulo=/barbe|salão|salao|beleza|estética|estetica|clínica|clinica|manicure|spa/.test(tipo)?"Serviços":/restaur|lanch|padar|pizz|bar|café|cafe|confeit|hamb|açaí|acai|sorvet/.test(tipo)?"Cardápio":"Produtos";
+  if(s.catalogoTitulo==="Serviços"){s.pedido.entrega=false;s.pedido.botao="Agendar pelo WhatsApp"}
+  const site=p.websiteURI||"";
+  const ig=site.match(/instagram\.com\/([^/?#]+)/i);
+  if(ig) s.instagram="@"+ig[1];
+  else if(site) s.extras=[{titulo:"Nosso site",url:site}];
+  s.slug=slugify(s.nome);
+  const nk=nichoDoTipo(tipo+" "+s.nome);
+  $("nicho").value=nk; $("nichoConfirm").innerHTML="";
+  toForm(); render(); clearPub();
+  toast((ig?"Dados importados, incluindo o Instagram.":"Dados importados. Confira o WhatsApp e digite o Instagram.")+(nk?` Já deixei o modelo ${NICHOS[nk].nome} selecionado na seção 3: é só clicar em Aplicar modelo.`:" Agora cadastre os produtos."));
+  // A foto do Google vem com a sua chave no endereço: convertemos para imagem embutida
+  try{
+    if(p.photos?.length){s.capa=await imgToData(p.photos[0].getURI({maxWidth:1200}),1200);render()}
+  }catch(_){ toast("Não consegui trazer a foto do Google. Suba uma foto de capa."); }
+};
+
+/* ---------- Painel do dono ---------- */
+const ARQ_API = /*__API__*/"// Painel do dono: lê e salva preços e \"esgotado\" dos produtos de um site.\n// Variáveis de ambiente na Vercel:\n//   GITHUB_TOKEN  token do GitHub com \"Contents: Read and write\" no repositório\n//   GITHUB_REPO   ex.: tiagoingles/bios\nconst crypto = require(\"crypto\");\n\nconst INI = '<script type=\"application/json\" id=\"bio-config\">';\n\nfunction gh(path, opt = {}) {\n  return fetch(\"https://api.github.com/repos/\" + process.env.GITHUB_REPO + path, {\n    method: opt.method || \"GET\",\n    body: opt.body,\n    cache: \"no-store\",\n    headers: {\n      Authorization: \"Bearer \" + process.env.GITHUB_TOKEN,\n      Accept: \"application/vnd.github+json\",\n      \"X-GitHub-Api-Version\": \"2022-11-28\",\n      \"User-Agent\": \"bios-painel\",\n      ...(opt.body ? { \"Content-Type\": \"application/json\" } : {}),\n    },\n  });\n}\n\nasync function lerArquivo(path) {\n  const r = await gh(\"/contents/\" + path);\n  if (r.status === 404) return null;\n  if (!r.ok) throw new Error(\"GitHub \" + r.status);\n  const j = await r.json();\n  let b64 = j.content;\n  if (!b64) {\n    const b = await gh(\"/git/blobs/\" + j.sha);\n    b64 = (await b.json()).content;\n  }\n  return { sha: j.sha, texto: Buffer.from(b64, \"base64\").toString(\"utf8\") };\n}\n\nfunction extrairConfig(html) {\n  const i = html.indexOf(INI);\n  if (i < 0) return null;\n  const j = html.indexOf(\"<\/script>\", i);\n  return { i, j, cfg: JSON.parse(html.slice(i + INI.length, j)) };\n}\n\nfunction normCodigo(c) {\n  return String(c || \"\").toLowerCase().replace(/[^a-z0-9]/g, \"\");\n}\n\nfunction verificar(codigo, acesso) {\n  if (!acesso || !acesso.hash || !codigo) return false;\n  const h = crypto.pbkdf2Sync(normCodigo(codigo), Buffer.from(acesso.salt, \"hex\"), acesso.iter || 150000, 32, \"sha256\");\n  const alvo = Buffer.from(acesso.hash, \"hex\");\n  return alvo.length === h.length && crypto.timingSafeEqual(h, alvo);\n}\n\nfunction num(v) {\n  let t = String(v == null ? \"\" : v).replace(/[^\\d,.]/g, \"\");\n  if (!t) return NaN;\n  if (t.indexOf(\",\") > -1) t = t.replace(/\\./g, \"\").replace(\",\", \".\");\n  return parseFloat(t);\n}\nconst brl = (n) => n.toLocaleString(\"pt-BR\", { style: \"currency\", currency: \"BRL\" });\n\nmodule.exports = async (req, res) => {\n  res.setHeader(\"Cache-Control\", \"no-store\");\n  if (req.method !== \"POST\") return res.status(405).json({ erro: \"Método não permitido.\" });\n  if (!process.env.GITHUB_TOKEN || !process.env.GITHUB_REPO)\n    return res.status(500).json({ erro: \"O painel ainda não foi configurado no servidor.\" });\n  try {\n    let b = req.body;\n    if (typeof b === \"string\") b = JSON.parse(b || \"{}\");\n    b = b || {};\n    const site = String(b.site || \"\").toLowerCase();\n    if (!/^[a-z0-9-]{1,60}$/.test(site)) return res.status(400).json({ erro: \"Endereço do site inválido.\" });\n\n    const acessoArq = await lerArquivo(\"admin/\" + site + \".json\");\n    if (!acessoArq) return res.status(404).json({ erro: \"Este site ainda não tem painel liberado. Fale com quem criou o seu site.\" });\n    if (!verificar(b.codigo, JSON.parse(acessoArq.texto))) {\n      await new Promise((r) => setTimeout(r, 800));\n      return res.status(401).json({ erro: \"Código de acesso incorreto.\" });\n    }\n\n    for (let tentativa = 0; tentativa < 3; tentativa++) {\n      const arq = await lerArquivo(site + \".html\");\n      if (!arq) return res.status(404).json({ erro: \"Site não encontrado.\" });\n      const x = extrairConfig(arq.texto);\n      if (!x) return res.status(500).json({ erro: \"Não consegui ler os produtos deste site.\" });\n      const cfg = x.cfg;\n\n      if (b.acao === \"ler\") {\n        return res.json({\n          nome: cfg.nome,\n          cor: cfg.cor,\n          categorias: cfg.categorias || [],\n          produtos: (cfg.produtos || []).map((p) => ({ id: p.id, nome: p.nome, cat: p.cat || \"\", preco: p.preco || \"\", esgotado: !!p.esgotado })),\n          atualizadoEm: cfg.precosAtualizadosEm || null,\n        });\n      }\n      if (b.acao !== \"salvar\") return res.status(400).json({ erro: \"Ação inválida.\" });\n\n      const alt = Array.isArray(b.alteracoes) ? b.alteracoes.slice(0, 500) : [];\n      let html = arq.texto, n = 0;\n      for (const a of alt) {\n        const p = (cfg.produtos || []).find((q) => q.id === a.id);\n        if (!p) continue;\n        if (typeof a.preco === \"string\") {\n          const v = a.preco.trim().slice(0, 20);\n          if (v && isNaN(num(v))) return res.status(400).json({ erro: 'Preço inválido em \"' + p.nome + '\".' });\n          p.preco = v;\n        }\n        if (typeof a.esgotado === \"boolean\") p.esgotado = a.esgotado;\n        n++;\n        if (/^[A-Za-z0-9_-]+$/.test(p.id)) {\n          const txt = isNaN(num(p.preco)) ? \"Consultar\" : brl(num(p.preco));\n          html = html.replace(new RegExp('(<b class=\"preco\" data-pid=\"' + p.id + '\">)[^<]*(<\/b>)'), (m, a1, a2) => a1 + txt + a2);\n        }\n      }\n      if (!n) return res.json({ ok: true, alterados: 0 });\n\n      cfg.precosAtualizadosEm = new Date().toISOString();\n      const k = extrairConfig(html);\n      html = html.slice(0, k.i + INI.length) + JSON.stringify(cfg).replace(/<\/g, \"\\\\u003c\") + html.slice(k.j);\n\n      const r = await gh(\"/contents/\" + site + \".html\", {\n        method: \"PUT\",\n        body: JSON.stringify({\n          message: \"Preços atualizados pelo dono: \" + cfg.nome,\n          content: Buffer.from(html, \"utf8\").toString(\"base64\"),\n          sha: arq.sha,\n        }),\n      });\n      if (r.status === 409 || r.status === 422) continue;\n      if (!r.ok) throw new Error(\"GitHub \" + r.status);\n      return res.json({ ok: true, alterados: n, atualizadoEm: cfg.precosAtualizadosEm });\n    }\n    return res.status(409).json({ erro: \"O site foi alterado ao mesmo tempo. Tente salvar de novo.\" });\n  } catch (e) {\n    console.error(e);\n    return res.status(500).json({ erro: \"Não foi possível concluir agora. Tente de novo em instantes.\" });\n  }\n};\n";
+const ARQ_PAINEL = /*__PAINEL__*/"<!doctype html>\n<html lang=\"pt-BR\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n<meta name=\"robots\" content=\"noindex\">\n<title>Painel de preços<\/title>\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&display=swap\">\n<style>\n:root{--bg:#f4f5f2;--card:#fff;--ink:#1b211e;--muted:#5f6a64;--line:#e0e4dd;--acc:#16734f;--acc-ink:#fff;--warn:#9a5b00;--warn-bg:#fff4e0;--ok-bg:#e6f4ec;--chg:#fff8e1;\n--f:\"Figtree\",system-ui,-apple-system,\"Segoe UI\",sans-serif;color-scheme:light}\n@media (prefers-color-scheme:dark){:root{--bg:#121513;--card:#1b201d;--ink:#e8ede9;--muted:#9aa59f;--line:#2d3530;--warn:#f0b357;--warn-bg:#2d2414;--ok-bg:#16291f;--chg:#2a2614;color-scheme:dark}}\n*{box-sizing:border-box}html,body{margin:0}\n[hidden]{display:none!important}\nbody{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f);padding:0 max(16px,env(safe-area-inset-left)) 120px max(16px,env(safe-area-inset-right))}\n.wrap{max-width:640px;margin:0 auto}\nheader{padding:22px 0 10px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}\nh1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em}\n.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}\na{color:var(--acc)}\n.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}\nlabel{display:grid;gap:6px;font-size:14px;font-weight:600}\ninput[type=text],input[type=search],input[type=password]{font:inherit;font-size:16px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink)}\ninput:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}\nbutton{font:inherit;font-weight:700;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:12px 16px;cursor:pointer}\nbutton.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}\nbutton:disabled{opacity:.55;cursor:default}\n.stack{display:grid;gap:14px}\n.check{display:flex;gap:8px;align-items:center;font-weight:500}\n.msg{border-radius:12px;padding:12px 14px;font-size:14px}\n.msg.erro{background:var(--warn-bg);color:var(--warn)}.msg.ok{background:var(--ok-bg)}\n.msg:empty{display:none}\n.busca{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0}\n.cat{margin-top:18px}\n.cat h2{font-size:15px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}\n.lista{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}\n.it{display:grid;grid-template-columns:minmax(0,1fr) 116px auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}\n.it:last-child{border-bottom:0}\n.it.mudou{background:var(--chg)}\n.it .n{min-width:0;font-weight:600;overflow-wrap:anywhere}\n.it .n small{display:block;font-weight:400;color:var(--muted);font-size:12px}\n.preco{position:relative}\n.preco span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}\n.preco input{padding:10px 10px 10px 34px;text-align:right;font-variant-numeric:tabular-nums}\n.sw{display:grid;justify-items:center;gap:2px;font-size:11px;color:var(--muted);font-weight:600;cursor:pointer}\n.sw input{appearance:none;width:44px;height:26px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s}\n.sw input::after{content:\"\";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s}\n.sw input:checked{background:#c2410c}.sw input:checked::after{left:21px}\n@media (max-width:420px){.it{grid-template-columns:minmax(0,1fr) 104px auto}}\n.barra{position:fixed;left:0;right:0;bottom:0;padding:12px max(16px,env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right));background:var(--card);border-top:1px solid var(--line);z-index:10}\n.barra .in{max-width:640px;margin:0 auto;display:flex;gap:10px;align-items:center}\n.barra .in span{flex:1;font-size:14px;color:var(--muted)}\n.vazio{color:var(--muted);text-align:center;padding:24px}\n@media (prefers-reduced-motion:reduce){*{transition:none!important}}\n<\/style>\n<\/head>\n<body>\n<div class=\"wrap\">\n  <header>\n    <div><p class=\"eyebrow\">Painel de preços<\/p><h1 id=\"titulo\">Entrar<\/h1><\/div>\n    <a id=\"verSite\" href=\"#\" target=\"_blank\" rel=\"noopener\" hidden>Ver meu site<\/a>\n  <\/header>\n\n  <section id=\"login\" class=\"card stack\">\n    <p style=\"margin:0;color:var(--muted)\">Digite o código de acesso que você recebeu para mudar os preços do seu site.<\/p>\n    <label>Código de acesso<input type=\"text\" id=\"codigo\" autocomplete=\"one-time-code\" autocapitalize=\"none\" spellcheck=\"false\" placeholder=\"xxxx-xxxx-xxxx\"><\/label>\n    <label class=\"check\"><input type=\"checkbox\" id=\"lembrar\" checked> Lembrar neste aparelho<\/label>\n    <button class=\"pri\" id=\"entrar\">Entrar<\/button>\n    <div class=\"msg erro\" id=\"loginMsg\" role=\"alert\"><\/div>\n  <\/section>\n\n  <section id=\"painel\" hidden>\n    <div class=\"busca\"><input type=\"search\" id=\"busca\" placeholder=\"Buscar produto\" aria-label=\"Buscar produto\"><\/div>\n    <div class=\"msg\" id=\"painelMsg\" role=\"status\"><\/div>\n    <div id=\"lista\"><\/div>\n    <p style=\"text-align:center;margin-top:24px\"><button id=\"sair\">Sair deste aparelho<\/button><\/p>\n  <\/section>\n<\/div>\n\n<div class=\"barra\" id=\"barra\" hidden>\n  <div class=\"in\"><span id=\"pend\">Nenhuma alteração<\/span><button class=\"pri\" id=\"salvar\" disabled>Salvar alterações<\/button><\/div>\n<\/div>\n\n<script>\n(function(){\n  var site=(new URLSearchParams(location.search).get(\"s\")||\"\").toLowerCase().replace(/[^a-z0-9-]/g,\"\");\n  var K=\"painel-codigo-\"+site, codigo=\"\", dados=null, orig={}, atual={};\n  function $(id){return document.getElementById(id)}\n  function esc(t){return String(t==null?\"\":t).replace(/[&<>\"']/g,function(c){return{\"&\":\"&amp;\",\"<\":\"&lt;\",\">\":\"&gt;\",'\"':\"&quot;\",\"'\":\"&#39;\"}[c]})}\n  function num(v){var t=String(v==null?\"\":v).replace(/[^\\d,.]/g,\"\");if(!t)return NaN;if(t.indexOf(\",\")>-1)t=t.replace(/\\./g,\"\").replace(\",\",\".\");return parseFloat(t)}\n  function fmt(v){var n=num(v);return isNaN(n)?\"\":n.toFixed(2).replace(\".\",\",\")}\n  function sobre(hex){var h=(hex||\"#000\").replace(\"#\",\"\");var L=(.299*parseInt(h.substr(0,2),16)+.587*parseInt(h.substr(2,2),16)+.114*parseInt(h.substr(4,2),16))/255;return L>.62?\"#161616\":\"#ffffff\"}\n  async function api(corpo){\n    var r=await fetch(\"/api/precos\",{method:\"POST\",headers:{\"Content-Type\":\"application/json\"},body:JSON.stringify(Object.assign({site:site,codigo:codigo},corpo))});\n    var j={};try{j=await r.json()}catch(e){}\n    if(!r.ok)throw Object.assign(new Error(j.erro||\"Não foi possível conectar. Tente de novo.\"),{status:r.status});\n    return j;\n  }\n  if(!site){$(\"loginMsg\").textContent=\"Link incompleto. Peça o link do painel para quem criou o seu site.\";$(\"entrar\").disabled=true;return}\n  $(\"verSite\").href=\"/\"+site;\n  try{var salvo=localStorage.getItem(K);if(salvo){$(\"codigo\").value=salvo;entrar()}}catch(e){}\n\n  async function entrar(){\n    codigo=$(\"codigo\").value.trim();\n    if(!codigo){$(\"loginMsg\").textContent=\"Digite o código de acesso.\";return}\n    $(\"entrar\").disabled=true;$(\"loginMsg\").textContent=\"\";$(\"entrar\").textContent=\"Entrando…\";\n    try{\n      dados=await api({acao:\"ler\"});\n      try{if($(\"lembrar\").checked)localStorage.setItem(K,codigo);else localStorage.removeItem(K)}catch(e){}\n      if(dados.cor){document.documentElement.style.setProperty(\"--acc\",dados.cor);document.documentElement.style.setProperty(\"--acc-ink\",sobre(dados.cor))}\n      $(\"titulo\").textContent=dados.nome;document.title=\"Preços · \"+dados.nome;\n      $(\"login\").hidden=true;$(\"painel\").hidden=false;$(\"barra\").hidden=false;$(\"verSite\").hidden=false;\n      orig={};atual={};dados.produtos.forEach(function(p){orig[p.id]={preco:fmt(p.preco)||p.preco,esgotado:p.esgotado};atual[p.id]={preco:orig[p.id].preco,esgotado:p.esgotado}});\n      desenhar();\n      if(dados.atualizadoEm)$(\"painelMsg\").className=\"msg\",$(\"painelMsg\").textContent=\"\";\n    }catch(e){\n      $(\"loginMsg\").textContent=e.message;\n      if(e.status===401){try{localStorage.removeItem(K)}catch(_){}}\n    }finally{$(\"entrar\").disabled=false;$(\"entrar\").textContent=\"Entrar\"}\n  }\n  $(\"entrar\").onclick=entrar;\n  $(\"codigo\").addEventListener(\"keydown\",function(e){if(e.key===\"Enter\")entrar()});\n\n  function desenhar(){\n    var q=$(\"busca\").value.trim().toLowerCase().normalize(\"NFD\").replace(/[̀-ͯ]/g,\"\");\n    var cats=(dados.categorias||[]).slice();\n    dados.produtos.forEach(function(p){if(cats.indexOf(p.cat)<0)cats.push(p.cat)});\n    var h=\"\";\n    cats.forEach(function(c){\n      var itens=dados.produtos.filter(function(p){return p.cat===c&&(!q||p.nome.toLowerCase().normalize(\"NFD\").replace(/[̀-ͯ]/g,\"\").indexOf(q)>-1)});\n      if(!itens.length)return;\n      h+='<section class=\"cat\"><h2>'+esc(c||\"Outros\")+'<\/h2><div class=\"lista\">'+itens.map(function(p){var a=atual[p.id];\n        return '<div class=\"it'+(mudou(p.id)?\" mudou\":\"\")+'\" data-id=\"'+esc(p.id)+'\"><div class=\"n\">'+esc(p.nome)+(a.esgotado?'<small>Esgotado no site<\/small>':'')+'<\/div>'+\n        '<label class=\"preco\"><span>R$<\/span><input type=\"text\" inputmode=\"decimal\" id=\"pr-'+esc(p.id)+'\" data-id=\"'+esc(p.id)+'\" value=\"'+esc(a.preco)+'\" placeholder=\"Consultar\" aria-label=\"Preço de '+esc(p.nome)+'\"><\/label>'+\n        '<label class=\"sw\">Esgotado<input type=\"checkbox\" id=\"es-'+esc(p.id)+'\" data-id=\"'+esc(p.id)+'\"'+(a.esgotado?\" checked\":\"\")+' aria-label=\"'+esc(p.nome)+' esgotado\"><\/label><\/div>'}).join(\"\")+'<\/div><\/section>';\n    });\n    $(\"lista\").innerHTML=h||'<p class=\"vazio\">Nenhum produto encontrado.<\/p>';\n    contar();\n  }\n  function mudou(id){return atual[id].preco!==orig[id].preco||atual[id].esgotado!==orig[id].esgotado}\n  function pendentes(){return Object.keys(atual).filter(mudou)}\n  function contar(){var n=pendentes().length;$(\"pend\").textContent=n?n+(n>1?\" produtos alterados\":\" produto alterado\"):\"Nenhuma alteração\";$(\"salvar\").disabled=!n}\n  $(\"busca\").addEventListener(\"input\",desenhar);\n  $(\"lista\").addEventListener(\"input\",function(e){\n    var id=e.target.dataset.id;if(!id)return;\n    if(e.target.type===\"checkbox\")atual[id].esgotado=e.target.checked;else atual[id].preco=e.target.value.trim();\n    e.target.closest(\".it\").classList.toggle(\"mudou\",mudou(id));contar();\n  });\n  $(\"lista\").addEventListener(\"change\",function(e){\n    var id=e.target.dataset.id;if(!id||e.target.type===\"checkbox\")return;\n    var f=fmt(e.target.value);if(f){e.target.value=f;atual[id].preco=f}\n    e.target.closest(\".it\").classList.toggle(\"mudou\",mudou(id));contar();\n  });\n  $(\"salvar\").onclick=async function(){\n    var ids=pendentes(),ruim=ids.filter(function(id){return atual[id].preco&&isNaN(num(atual[id].preco))});\n    if(ruim.length){var p=dados.produtos.find(function(x){return x.id===ruim[0]});msg(\"erro\",\"Confira o preço de \\\"\"+p.nome+\"\\\". Use números, ex.: 25,90.\");return}\n    $(\"salvar\").disabled=true;$(\"salvar\").textContent=\"Salvando…\";\n    try{\n      var r=await api({acao:\"salvar\",alteracoes:ids.map(function(id){return{id:id,preco:atual[id].preco,esgotado:atual[id].esgotado}})});\n      ids.forEach(function(id){orig[id]={preco:atual[id].preco,esgotado:atual[id].esgotado}});\n      desenhar();\n      msg(\"ok\",\"Salvo! \"+r.alterados+(r.alterados>1?\" produtos atualizados\":\" produto atualizado\")+\". O site mostra os novos preços em cerca de 1 minuto.\");\n    }catch(e){msg(\"erro\",e.message);if(e.status===401){$(\"painel\").hidden=true;$(\"barra\").hidden=true;$(\"login\").hidden=false}}\n    finally{$(\"salvar\").textContent=\"Salvar alterações\";contar()}\n  };\n  function msg(tipo,t){var m=$(\"painelMsg\");m.className=\"msg \"+tipo;m.textContent=t;window.scrollTo({top:0,behavior:\"smooth\"})}\n  $(\"sair\").onclick=function(){try{localStorage.removeItem(K)}catch(e){}location.reload()};\n  window.addEventListener(\"beforeunload\",function(e){if(dados&&pendentes().length){e.preventDefault();e.returnValue=\"\"}});\n})();\n<\/script>\n<\/body>\n<\/html>\n";
+function painelUrl(slug){return (siteBase()||"seudominio.com.br")+"/painel?s="+slug}
+async function gerarAcesso(){
+  const alf="23456789abcdefghjkmnpqrstuvwxyz";
+  let c="";
+  while(c.length<12){for(const v of crypto.getRandomValues(new Uint8Array(24))){if(v<248&&c.length<12)c+=alf[v%31]}}
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(c),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},key,256);
+  const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
+  return {codigo:c.slice(0,4)+"-"+c.slice(4,8)+"-"+c.slice(8),acesso:{salt:hex(salt),hash:hex(bits),iter:150000}};
+}
+$("btnCodigo").onclick=async()=>{
+  if(!s.nome){toast("Preencha o nome da empresa antes.");return}
+  s.slug=slugify(s.slug||s.nome);$("slug").value=s.slug;showUrl();
+  const {codigo,acesso}=await gerarAcesso();
+  s._acesso=acesso;save("bio_rascunho",s);
+  const link=painelUrl(s.slug);
+  const texto=`Olá! Para mudar os preços do seu site sozinho, abra ${link} e digite o código ${codigo}. Guarde esta mensagem.`;
+  $("codigoBox").innerHTML=`<div class="okbox">
+    <div><small>Código de acesso de ${esc(s.nome)}</small><br><b style="font-size:20px;letter-spacing:.06em;font-variant-numeric:tabular-nums">${codigo}</b></div>
+    <div><small>Link do painel</small><br>${siteBase()?`<a href="${esc(link)}" target="_blank" rel="noopener">${esc(link)}</a>`:esc(link)}</div>
+    <div class="row"><button class="small" data-copy2="${esc(texto)}">Copiar mensagem para o dono</button><button class="small" data-copy2="${esc(codigo)}">Copiar só o código</button></div>
+    <div class="warn" style="margin:0">Publique o site para o código passar a valer. O código não fica salvo aqui: se perder, gere outro e publique (o antigo para de funcionar).</div></div>`;
+};
+$("codigoBox").addEventListener("click",async e=>{
+  const t=e.target.dataset.copy2;if(!t)return;
+  try{await navigator.clipboard.writeText(t);toast("Copiado.")}catch(_){toast("Não consegui copiar. Selecione o texto e copie.")}
+});
+
+/* ---------- GitHub / Vercel ---------- */
+function ghCfg(){return Object.assign({owner:"tiagoingles",repo:"biosite",token:"",base:"https://biosite-dusky.vercel.app"},load("bio_gh")||{})}
+function ghFill(){const g=ghCfg();$("ghOwner").value=g.owner||"";$("ghRepo").value=g.repo||"biosite";$("ghToken").value=g.token||"";$("ghBase").value=g.base||""}
+function ghReady(){const g=ghCfg();return g.owner&&g.repo&&g.token}
+function ghErr(status,j){
+  if(status===401) return "Token inválido ou expirado. Gere um novo no GitHub.";
+  if(status===403) return "O token não tem permissão de escrita. No token, dê acesso ao repositório e marque Contents: Read and write.";
+  if(status===404) return "Repositório não encontrado. Confira usuário e nome do repositório, e se o token tem acesso a ele.";
+  if(status===409) return "O GitHub recusou por conflito. Clique em Publicar de novo.";
+  if(status===422) return "O GitHub recusou os dados: "+(j.message||"dados inválidos")+".";
+  return `Erro do GitHub (${status}): ${j.message||"sem detalhes"}.`;
+}
+async function gh(path,opt={}){
+  const g=ghCfg();
+  let r;
+  try{
+    r=await fetch(`https://api.github.com/repos/${encodeURIComponent(g.owner)}/${encodeURIComponent(g.repo)}${path}`,{
+      method:opt.method||"GET", body:opt.body, cache:"no-store",
+      headers:{Authorization:`Bearer ${g.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.body?{"Content-Type":"application/json"}:{})}
+    });
+  }catch(e){throw new Error("Sem conexão com o GitHub. Verifique a internet.")}
+  const j=await r.json().catch(()=>({}));
+  if(opt.allowMissing&&(r.status===404||r.status===409)) return null;
+  if(!r.ok) throw new Error(ghErr(r.status,j));
+  return j;
+}
+function b64enc(str){const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)}
+function b64dec(b){const bin=atob(String(b).replace(/\s/g,""));return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0)))}
+function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
+async function ghText(path){
+  const f=await gh(`/contents/${path}`,{allowMissing:true});
+  if(!f) return null;
+  if(f.content) return {sha:f.sha,text:b64dec(f.content)};
+  const blob=await gh(`/git/blobs/${f.sha}`);
+  return {sha:f.sha,text:b64dec(blob.content)};
+}
+
+$("btnGhSalvar").onclick=async()=>{
+  const g={owner:$("ghOwner").value.trim().replace(/^@/,""),repo:$("ghRepo").value.trim()||"biosite",token:$("ghToken").value.trim(),base:$("ghBase").value.trim().replace(/\/+$/,"")};
+  save("bio_gh",g); showUrl(); renderProdutos(); render();
+  if(!g.owner||!g.token){msg("ghMsg","Preencha o usuário e o token do GitHub.");return}
+  $("ghMsg").innerHTML=`<p class="note">Testando…</p>`;
+  try{
+    const repo=await gh("");
+    if(repo.permissions&&!repo.permissions.push) throw new Error("O token só tem leitura. Marque Contents: Read and write.");
+    $("ghMsg").innerHTML=`<div class="okbox">Conectado ao repositório ${esc(repo.full_name)}.${g.base?"":" Depois de importar na Vercel, preencha o Endereço do site."}</div>`;
+    listar();
+  }catch(e){msg("ghMsg",e.message)}
+};
+
+function clearPub(){$("pubConfirm").innerHTML="";$("pubResult").innerHTML=""}
+function etapa(t){$("pubResult").innerHTML=`<p class="note">${esc(t)}</p>`}
+let publicando=false;
+async function publicar(forcar,precosOk){
+  if(publicando) return;
+  clearPub();
+  if(!ghReady()){$("ghDetails").open=true;msg("pubResult","Configure o GitHub primeiro (abri a configuração logo abaixo).");return}
+  s.slug=slugify(s.slug||s.nome);$("slug").value=s.slug;showUrl();
+  if(!s.nome){msg("pubResult","Preencha o nome da empresa.");return}
+  if(s.produtos.some(p=>p.nome)&&!(s.whatsapp||"").replace(/\D/g,"")){msg("pubResult","Preencha o WhatsApp: é para lá que os pedidos vão.");return}
+  publicando=true;$("btnPublicar").disabled=true;etapa("Conectando ao GitHub…");
+  try{
+    const slug=s.slug;
+    const repo=await gh("");
+    const br=repo.default_branch||"main";
+    let ref=await gh(`/git/ref/heads/${encodeURIComponent(br)}`,{allowMissing:true});
+    if(!ref){
+      // Repositório vazio: cria o primeiro arquivo para existir um commit
+      await gh(`/contents/vercel.json`,{method:"PUT",body:JSON.stringify({message:"Configuração inicial",content:b64enc(JSON.stringify({cleanUrls:true,trailingSlash:false},null,2)+"\n")})});
+      const r2=await gh("");
+      ref=await gh(`/git/ref/heads/${encodeURIComponent(r2.default_branch||"main")}`);
+    }
+    const branch=ref.ref.replace("refs/heads/","");
+    const head=ref.object.sha;
+    const commit=await gh(`/git/commits/${head}`);
+    const arvore=await gh(`/git/trees/${commit.tree.sha}?recursive=1`);
+    const existe=new Map((arvore.tree||[]).filter(t=>t.type==="blob").map(t=>[t.path,t.sha]));
+
+    let cfgAtual=null;
+    if(existe.has(`${slug}.html`)){
+      try{const bl=await gh(`/git/blobs/${existe.get(`${slug}.html`)}`);const m=b64dec(bl.content).match(/<script type="application\/json" id="bio-config">([\s\S]*?)<\/script>/);if(m)cfgAtual=JSON.parse(m[1])}catch(_){}
+    }
+    if(existe.has(`${slug}.html`)&&!forcar&&s._publicado!==slug){
+      const outro=cfgAtual?.nome||"";
+      $("pubResult").innerHTML="";
+      $("pubConfirm").innerHTML=`<div class="warn">Já existe um site publicado em <b>${esc(bioUrl(slug))}</b>${outro?` (${esc(outro)})`:""}. Publicar por cima vai substituí-lo.
+        <div class="row" style="margin-top:8px"><button class="primary" id="btnForcar">Publicar por cima</button><button id="btnCancelar">Cancelar e mudar o endereço</button></div></div>`;
+      $("btnForcar").onclick=()=>publicar(true,precosOk);
+      $("btnCancelar").onclick=()=>{clearPub();$("slug").focus();$("slug").select()};
+      return;
+    }
+    // O dono mudou preços pelo painel depois que este cliente foi aberto aqui?
+    if(cfgAtual&&cfgAtual.precosAtualizadosEm&&cfgAtual.precosAtualizadosEm!==s.precosAtualizadosEm&&!precosOk){
+      const quando=new Date(cfgAtual.precosAtualizadosEm).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});
+      $("pubResult").innerHTML="";
+      $("pubConfirm").innerHTML=`<div class="warn">O dono mudou preços pelo painel em <b>${esc(quando)}</b>, depois que você abriu este cliente aqui. Se publicar com os preços daqui, as mudanças dele se perdem.
+        <div class="row" style="margin-top:8px"><button class="primary" id="btnTrazer">Trazer os preços do dono e publicar</button><button id="btnMeus">Publicar com os preços daqui</button></div></div>`;
+      $("btnTrazer").onclick=()=>{
+        let n=0;
+        s.produtos.forEach(p=>{const q=(cfgAtual.produtos||[]).find(x=>x.id===p.id);if(q){if(p.preco!==q.preco||!!p.esgotado!==!!q.esgotado)n++;p.preco=q.preco;p.esgotado=!!q.esgotado}});
+        s.precosAtualizadosEm=cfgAtual.precosAtualizadosEm;renderProdutos();render();
+        toast(`${n} preço${n===1?"":"s"} do dono trazido${n===1?"":"s"}.`);
+        publicar(true,true);
+      };
+      $("btnMeus").onclick=()=>{s.precosAtualizadosEm=cfgAtual.precosAtualizadosEm;publicar(true,true)};
+      return;
+    }
+
+    // Sobe as imagens como arquivos (uma vez cada) e troca por caminhos /img/...
+    const d=structuredClone(s); for(const k in d) if(k.startsWith("_")) delete d[k];
+    const entradas=[], usadas=new Set();
+    const imgs=[["logo",d,"logo"],["capa",d,"capa"],...d.produtos.map(p=>["prod-"+slugify(p.nome).slice(0,24),p,"foto"])].filter(([_,o,k])=>o[k]);
+    let n=0;
+    for(const [nome,obj,k] of imgs){
+      const u=obj[k];
+      if(u.startsWith("data:")){
+        const b64=u.slice(u.indexOf(",")+1);
+        const path=`img/${slug}/${nome}-${hash(b64)}.jpg`;
+        if(!existe.has(path)&&!usadas.has(path)){
+          n++;etapa(`Enviando fotos (${n})…`);
+          const bl=await gh("/git/blobs",{method:"POST",body:JSON.stringify({content:b64,encoding:"base64"})});
+          entradas.push({path,mode:"100644",type:"blob",sha:bl.sha});
+        }
+        usadas.add(path); obj[k]="/"+path;
+      }else if(u.startsWith("/img/")){usadas.add(u.slice(1))}
+      else if(/googleapis\.com|key=/.test(u)){obj[k]=""}
+    }
+    etapa("Publicando…");
+    entradas.push({path:`${slug}.html`,mode:"100644",type:"blob",content:bioHTML(d,u=>u)});
+    if(safeUrl(d.review)) entradas.push({path:`${slug}-avaliar.html`,mode:"100644",type:"blob",content:redirectHTML(d.review)});
+    entradas.push({path:"api/precos.js",mode:"100644",type:"blob",content:ARQ_API});
+    entradas.push({path:"painel.html",mode:"100644",type:"blob",content:ARQ_PAINEL});
+    const novoAcesso=s._acesso;
+    if(novoAcesso) entradas.push({path:`admin/${slug}.json`,mode:"100644",type:"blob",content:JSON.stringify(novoAcesso)});
+    if(!existe.has("vercel.json")) entradas.push({path:"vercel.json",mode:"100644",type:"blob",content:JSON.stringify({cleanUrls:true,trailingSlash:false},null,2)+"\n"});
+    for(const [p] of existe){ if(p.startsWith(`img/${slug}/`)&&!usadas.has(p)) entradas.push({path:p,mode:"100644",type:"blob",sha:null}); }
+
+    const novaArvore=await gh("/git/trees",{method:"POST",body:JSON.stringify({base_tree:commit.tree.sha,tree:entradas})});
+    const novo=await gh("/git/commits",{method:"POST",body:JSON.stringify({message:`${existe.has(`${slug}.html`)?"Atualiza":"Publica"} site: ${d.nome}`,tree:novaArvore.sha,parents:[head]})});
+    await gh(`/git/refs/heads/${encodeURIComponent(branch)}`,{method:"PATCH",body:JSON.stringify({sha:novo.sha})});
+
+    s._publicado=slug;
+    if(novoAcesso){delete s._acesso;$("codigoBox").querySelector(".warn")?.replaceWith(Object.assign(document.createElement("div"),{textContent:"Código ativado. Já pode enviar para o dono."}))}
+    save("bio_rascunho",s);
+    const url=bioUrl(slug), urlAv=bioUrl(slug+"-avaliar");
+    const temBase=!!siteBase();
+    $("pubResult").innerHTML=`<div class="okbox">
+      <div>${existe.has(`${slug}.html`)?"Site atualizado":"Site publicado"}. Fica no ar em cerca de 1 minuto.</div>
+      ${temBase?`<div><small>Site (bio do Instagram, Google, WhatsApp)</small><br><a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a></div>
+      ${safeUrl(d.review)?`<div><small>Plaquinha NFC (abre direto a avaliação)</small><br><a href="${esc(urlAv)}" target="_blank" rel="noopener">${esc(urlAv)}</a></div>`:""}
+      <div class="row"><button class="small" data-copy="${esc(url)}">Copiar site</button>${safeUrl(d.review)?`<button class="small" data-copy="${esc(urlAv)}">Copiar link da plaquinha</button>`:""}</div>`
+      :`<div>Enviado ao GitHub. Importe o repositório na Vercel e preencha o Endereço do site para ver os links.</div>`}
+    </div>`;
+    listar();
+  }catch(e){msg("pubResult",e.message)}
+  finally{publicando=false;$("btnPublicar").disabled=false}
+}
+$("btnPublicar").onclick=()=>publicar(false);
+$("pubResult").addEventListener("click",async e=>{
+  const u=e.target.dataset.copy;if(!u)return;
+  try{await navigator.clipboard.writeText(u);toast("Link copiado.")}catch(_){toast("Não consegui copiar. Selecione o link e copie.")}
+});
+
+async function listar(){
+  if(!ghReady()) return;
+  $("publist").innerHTML=`<p class="note">Carregando…</p>`;
+  try{
+    const items=(await gh("/contents/",{allowMissing:true}))||[];
+    const sites=items.filter(f=>f.type==="file"&&f.name.endsWith(".html")&&!f.name.endsWith("-avaliar.html")).map(f=>f.name.slice(0,-5)).sort();
+    $("publist").innerHTML=sites.length?sites.map(sl=>`<div class="pub"><b>${esc(sl)}</b>${siteBase()?`<a href="${esc(bioUrl(sl))}" target="_blank" rel="noopener">Abrir</a>`:""}<button class="small" data-edit="${esc(sl)}">Editar</button></div>`).join(""):`<p class="note">Nenhum site publicado ainda.</p>`;
+  }catch(e){$("publist").innerHTML="";msg("publist",e.message)}
+}
+$("btnLista").onclick=listar;
+$("publist").onclick=async e=>{
+  const sl=e.target.dataset.edit; if(!sl) return;
+  e.target.disabled=true; e.target.textContent="Abrindo…";
+  try{
+    const f=await ghText(`${sl}.html`);
+    if(!f) throw new Error("Esse site não existe mais no repositório.");
+    const doc=new DOMParser().parseFromString(f.text,"text/html");
+    const cfg=doc.getElementById("bio-config");
+    if(!cfg) throw new Error("Esse site foi criado por uma versão antiga do criador. Abra o .json dele, ou refaça e publique por cima.");
+    const d=JSON.parse(cfg.textContent);
+    if(!d.logo) d.logo=doc.querySelector("img.logo")?.getAttribute("src")||"";
+    if(!d.capa){const m=(doc.querySelector(".capa")?.getAttribute("style")||"").match(/url\('(.+?)'\)/);d.capa=m?m[1]:""}
+    s=normalizar(Object.assign(d,{slug:sl}));s._publicado=sl;
+    toForm(); render(); clearPub();
+    window.scrollTo({top:0,behavior:"smooth"});
+    toast(`Editando ${s.nome}.${siteBase()?"":" Preencha o Endereço do site para ver as fotos na prévia."}`);
+  }catch(err){toast(err.message)}
+  finally{e.target.disabled=false;e.target.textContent="Editar"}
+};
+
+/* ---------- Arquivos locais ---------- */
+function download(name,content,type){
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+$("btnExport").onclick=()=>{download((s.slug||"cliente")+".html",bioHTML(),"text/html");toast("Site baixado.")};
+$("btnSaveJson").onclick=()=>{const c={...s};delete c._publicado;download((s.slug||"cliente")+".json",JSON.stringify(c,null,2),"application/json");toast("Cliente salvo.")};
+$("btnOpenJson").onclick=()=>$("openJson").click();
+$("openJson").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{s=normalizar(JSON.parse(r.result));delete s._publicado;toForm();render();clearPub();toast("Cliente aberto.")}catch(_){toast("Arquivo inválido: escolha um .json salvo por este criador.")}};r.readAsText(f);e.target.value=""};
+$("btnNovo").onclick=()=>{s=normalizar({...DEFAULT,nome:"",cidade:"",descricao:"",whatsapp:"",instagram:"",review:"",endereco:"",maps:"",horario:"",nota:"",totalAval:"",extras:[],produtos:[],categorias:[],pedido:{...PEDIDO_PADRAO},logo:"",capa:"",slug:"cliente"});toForm();render();clearPub();$("q").focus()};
+
+/* ---------- Início ---------- */
+if(s.capa&&/googleapis\.com|key=/.test(s.capa)) s.capa="";
+fillFonts(); fillPresets(); ghFill(); toForm(); render();
+if(ghReady()) listar(); else $("ghDetails").open=true;
+</script>
+</body>
+</html>

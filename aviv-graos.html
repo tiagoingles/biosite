@@ -126,6 +126,48 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--cor);outline-offset
 .t-minimal .btn{background:transparent;color:var(--texto);border:1.5px solid var(--texto);border-radius:4px}
 .t-minimal .btn.destaque{background:var(--texto);color:var(--fundo);box-shadow:none}
 .t-minimal .avaliar{border-radius:6px}
+/* Acabamento: profundidade, transições suaves e movimento */
+:root{--ease:cubic-bezier(.2,.7,.2,1);--sombra:0 1px 2px rgba(0,0,0,.04),0 12px 28px -12px color-mix(in srgb,var(--texto) 30%,transparent)}
+body{background:radial-gradient(90% 420px at 50% -80px,color-mix(in srgb,var(--cor) 22%,transparent),transparent 70%),var(--fundo)}
+h1{letter-spacing:-.02em}
+.capa{position:relative;overflow:hidden;height:170px}
+.capa::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--fundo) 100%)}
+.logo{box-shadow:0 0 0 6px color-mix(in srgb,var(--cor) 16%,transparent),0 16px 32px -12px color-mix(in srgb,var(--cor) 70%,transparent);transition:transform .6s var(--ease)}
+.logo:hover{transform:scale(1.05) rotate(-2deg)}
+.chips a,.acao .ic,.add,.step button,.x{transition:background .3s,color .3s,transform .35s var(--ease),box-shadow .35s var(--ease)}
+.chips a:hover{transform:translateY(-1px);background:var(--suave)}
+.acao .ic{box-shadow:var(--sombra)}
+.acao:hover .ic{transform:translateY(-3px);box-shadow:0 14px 26px -10px color-mix(in srgb,var(--cor) 70%,transparent)}
+.prod{transition:transform .5s var(--ease),box-shadow .5s var(--ease),background .3s}
+.prod:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+.pimg{transition:transform .9s var(--ease)}
+.t-vitrine .prod:hover .pimg{transform:scale(1.07)}
+.add:hover{box-shadow:0 8px 18px -6px color-mix(in srgb,var(--cor) 80%,transparent)}
+.add:active,.step button:active{transform:scale(.88)}
+.btn,.avaliar{transition:transform .4s var(--ease),box-shadow .4s var(--ease),filter .3s}
+.btn:hover,.avaliar:hover{transform:translateY(-2px);filter:brightness(1.06)}
+.btn:active,.avaliar:active{transform:scale(.98)}
+.btn.destaque{box-shadow:0 14px 30px -10px color-mix(in srgb,var(--cor) 65%,transparent)}
+.cartbar{background:color-mix(in srgb,var(--cor) 93%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);transition:transform .5s var(--ease),background .3s}
+.cartbar:not([hidden]){animation:cartSobe .7s var(--ease) both}
+.cartbar:active{transform:translateX(-50%) scale(.98)}
+@keyframes cartSobe{from{opacity:0;translate:0 30px}to{opacity:1;translate:0 0}}
+dialog[open]{animation:dialogSobe .55s var(--ease) both}
+dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3px)}
+@keyframes dialogSobe{from{opacity:0;translate:0 40px}to{opacity:1;translate:0 0}}
+@keyframes dialogFade{from{opacity:0}to{opacity:1}}
+@keyframes entra{from{opacity:0;translate:0 18px;filter:blur(6px)}to{opacity:1;translate:0 0;filter:blur(0)}}
+.topo>*{animation:entra 1s var(--ease) both}
+.topo>*:nth-child(2){animation-delay:.08s}.topo>*:nth-child(3){animation-delay:.16s}.topo>*:nth-child(4){animation-delay:.24s}.topo>*:nth-child(5){animation-delay:.32s}
+.links .btn{animation:entra .9s var(--ease) both}
+.links .btn:nth-child(2){animation-delay:.1s}.links .btn:nth-child(3){animation-delay:.2s}.links .btn:nth-child(4){animation-delay:.3s}
+@supports (animation-timeline:view()){
+  .cat h2,.bloco,.avaliar,.infos{animation:entra linear both;animation-timeline:view();animation-range:entry 0% entry 40%}
+  .prod{animation:entra linear both;animation-timeline:view();animation-range:entry 0% entry 55%}
+}
+.t-minimal .prod:hover{box-shadow:none;transform:translateX(4px)}
+.t-minimal .btn:hover,.t-minimal .avaliar:hover{box-shadow:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 <script type="application/json" id="bio-config">{"modelo":"vitrine","nome":"Aviv Grãos","cidade":"Abreu e Lima - PE","descricao":"Loja de produtos naturais em Abreu e Lima - PE","whatsapp":"5581985860724","whatsMsg":"Olá! Vim pelo site.","instagram":"@avivgraos","review":"https://search.google.com/local/writereview?placeid=ChIJ_1Y6px8UqwcRsFP1a9wfrTs","endereco":"Av. D, 107 - Caetés I, Abreu e Lima - PE, 53540-255","maps":"https://maps.google.com/?cid=4300128250773197744&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&hl=pt-BR&gl=br&source=apiv3","horario":"","logo":"/img/aviv-graos/logo-1lnag7x.jpg","capa":"/img/aviv-graos/capa-1u5pzwd.jpg","nota":5,"totalAval":4,"mostrarNota":true,"extras":[],"catalogoTitulo":"Produtos","categorias":["Grãos","Castanhas e sementes","Temperos","Óleos e azeites"],"produtos":[{"id":"pmvv2juxw5opq","nome":"Feijão carioca 1 kg","preco":"8,90","cat":"Grãos","desc":"","marca":"","unidade":"Peso","foto":"/img/aviv-graos/prod-feijao-carioca-1-kg-5zf1im.jpg","esgotado":false},{"id":"pmvv2juyf145x","nome":"Feijão preto 1 kg","preco":"9,50","cat":"Grãos","desc":"","marca":"","unidade":"Peso","foto":"/img/aviv-graos/prod-feijao-preto-1-kg-1z07tjx.jpg","esgotado":false},{"id":"pmvv2juywmq2w","nome":"Amendoim torrado 500 g","preco":"12,90","cat":"Castanhas e sementes","desc":"","marca":"","unidade":"Peso","foto":"/img/aviv-graos/prod-amendoim-torrado-500-g-3b1f23.jpg","esgotado":false},{"id":"pmvv2juzd06wd","nome":"Chia 250 g","preco":"9,90","cat":"Castanhas e sementes","desc":"","marca":"","unidade":"Peso","foto":"/img/aviv-graos/prod-chia-250-g-jg1wux.jpg","esgotado":false},{"id":"pmvv2juzxdyvb","nome":"Linhaça dourada 250 g","preco":"7,90","cat":"Castanhas e sementes","desc":"","marca":"","unidade":"Peso","foto":"/img/aviv-graos/prod-linhaca-dourada-250-g-1ltz2dc.jpg","esgotado":false},{"id":"pmvv2jv0jofdm","nome":"Cominho moído 100 g","preco":"4,90","cat":"Temperos","desc":"","marca":"","unidade":"Peso","foto":"/img/aviv-graos/prod-cominho-moido-100-g-14kxewp.jpg","esgotado":false},{"id":"pmvv2jv13avvg","nome":"Pimenta-do-reino moída 100 g","preco":"7,90","cat":"Temperos","desc":"","marca":"","unidade":"Peso","foto":"/img/aviv-graos/prod-pimenta-do-reino-moida-1-1estcwo.jpg","esgotado":false},{"id":"pmvv2jv1h8opi","nome":"Óleo de soja 900 ml","preco":"7,90","cat":"Óleos e azeites","desc":"","marca":"","unidade":"Litro","foto":"/img/aviv-graos/prod-oleo-de-soja-900-ml-imv7lu.jpg","esgotado":false},{"id":"pmvv2jv29qtp5","nome":"Azeite de oliva extravirgem 500 ml","preco":"29,90","cat":"Óleos e azeites","desc":"","marca":"","unidade":"Litro","foto":"/img/aviv-graos/prod-azeite-de-oliva-extravir-1pj5uru.jpg","esgotado":false}],"pedido":{"entrega":true,"retirada":true,"agendamento":false,"taxa":"5,00","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[{"nome":"Caetes 1","taxa":"0,00"},{"nome":"Caetes 2","taxa":"3"},{"nome":"caetes 3","taxa":"3,00"}],"botao":"Enviar pedido pelo WhatsApp","obsDica":"Ex.: entregar depois das 14h"},"cor":"#c2410c","fundo":"#fff8f1","texto":"#2a1a10","fonteTitulo":"Playfair Display","fonteTexto":"Nunito","slug":"aviv-graos"}</script>
 </head>

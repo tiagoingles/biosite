@@ -284,13 +284,47 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
     </section>
 
     <section class="panel">
-      <h2>5 · Links extras</h2>
+      <h2>5 · Agendamento de serviços</h2>
+      <div class="stack">
+        <label class="check"><input type="checkbox" id="agAtivo"> Ativar agendamento de serviços no site</label>
+        <div id="agBox" class="stack">
+          <div class="grid2">
+            <label>Como chamar quem atende<select id="agTermo"><option>Barbeiro</option><option>Cabeleireiro</option><option>Esteticista</option><option>Profissional</option></select></label>
+            <label>Mensagem enviada ao WhatsApp <small>(opcional)</small><textarea id="agMsg" rows="3" placeholder="Vazio = modelo padrão"></textarea></label>
+          </div>
+          <p class="note" style="margin:0">Na mensagem, use {servico}, {profissional}, {dia}, {horario}, {nome} e {obs}.</p>
+          <p class="note" style="margin:0;font-weight:600;color:var(--ink)">Serviços</p>
+          <div class="grid2">
+            <label>Nome<input type="text" id="agSvcNome" placeholder="Ex.: Corte masculino"></label>
+            <label>Duração <small>(opcional)</small><input type="text" id="agSvcDur" placeholder="Ex.: 40 min"></label>
+          </div>
+          <div class="grid2">
+            <label>Preço <small>(opcional)</small><input type="text" inputmode="decimal" id="agSvcPreco" placeholder="35,00"></label>
+            <div class="row" style="align-self:end"><button type="button" class="small" id="btnAddSvc">Adicionar serviço</button></div>
+          </div>
+          <div id="agServicosCad" class="stack"></div>
+          <p class="note" style="margin:0;font-weight:600;color:var(--ink)">Profissionais e horários</p>
+          <label>Nome<input type="text" id="agProfNome" placeholder="Ex.: João"></label>
+          <div class="grid2">
+            <label>Início<input type="time" id="agIni" value="09:00"></label>
+            <label>Fim<input type="time" id="agFim" value="18:00"></label>
+          </div>
+          <div><p class="note" style="margin:0 0 6px">Serviços que faz</p><div id="agSvcChecks" class="checks"></div></div>
+          <div><p class="note" style="margin:0 0 6px">Dias de trabalho</p><div id="agDiasChecks" class="checks"></div></div>
+          <div class="row"><button type="button" class="small" id="btnAddProf">Adicionar profissional</button></div>
+          <div id="agProfCad" class="stack"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>6 · Links extras</h2>
       <div class="stack" id="extras"></div>
       <div class="row" style="margin-top:12px"><button id="btnAddExtra">+ Adicionar link</button></div>
     </section>
 
     <section class="panel">
-      <h2>6 · Visual</h2>
+      <h2>7 · Visual</h2>
       <div class="stack">
         <div class="models" role="group" aria-label="Modelo">
           <button class="model" data-model="vitrine" aria-pressed="true"><span class="mini vitrine"><i></i><i></i><i></i><i></i></span>Vitrine</button>
@@ -313,7 +347,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
     </section>
 
     <section class="panel">
-      <h2>7 · Publicar</h2>
+      <h2>8 · Publicar</h2>
       <div class="stack">
         <label>Endereço do site <small>(fica: <span id="urlShow"></span>)</small><input type="text" id="slug"></label>
         <div class="row">
@@ -360,7 +394,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
     </section>
 
     <section class="panel">
-      <h2>8 · Sites publicados</h2>
+      <h2>9 · Sites publicados</h2>
       <div class="row" style="justify-content:space-between">
         <p class="note" style="margin:0">Clique em Editar para carregar, mudar e publicar de novo.</p>
         <button id="btnLista">Atualizar lista</button>
@@ -506,6 +540,8 @@ function normalizar(d){
   x.pedido=Object.assign({},PEDIDO_PADRAO,d?(d.pedido||{}):DEFAULT.pedido);
   if(!Array.isArray(x.produtos)) x.produtos=[];
   if(!Array.isArray(x.extras)) x.extras=[];
+  const A=d&&d.agenda?d.agenda:{};
+  x.agenda={ativo:!!A.ativo,termo:A.termo||"Profissional",msg:A.msg||"",servicos:Array.isArray(A.servicos)?A.servicos:[],profissionais:Array.isArray(A.profissionais)?A.profissionais:[]};
   x.produtos.forEach(p=>{if(!p.id)p.id=uid();p.cat=(p.cat||"").trim();p.marca=p.marca||"";p.unidade=p.unidade||""});
   // Categorias: usa a lista salva e acrescenta as que só existem nos produtos
   const base=(d&&Array.isArray(d.categorias))?d.categorias:(d?[]:DEFAULT.categorias);
@@ -655,6 +691,86 @@ function bigLinks(d){
   (d.extras||[]).forEach(e=>{if(e.titulo&&safeUrl(e.url))L.push({k:"link",t:e.titulo,u:e.url})});
   return L.filter(l=>safeUrl(l.u));
 }
+function agendaRuntime(){
+  var C=JSON.parse(document.getElementById("bio-config").textContent);
+  var AG=C.agenda||{};
+  var dlg=document.getElementById("agenda");
+  if(!dlg)return;
+  function $(id){return document.getElementById(id)}
+  function num(v){var t=String(v==null?"":v).replace(/[^\d,.]/g,"");if(!t)return NaN;if(t.indexOf(",")>-1)t=t.replace(/\./g,"").replace(",",".");return parseFloat(t)}
+  function brl(n){return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+  function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function pad(n){return n<10?"0"+n:""+n}
+  var DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  var MSG_PADRAO="Olá! Quero agendar:\n*{servico}*\nCom: {profissional}\nDia: {dia} às {horario}\nNome: {nome}{obs}";
+  var passo=0,sel={},dias=[];
+  function profs(){return (AG.profissionais||[]).filter(function(p){return !sel.servico||(p.servicos||[]).indexOf(sel.servico.id)>-1})}
+  function diasDe(p){var out=[],h=new Date();for(var i=0;i<30&&out.length<10;i++){var dt=new Date(h.getFullYear(),h.getMonth(),h.getDate()+i);if((p.dias||[]).indexOf(dt.getDay())>-1)out.push(dt)}return out}
+  function horasDe(p){var h=[],a=String(p.inicio||"09:00").split(":"),b=String(p.fim||"18:00").split(":");var t=+a[0]*60+ +a[1],f=+b[0]*60+ +b[1];for(;t<f;t+=30)h.push(pad(Math.floor(t/60))+":"+pad(t%60));return h}
+  function rotuloDia(dt){return DIAS[dt.getDay()]+" "+pad(dt.getDate())+"/"+pad(dt.getMonth()+1)}
+  function porId(lista,id){return lista.filter(function(x){return x.id===id})[0]}
+  function render(){
+    var h=passo>0?'<button type="button" class="ag-voltar" data-ag="voltar">← Voltar</button>':"";
+    var titulo="";
+    $("agEnviar").hidden=passo!==3;
+    if(passo===0){
+      titulo="Escolha o serviço";
+      (AG.servicos||[]).forEach(function(s){
+        var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
+        var info=[s.duracao,preco].filter(Boolean).join(" · ");
+        h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
+      });
+    }else if(passo===1){
+      titulo="Escolha quem vai atender";
+      var lista=profs();
+      lista.forEach(function(p){h+='<button type="button" class="ag-op" data-ag="prof" data-id="'+esc(p.id)+'"><b>'+esc(p.nome)+'</b></button>'});
+      if(!lista.length)h+='<p class="note">Nenhum profissional faz este serviço no momento.</p>';
+    }else if(passo===2){
+      titulo="Escolha o dia e o horário";
+      dias=diasDe(sel.prof);
+      h+='<div class="ag-chips">'+dias.map(function(dt,i){return '<button type="button" data-ag="dia" data-i="'+i+'"'+(sel.dia===i?' aria-pressed="true"':'')+'>'+rotuloDia(dt)+'</button>'}).join("")+'</div>';
+      if(!dias.length)h+='<p class="note">Sem dias disponíveis nos próximos 30 dias.</p>';
+      if(sel.dia!=null){
+        h+='<p class="ag-sub">Horários</p><div class="ag-chips">'+horasDe(sel.prof).map(function(t){return '<button type="button" data-ag="hora" data-v="'+t+'">'+t+'</button>'}).join("")+'</div>';
+      }
+    }else{
+      titulo="Seus dados";
+      h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(sel.prof.nome)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
+      h+='<div class="campos"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome"></label><label>Observação <small>(opcional)</small><textarea id="agObs" rows="2"></textarea></label></div>';
+    }
+    $("agTitulo").textContent=titulo;
+    $("agSteps").innerHTML=h;
+  }
+  function abrir(){passo=0;sel={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
+  function fechar(){if(dlg.close)dlg.close();else dlg.removeAttribute("open")}
+  $("abrirAgenda").addEventListener("click",abrir);
+  dlg.querySelector("[data-close]").addEventListener("click",fechar);
+  $("agSteps").addEventListener("click",function(e){
+    var b=e.target.closest("[data-ag]");if(!b)return;
+    var a=b.getAttribute("data-ag");
+    $("agErro").textContent="";
+    if(a==="voltar"){
+      if(passo===3)sel.hora=null;
+      if(passo===2){sel.dia=null}
+      if(passo===1)sel.prof=null;
+      passo--;
+    }
+    else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));passo=1}
+    else if(a==="prof"){sel.prof=porId(AG.profissionais||[],b.getAttribute("data-id"));sel.dia=null;passo=2}
+    else if(a==="dia"){sel.dia=+b.getAttribute("data-i");sel.diaTxt=rotuloDia(dias[sel.dia]);sel.hora=null}
+    else if(a==="hora"){sel.hora=b.getAttribute("data-v");passo=3}
+    render();
+  });
+  $("agEnviar").addEventListener("click",function(){
+    var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
+    if(!nome){$("agErro").textContent="Informe seu nome.";return}
+    var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(sel.prof.nome).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"");
+    var w=String(C.whatsapp||"").replace(/\D/g,"");if(w.indexOf("55")!==0)w="55"+w;
+    var a=document.createElement("a");a.href="https://wa.me/"+w+"?text="+encodeURIComponent(txt);a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
+    fechar();
+  });
+}
+
 function waLink(d){const w=(d.whatsapp||"").replace(/\D/g,"");if(!w)return "";const n=w.startsWith("55")?w:"55"+w;return `https://wa.me/${n}${d.whatsMsg?"?text="+encodeURIComponent(d.whatsMsg):""}`}
 function igLink(d){const ig=(d.instagram||"").replace(/^@/,"").replace(/https?:\/\/(www\.)?instagram\.com\//,"").replace(/\/.*/,"").trim();return ig?`https://instagram.com/${ig}`:""}
 function configJSON(d){
@@ -674,6 +790,11 @@ function bioHTML(d=s, img=R){
   const prods=(d.produtos||[]).filter(p=>p.nome);
   const temCat=prods.length>0;
   const O=d.pedido||PEDIDO_PADRAO;
+  // Agendamento de serviços: o cliente escolhe serviço, profissional e horário, e envia pelo WhatsApp
+  const AG=d.agenda||{};
+  const agOk=!!AG.ativo&&(AG.servicos||[]).length>0&&(AG.profissionais||[]).length>0;
+  const agCta=agOk?`<nav class="links"><button type="button" class="btn destaque" id="abrirAgenda">${svg("whats")}<span>${esc(AG.botao||"Agendar um horário")}</span><em aria-hidden="true">→</em></button></nav>`:"";
+  const agDlg=agOk?`<dialog id="agenda" aria-labelledby="agTitulo"><div class="sheet"><div class="sh-top"><h2 id="agTitulo">Agendar</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div><div id="agSteps" class="ag-steps"></div><p class="erro" id="agErro" role="alert"></p><button type="button" class="enviar" id="agEnviar" hidden>${svg("whats")}<span>Enviar pedido pelo WhatsApp</span></button></div></dialog>`:"";
 
   const notaTxt=(d.mostrarNota&&d.nota)?`${svg("star")}<b>${String(d.nota).replace(".",",")}</b>${d.totalAval?` · ${d.totalAval} avaliações`:""} no Google`:"";
   const nota=notaTxt?(d.review?`<a class="nota" href="${esc(d.review)}" target="_blank" rel="noopener">${notaTxt}</a>`:`<p class="nota">${notaTxt}</p>`):"";
@@ -907,6 +1028,17 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 .t-minimal .prod:hover{box-shadow:none;transform:translateX(4px)}
 .t-minimal .btn:hover,.t-minimal .avaliar:hover{box-shadow:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* Agendamento de serviços */
+.ag-op{display:grid;gap:2px;width:100%;text-align:left;padding:13px 14px;border:1px solid var(--linha);border-radius:12px;background:var(--fundo);color:inherit;font:inherit;cursor:pointer;transition:background .3s,transform .35s var(--ease),box-shadow .35s var(--ease)}
+.ag-op:hover{background:var(--suave);transform:translateY(-2px);box-shadow:var(--sombra)}
+.ag-op small{opacity:.7;font-size:13px}
+.ag-steps{display:grid;gap:12px}
+.ag-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ag-chips button{border:1px solid var(--linha);background:var(--fundo);color:inherit;border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;transition:background .3s,color .3s,transform .3s var(--ease)}
+.ag-chips button:hover{transform:translateY(-1px)}
+.ag-chips button[aria-pressed=true]{background:var(--cor);color:var(--sobre);border-color:var(--cor)}
+.ag-voltar{justify-self:start;background:none;border:0;padding:0;color:inherit;opacity:.7;font:inherit;cursor:pointer}
+.ag-sub{margin:4px 0 0;font-weight:700;font-size:14px}
 </style>
 <script type="application/json" id="bio-config">${configJSON(d)}<\/script>
 </head>
@@ -919,6 +1051,7 @@ ${d.descricao?`<p class="sub">${esc(d.descricao)}</p>`:""}
 ${nota}
 ${temCat?acoes:""}
 </header>
+${agCta}
 ${links}
 ${catalogo}
 ${avaliar}
@@ -927,7 +1060,9 @@ ${infoBloco}
 <footer>${esc(d.nome)}${d.cidade?" · "+esc(d.cidade):""}</footer>
 </div>
 ${sheet}
+${agDlg}
 ${temCat?`<script>(${bioRuntime.toString()})()<\/script>`:""}
+${agOk?`<script>(${agendaRuntime.toString()})()<\/script>`:""}
 </body></html>`;
 }
 function redirectHTML(url){
@@ -953,6 +1088,7 @@ function toForm(){
   for(const id in pedidoChecks) $(id).checked=!!s.pedido[pedidoChecks[id]];
   for(const id in pagChecks) $(id).checked=(s.pedido.pag||[]).includes(pagChecks[id]);
   renderBairros();
+  renderAgenda();
   showUrl();
   document.querySelectorAll(".model").forEach(b=>b.setAttribute("aria-pressed",b.dataset.model===s.modelo));
   renderExtras(); renderCats(); renderProdutos();
@@ -987,6 +1123,58 @@ $("btnBColar").onclick=()=>{
 };
 $("bairrosCad").addEventListener("click",e=>{const i=e.target.dataset.bdel;if(i==null)return;s.pedido.bairros=bairrosCfg().filter((_,j)=>String(j)!==i);renderBairros();render()});
 document.querySelectorAll(".model").forEach(b=>b.onclick=()=>{s.modelo=b.dataset.model;toForm();render()});
+
+/* ---------- Agendamento de serviços ---------- */
+const AG_DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+function renderAgenda(){
+  const A=s.agenda;
+  $("agAtivo").checked=!!A.ativo;
+  $("agBox").hidden=!A.ativo;
+  $("agTermo").value=A.termo||"Profissional";
+  $("agMsg").value=A.msg||"";
+  $("agServicosCad").innerHTML=A.servicos.length?`<div class="tabwrap"><table class="tab"><thead><tr><th>Serviço</th><th>Duração</th><th>Preço</th><th></th></tr></thead><tbody>${A.servicos.map((v,i)=>`<tr><td>${esc(v.nome)}</td><td>${esc(v.duracao)||"—"}</td><td>${v.preco?esc(v.preco):"—"}</td><td><button type="button" class="small" data-agdel="svc:${i}">Remover</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="note" style="margin:0">Nenhum serviço cadastrado.</p>`;
+  $("agSvcChecks").innerHTML=A.servicos.map(v=>`<label class="check"><input type="checkbox" data-agsvc="${esc(v.id)}"> ${esc(v.nome)}</label>`).join("")||`<p class="note" style="margin:0">Cadastre um serviço primeiro.</p>`;
+  $("agDiasChecks").innerHTML=AG_DIAS.map((n,i)=>`<label class="check"><input type="checkbox" data-agdia="${i}"> ${n}</label>`).join("");
+  $("agProfCad").innerHTML=A.profissionais.length?`<div class="tabwrap"><table class="tab"><thead><tr><th>Nome</th><th>Serviços</th><th>Dias e horário</th><th></th></tr></thead><tbody>${A.profissionais.map((p,i)=>`<tr><td>${esc(p.nome)}</td><td>${esc(p.servicos.map(id=>(A.servicos.find(v=>v.id===id)||{}).nome).filter(Boolean).join(", "))||"—"}</td><td>${esc(p.dias.map(n=>AG_DIAS[n]).join(" "))} ${esc(p.inicio)}–${esc(p.fim)}</td><td><button type="button" class="small" data-agdel="prof:${i}">Remover</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="note" style="margin:0">Nenhum profissional cadastrado.</p>`;
+}
+function addServico(){
+  const nome=$("agSvcNome").value.trim();
+  if(!nome){toast("Digite o nome do serviço.");return}
+  const preco=$("agSvcPreco").value.trim();
+  if(preco&&isNaN(num(preco))){toast("Preço inválido. Use um valor como 35,00.");return}
+  s.agenda.servicos.push({id:uid(),nome,duracao:$("agSvcDur").value.trim(),preco});
+  $("agSvcNome").value="";$("agSvcDur").value="";$("agSvcPreco").value="";
+  renderAgenda();render();
+}
+function addProf(){
+  const nome=$("agProfNome").value.trim();
+  if(!nome){toast("Digite o nome do profissional.");return}
+  const servicos=[...document.querySelectorAll("[data-agsvc]:checked")].map(e=>e.dataset.agsvc);
+  if(!servicos.length){toast("Marque pelo menos um serviço que essa pessoa faz.");return}
+  const dias=[...document.querySelectorAll("[data-agdia]:checked")].map(e=>+e.dataset.agdia);
+  if(!dias.length){toast("Marque pelo menos um dia de trabalho.");return}
+  const inicio=$("agIni").value||"09:00",fim=$("agFim").value||"18:00";
+  if(inicio>=fim){toast("O horário de fim precisa ser depois do início.");return}
+  s.agenda.profissionais.push({id:uid(),nome,servicos,dias,inicio,fim});
+  $("agProfNome").value="";
+  document.querySelectorAll("[data-agsvc]:checked,[data-agdia]:checked").forEach(e=>e.checked=false);
+  renderAgenda();render();
+}
+$("agAtivo").addEventListener("change",()=>{s.agenda.ativo=$("agAtivo").checked;renderAgenda();render()});
+$("agTermo").addEventListener("change",()=>{s.agenda.termo=$("agTermo").value;render()});
+$("agMsg").addEventListener("input",()=>{s.agenda.msg=$("agMsg").value;render()});
+$("btnAddSvc").onclick=addServico;
+$("btnAddProf").onclick=addProf;
+$("agBox").addEventListener("click",e=>{
+  const t=e.target.dataset.agdel;if(!t)return;
+  const [tipo,i]=t.split(":");
+  if(tipo==="svc"){
+    const id=s.agenda.servicos[i].id;
+    s.agenda.servicos.splice(i,1);
+    s.agenda.profissionais.forEach(p=>p.servicos=p.servicos.filter(x=>x!==id));
+  }else s.agenda.profissionais.splice(i,1);
+  renderAgenda();render();
+});
 
 /* ---------- Links extras ---------- */
 function renderExtras(){

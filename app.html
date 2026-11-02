@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painel | Bio Site</title>
+<style>
+:root{--cor:#1f4e79;--fundo:#f4f5f8;--texto:#1c2430;--linha:#d6dce5;--suave:#fff;--erro:#b03a2e;--ok:#1e7d4f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#11151c;--texto:#e7ebf1;--linha:#2a313c;--suave:#1a202a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.45 system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;background:var(--suave);border-bottom:1px solid var(--linha);position:sticky;top:0}
+header b{font-size:17px}
+main{max-width:640px;margin:0 auto;padding:16px;display:grid;gap:14px}
+section{background:var(--suave);border:1px solid var(--linha);border-radius:16px;padding:16px;display:grid;gap:10px;animation:sobe .5s cubic-bezier(.2,.7,.2,1) both}
+@keyframes sobe{from{opacity:0;transform:translateY(12px)}}
+h2{font-size:17px;margin:0}
+h3{font-size:14px;margin:6px 0 0;opacity:.8}
+label{display:grid;gap:4px;font-size:13px;font-weight:600}
+input{font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto);width:100%}
+button{font:inherit;font-weight:600;padding:9px 12px;border-radius:10px;border:1px solid var(--linha);background:var(--suave);color:var(--texto);cursor:pointer;transition:transform .2s}
+button:hover{transform:translateY(-1px)}
+button.main{background:var(--cor);border-color:var(--cor);color:#fff}
+button.perigo{color:var(--erro)}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.item{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha)}
+.item:last-child{border-bottom:0}
+.note{margin:0;font-size:13px;opacity:.75}
+.msg{margin:0;font-size:14px;min-height:18px}
+.erro{color:var(--erro)}.ok{color:var(--ok)}
+.link{word-break:break-all;font-size:13px;background:var(--fundo);padding:8px 10px;border-radius:10px}
+.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.em-breve{opacity:.6;border:1px dashed var(--linha);border-radius:12px;padding:12px;font-size:14px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <b id="titulo">Painel</b>
+  <button type="button" id="sair">Sair</button>
+</header>
+<main>
+  <p class="note" id="carregando">Carregando sua conta…</p>
+
+  <!-- Usuário sem barbearia: aceitar convite ou criar a própria -->
+  <section id="semPerfil" hidden>
+    <div id="secConvite" hidden>
+      <h2>Convite para trabalhar em uma barbearia</h2>
+      <p class="note" id="textoConvite"></p>
+      <div class="linha"><button type="button" class="main" id="aceitarConvite">Aceitar convite</button></div>
+      <p class="msg" id="msgConvite" role="status"></p>
+    </div>
+    <h2>Criar minha barbearia</h2>
+    <form id="formBarbearia" style="display:grid;gap:10px">
+      <label>Nome da barbearia<input id="bNome" required maxlength="80" placeholder="Ex.: Barbearia do João"></label>
+      <label>Endereço do site <small>(só letras minúsculas, números e hífen)</small>
+        <input id="bSlug" required minlength="3" maxlength="40" pattern="[a-z0-9-]{3,40}" placeholder="barbearia-do-joao"></label>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:500">
+        <input type="checkbox" id="bVirar" style="width:auto"> Também atendo clientes (sou barbeiro)
+      </label>
+      <div class="linha"><button type="submit" class="main" id="bEnviar">Criar barbearia</button></div>
+      <p class="msg" id="msgBarbearia" role="status"></p>
+    </form>
+  </section>
+
+  <!-- Usuário com barbearia -->
+  <section id="comPerfil" hidden>
+    <h2 id="nomeBarbearia"></h2>
+    <p class="note" id="infoPapel"></p>
+    <p class="note">Seu site: <a id="linkSite" href="#" target="_blank" rel="noopener"></a></p>
+    <div class="linha" id="acoesBarbeiro" hidden>
+      <button type="button" id="virarBarbeiro">Também atendo clientes</button>
+    </div>
+    <p class="msg" id="msgPerfil" role="status"></p>
+  </section>
+
+  <section id="modulos" hidden>
+    <h2>Módulos</h2>
+    <div class="grade">
+      <div class="em-breve">Agenda<br><small>Fase 2</small></div>
+      <div class="em-breve">Serviços e fotos<br><small>Fase 3</small></div>
+      <div class="em-breve">Financeiro<br><small>Fase 4</small></div>
+    </div>
+  </section>
+
+  <!-- Equipe: só para dono e dono-barbeiro -->
+  <section id="equipe" hidden>
+    <h2>Equipe</h2>
+    <form id="formConvite" style="display:grid;gap:8px">
+      <label>E-mail do barbeiro<input type="email" id="cEmail" required placeholder="barbeiro@email.com"></label>
+      <div class="linha"><button type="submit" class="main">Gerar convite</button></div>
+    </form>
+    <div id="linkNovo" hidden>
+      <p class="note">Envie este link para o barbeiro pelo WhatsApp. Ele vale por 7 dias e só funciona com o e-mail convidado.</p>
+      <div class="link" id="linkTexto"></div>
+      <div class="linha"><button type="button" id="copiarNovo">Copiar link</button></div>
+    </div>
+    <p class="msg" id="msgEquipe" role="status"></p>
+    <h3>Pessoas na equipe</h3>
+    <div id="listaEquipe"></div>
+    <h3>Convites pendentes</h3>
+    <div id="listaConvites"></div>
+  </section>
+</main>
+<script src="/conta.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var convite = new URLSearchParams(location.search).get("convite") || "";
+  var PAPEIS = { dono: "Dono", barbeiro: "Barbeiro", dono_barbeiro: "Dono e barbeiro" };
+  var estado = null;
+
+  function msg(id, t, tipo) { $(id).textContent = t; $(id).className = "msg " + (tipo || ""); }
+  function el(tag, txt, cls) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; }
+  function copiar(texto, botao) {
+    navigator.clipboard.writeText(texto).then(function () { botao.textContent = "Copiado!"; setTimeout(function () { botao.textContent = "Copiar link"; }, 1800); });
+  }
+
+  if (!Conta.ler()) { location.replace("entrar.html" + (convite ? "?convite=" + encodeURIComponent(convite) : "")); return; }
+
+  $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
+
+  function carregar() {
+    return Conta.api("/api/eu").then(function (dados) {
+      estado = dados;
+      $("carregando").hidden = true;
+      if (!dados.perfil) { mostrarSemPerfil(dados); return; }
+      mostrarComPerfil(dados);
+    }).catch(function (err) {
+      $("carregando").textContent = err.message;
+      if (/Entre|expirou/.test(err.message)) setTimeout(function () { location.href = "entrar.html"; }, 1500);
+    });
+  }
+
+  function mostrarSemPerfil(dados) {
+    $("semPerfil").hidden = false;
+    if (convite) {
+      $("secConvite").hidden = false;
+      fetch("/api/convite?token=" + encodeURIComponent(convite)).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+        $("textoConvite").textContent = j ? "Você foi convidado para trabalhar em " + j.barbearia + "." : "Este convite não é válido ou já venceu.";
+        $("aceitarConvite").disabled = !j;
+      });
+    }
+  }
+
+  $("aceitarConvite").onclick = function () {
+    $("aceitarConvite").disabled = true;
+    Conta.api("/api/convite", { corpo: { token: convite } }).then(function () {
+      msg("msgConvite", "Convite aceito. Carregando sua conta…", "ok");
+      history.replaceState(null, "", "app.html");
+      carregar();
+    }).catch(function (err) { msg("msgConvite", err.message, "erro"); $("aceitarConvite").disabled = false; });
+  };
+
+  $("formBarbearia").addEventListener("submit", function (e) {
+    e.preventDefault();
+    $("bEnviar").disabled = true;
+    Conta.api("/api/barbearia", { corpo: { nome: $("bNome").value.trim(), slug: $("bSlug").value.trim().toLowerCase(), virarBarbeiro: $("bVirar").checked } })
+      .then(function () { msg("msgBarbearia", "Barbearia criada.", "ok"); return carregar(); })
+      .catch(function (err) { msg("msgBarbearia", err.message, "erro"); })
+      .finally(function () { $("bEnviar").disabled = false; });
+  });
+
+  function mostrarComPerfil(dados) {
+    var b = dados.barbearia || {};
+    $("comPerfil").hidden = false;
+    $("modulos").hidden = false;
+    $("titulo").textContent = b.nome || "Painel";
+    $("nomeBarbearia").textContent = b.nome || "";
+    $("infoPapel").textContent = "Você entrou como: " + (PAPEIS[dados.perfil.papel] || dados.perfil.papel);
+    $("linkSite").textContent = location.origin + "/" + (b.slug || "");
+    $("linkSite").href = "/" + (b.slug || "");
+    var admin = dados.perfil.papel === "dono" || dados.perfil.papel === "dono_barbeiro";
+    $("acoesBarbeiro").hidden = dados.perfil.papel !== "dono";
+    $("equipe").hidden = !admin;
+    if (admin) carregarEquipe();
+  }
+
+  $("virarBarbeiro").onclick = function () {
+    if (!confirm("Você passa a aparecer também como barbeiro na agenda. Continuar?")) return;
+    Conta.api("/api/eu", { corpo: { acao: "virar-barbeiro" } })
+      .then(function () { msg("msgPerfil", "Pronto. Agora você atende também.", "ok"); return carregar(); })
+      .catch(function (err) { msg("msgPerfil", err.message, "erro"); });
+  };
+
+  function carregarEquipe() {
+    Conta.api("/api/equipe").then(function (j) {
+      var lista = $("listaEquipe");
+      lista.textContent = "";
+      j.profissionais.forEach(function (p) {
+        var linha = el("div", null, "item");
+        linha.appendChild(el("span", p.nome + (p.perfil_user_id === estado.usuario.id ? " (você)" : "")));
+        if (p.perfil_user_id !== estado.usuario.id) {
+          var b = el("button", "Remover", "perigo");
+          b.onclick = function () {
+            if (!confirm("Remover " + p.nome + " da equipe?")) return;
+            Conta.api("/api/equipe", { corpo: { acao: "remover", profissionalId: p.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+          };
+          linha.appendChild(b);
+        }
+        lista.appendChild(linha);
+      });
+      if (!j.profissionais.length) lista.appendChild(el("p", "Ninguém na equipe ainda.", "note"));
+
+      var conv = $("listaConvites");
+      conv.textContent = "";
+      j.convites.forEach(function (c) {
+        var linha = el("div", null, "item");
+        linha.appendChild(el("span", c.email));
+        var grupo = el("div", null, "linha");
+        var copia = el("button", "Copiar link");
+        copia.onclick = function () { copiar(c.link, copia); };
+        var cancela = el("button", "Cancelar", "perigo");
+        cancela.onclick = function () {
+          Conta.api("/api/equipe", { corpo: { acao: "cancelar-convite", id: c.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+        };
+        grupo.appendChild(copia); grupo.appendChild(cancela);
+        linha.appendChild(grupo);
+        conv.appendChild(linha);
+      });
+      if (!j.convites.length) conv.appendChild(el("p", "Nenhum convite pendente.", "note"));
+    }).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+  }
+
+  $("formConvite").addEventListener("submit", function (e) {
+    e.preventDefault();
+    msg("msgEquipe", "");
+    Conta.api("/api/equipe", { corpo: { acao: "convidar", email: $("cEmail").value.trim() } }).then(function (j) {
+      $("linkTexto").textContent = j.link;
+      $("linkNovo").hidden = false;
+      $("copiarNovo").onclick = function () { copiar(j.link, $("copiarNovo")); };
+      $("cEmail").value = "";
+      carregarEquipe();
+    }).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+  });
+
+  carregar();
+})();
+</script>
+</body>
+</html>

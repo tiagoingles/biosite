@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Entrar | Bio Site</title>
+<style>
+:root{--cor:#1f4e79;--fundo:#f4f5f8;--texto:#1c2430;--linha:#d6dce5;--suave:#fff;--erro:#b03a2e;--ok:#1e7d4f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#11151c;--texto:#e7ebf1;--linha:#2a313c;--suave:#1a202a}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--fundo);color:var(--texto);font:15px/1.45 system-ui,sans-serif}
+.card{width:100%;max-width:380px;background:var(--suave);border:1px solid var(--linha);border-radius:18px;padding:22px;display:grid;gap:12px;box-shadow:0 20px 40px -24px rgba(0,0,0,.35);animation:sobe .6s cubic-bezier(.2,.7,.2,1) both}
+@keyframes sobe{from{opacity:0;transform:translateY(14px)}}
+h1{font-size:22px;margin:0}
+label{display:grid;gap:4px;font-size:13px;font-weight:600}
+input{font:inherit;padding:11px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto)}
+button{font:inherit;font-weight:600;padding:11px 12px;border-radius:10px;border:1px solid var(--linha);background:var(--suave);color:var(--texto);cursor:pointer;transition:transform .2s,background .2s}
+button:hover{transform:translateY(-1px)}
+button.main{background:var(--cor);border-color:var(--cor);color:#fff}
+button.link{border:0;background:none;color:var(--cor);padding:6px 0}
+.abas{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.abas button[aria-pressed="true"]{background:var(--cor);color:#fff;border-color:var(--cor)}
+.msg{margin:0;font-size:14px;min-height:20px}
+.msg.erro{color:var(--erro)}
+.msg.ok{color:var(--ok)}
+.aviso{margin:0;font-size:14px;background:var(--fundo);padding:10px 12px;border-radius:10px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Acesse sua conta</h1>
+  <p class="aviso" id="convite" hidden></p>
+  <div class="abas">
+    <button type="button" id="abaEntrar" aria-pressed="true">Entrar</button>
+    <button type="button" id="abaCriar" aria-pressed="false">Criar conta</button>
+  </div>
+  <form id="form" class="card" style="padding:0;border:0;box-shadow:none;animation:none">
+    <label>E-mail<input type="email" id="email" required autocomplete="email"></label>
+    <label>Senha<input type="password" id="senha" required minlength="6" autocomplete="current-password"></label>
+    <button class="main" type="submit" id="enviar">Entrar</button>
+  </form>
+  <button type="button" id="google">Entrar com Google</button>
+  <button type="button" class="link" id="esqueci">Esqueci minha senha</button>
+  <p class="msg" id="msg" role="status"></p>
+</main>
+<script src="/conta.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var p = new URLSearchParams(location.search);
+  var convite = p.get("convite") || "";
+  var modo = "entrar";
+
+  function destino() { return "app.html" + (convite ? "?convite=" + encodeURIComponent(convite) : ""); }
+  function msg(t, tipo) { $("msg").textContent = t; $("msg").className = "msg " + (tipo || ""); }
+
+  Conta.capturarSessaoDaUrl();
+  if (Conta.ler()) { location.replace(destino()); return; }
+
+  if (convite) {
+    fetch("/api/convite?token=" + encodeURIComponent(convite)).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j) { msg("Este convite não é válido ou já venceu.", "erro"); return; }
+      $("convite").textContent = "Você foi convidado para trabalhar em " + j.barbearia + ". Entre com o e-mail " + j.email + " para aceitar.";
+      $("convite").hidden = false;
+      $("email").value = j.email;
+    });
+  }
+
+  function trocaModo(m) {
+    modo = m;
+    $("abaEntrar").setAttribute("aria-pressed", m === "entrar");
+    $("abaCriar").setAttribute("aria-pressed", m === "criar");
+    $("enviar").textContent = m === "entrar" ? "Entrar" : "Criar conta";
+    $("senha").autocomplete = m === "entrar" ? "current-password" : "new-password";
+    msg("");
+  }
+  $("abaEntrar").onclick = function () { trocaModo("entrar"); };
+  $("abaCriar").onclick = function () { trocaModo("criar"); };
+
+  $("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = $("email").value.trim(), senha = $("senha").value;
+    $("enviar").disabled = true;
+    msg(modo === "entrar" ? "Entrando…" : "Criando sua conta…");
+    var op = modo === "entrar" ? Conta.entrar(email, senha) : Conta.criarConta(email, senha);
+    op.then(function () {
+      if (Conta.ler()) { location.href = destino(); return; }
+      msg("Enviamos um link de confirmação para " + email + ". Confirme e depois entre aqui.", "ok");
+    }).catch(function (err) {
+      msg(err.message, "erro");
+    }).finally(function () { $("enviar").disabled = false; });
+  });
+
+  $("google").onclick = function () {
+    Conta.entrarComGoogle(location.origin + "/entrar.html" + (convite ? "?convite=" + encodeURIComponent(convite) : ""));
+  };
+
+  $("esqueci").onclick = function () {
+    var email = $("email").value.trim();
+    if (!email) { msg("Digite seu e-mail no campo acima.", "erro"); return; }
+    Conta.esqueciSenha(email, location.origin + "/redefinir.html").then(function () {
+      msg("Se o e-mail estiver cadastrado, enviamos o link para redefinir a senha.", "ok");
+    }).catch(function (err) { msg(err.message, "erro"); });
+  };
+})();
+</script>
+</body>
+</html>

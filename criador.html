@@ -318,13 +318,27 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
     </section>
 
     <section class="panel">
-      <h2>6 · Links extras</h2>
+      <h2>6 · Fotos e vídeos dos serviços</h2>
+      <div class="stack">
+        <p class="note" style="margin:0">Cada foto ou vídeo fica ligado a um serviço. Fotos até 5 MB e vídeos até 25 MB. Depois de enviar, republique o site.</p>
+        <div class="grid2">
+          <label>Serviço<select id="vidSvc"></select></label>
+          <label>Título <small>(opcional)</small><input type="text" id="vidTitulo" placeholder="Ex.: Degradê"></label>
+        </div>
+        <label>Arquivo<input type="file" id="vidArq" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"></label>
+        <div class="row"><button type="button" class="small" id="btnVideo">Enviar</button><span class="note" id="vidStatus"></span></div>
+        <div id="vidCad" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>7 · Links extras</h2>
       <div class="stack" id="extras"></div>
       <div class="row" style="margin-top:12px"><button id="btnAddExtra">+ Adicionar link</button></div>
     </section>
 
     <section class="panel">
-      <h2>7 · Visual</h2>
+      <h2>8 · Visual</h2>
       <div class="stack">
         <div class="models" role="group" aria-label="Modelo">
           <button class="model" data-model="vitrine" aria-pressed="true"><span class="mini vitrine"><i></i><i></i><i></i><i></i></span>Vitrine</button>
@@ -347,7 +361,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
     </section>
 
     <section class="panel">
-      <h2>8 · Publicar</h2>
+      <h2>9 · Publicar</h2>
       <div class="stack">
         <label>Endereço do site <small>(fica: <span id="urlShow"></span>)</small><input type="text" id="slug"></label>
         <div class="row">
@@ -394,7 +408,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
     </section>
 
     <section class="panel">
-      <h2>9 · Sites publicados</h2>
+      <h2>10 · Sites publicados</h2>
       <div class="row" style="justify-content:space-between">
         <p class="note" style="margin:0">Clique em Editar para carregar, mudar e publicar de novo.</p>
         <button id="btnLista">Atualizar lista</button>
@@ -541,7 +555,7 @@ function normalizar(d){
   if(!Array.isArray(x.produtos)) x.produtos=[];
   if(!Array.isArray(x.extras)) x.extras=[];
   const A=d&&d.agenda?d.agenda:{};
-  x.agenda={ativo:!!A.ativo,termo:A.termo||"Profissional",msg:A.msg||"",servicos:Array.isArray(A.servicos)?A.servicos:[],profissionais:Array.isArray(A.profissionais)?A.profissionais:[]};
+  x.agenda={ativo:!!A.ativo,termo:A.termo||"Profissional",msg:A.msg||"",servicos:(Array.isArray(A.servicos)?A.servicos:[]).map(v=>({...v,midia:Array.isArray(v.midia)?v.midia:[]})),profissionais:Array.isArray(A.profissionais)?A.profissionais:[]};
   x.produtos.forEach(p=>{if(!p.id)p.id=uid();p.cat=(p.cat||"").trim();p.marca=p.marca||"";p.unidade=p.unidade||""});
   // Categorias: usa a lista salva e acrescenta as que só existem nos produtos
   const base=(d&&Array.isArray(d.categorias))?d.categorias:(d?[]:DEFAULT.categorias);
@@ -736,7 +750,7 @@ function agendaRuntime(){
     }else{
       titulo="Seus dados";
       h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(sel.prof.nome)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
-      h+='<div class="campos"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome"></label><label>Observação <small>(opcional)</small><textarea id="agObs" rows="2"></textarea></label></div>';
+      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome"></label><label>Observação <small>(opcional)</small><textarea id="agObs" rows="2"></textarea></label></div>';
     }
     $("agTitulo").textContent=titulo;
     $("agSteps").innerHTML=h;
@@ -757,17 +771,25 @@ function agendaRuntime(){
     }
     else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));passo=1}
     else if(a==="prof"){sel.prof=porId(AG.profissionais||[],b.getAttribute("data-id"));sel.dia=null;passo=2}
-    else if(a==="dia"){sel.dia=+b.getAttribute("data-i");sel.diaTxt=rotuloDia(dias[sel.dia]);sel.hora=null}
+    else if(a==="dia"){sel.dia=+b.getAttribute("data-i");var dt=dias[sel.dia];sel.diaTxt=rotuloDia(dt);sel.diaISO=dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());sel.hora=null}
     else if(a==="hora"){sel.hora=b.getAttribute("data-v");passo=3}
     render();
   });
   $("agEnviar").addEventListener("click",function(){
     var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
     if(!nome){$("agErro").textContent="Informe seu nome.";return}
-    var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(sel.prof.nome).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"");
-    var w=String(C.whatsapp||"").replace(/\D/g,"");if(w.indexOf("55")!==0)w="55"+w;
-    var a=document.createElement("a");a.href="https://wa.me/"+w+"?text="+encodeURIComponent(txt);a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
-    fechar();
+    var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.prof.nome,dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
+    $("agEnviar").disabled=true;
+    // Grava o pedido como pendente e recebe o código; se falhar, o cliente ainda envia a mensagem
+    fetch("/api/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){return r.ok?r.json():{}}).catch(function(){return {}}).then(function(j){
+      var cod=j.codigo||"";
+      var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(sel.prof.nome).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
+      if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
+      var w=String(C.whatsapp||"").replace(/\D/g,"");if(w.indexOf("55")!==0)w="55"+w;
+      var a=document.createElement("a");a.href="https://wa.me/"+w+"?text="+encodeURIComponent(txt);a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
+      $("agEnviar").disabled=false;
+      fechar();
+    });
   });
 }
 
@@ -794,6 +816,8 @@ function bioHTML(d=s, img=R){
   const AG=d.agenda||{};
   const agOk=!!AG.ativo&&(AG.servicos||[]).length>0&&(AG.profissionais||[]).length>0;
   const agCta=agOk?`<nav class="links"><button type="button" class="btn destaque" id="abrirAgenda">${svg("whats")}<span>${esc(AG.botao||"Agendar um horário")}</span><em aria-hidden="true">→</em></button></nav>`:"";
+  // Seção de serviços: cada serviço mostra as fotos e vídeos cadastrados para ele
+  const svcsBloco=agOk?`<section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista">${(AG.servicos||[]).map(v=>{const m=(v.midia||[]).filter(x=>safeUrl(x.url));const preco=v.preco?(isNaN(num(v.preco))?v.preco:brl(num(v.preco))):"";const midia=x=>x.tipo==="video"?`<video src="${esc(x.url)}" muted playsinline controls preload="metadata"></video>`:`<img src="${esc(x.url)}" alt="${esc(x.titulo||v.nome)}" loading="lazy">`;return `<article class="svc"><div class="svc-midia">${m[0]?midia(m[0]):""}</div><div class="svc-t"><b>${esc(v.nome)}</b><small>${esc([v.duracao,preco].filter(Boolean).join(" · "))}</small></div>${m.length>1?`<div class="svc-mais">${m.slice(1).map(midia).join("")}</div>`:""}</article>`}).join("")}</div></section>`:"";
   const agDlg=agOk?`<dialog id="agenda" aria-labelledby="agTitulo"><div class="sheet"><div class="sh-top"><h2 id="agTitulo">Agendar</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div><div id="agSteps" class="ag-steps"></div><p class="erro" id="agErro" role="alert"></p><button type="button" class="enviar" id="agEnviar" hidden>${svg("whats")}<span>Enviar pedido pelo WhatsApp</span></button></div></dialog>`:"";
 
   const notaTxt=(d.mostrarNota&&d.nota)?`${svg("star")}<b>${String(d.nota).replace(".",",")}</b>${d.totalAval?` · ${d.totalAval} avaliações`:""} no Google`:"";
@@ -1039,6 +1063,16 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 .ag-chips button[aria-pressed=true]{background:var(--cor);color:var(--sobre);border-color:var(--cor)}
 .ag-voltar{justify-self:start;background:none;border:0;padding:0;color:inherit;opacity:.7;font:inherit;cursor:pointer}
 .ag-sub{margin:4px 0 0;font-weight:700;font-size:14px}
+/* Serviços com fotos e vídeos */
+.svc-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.svc{margin:0;min-width:0;background:var(--suave);border:1px solid var(--linha);border-radius:14px;overflow:hidden;transition:transform .4s var(--ease),box-shadow .4s var(--ease)}
+.svc:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+.svc-midia{aspect-ratio:4/5;background:var(--linha)}
+.svc-midia img,.svc-midia video{width:100%;height:100%;object-fit:cover;display:block}
+.svc-t{display:grid;gap:2px;padding:10px 12px}
+.svc-t small{opacity:.7;font-size:13px}
+.svc-mais{display:flex;gap:6px;padding:0 10px 10px;overflow-x:auto}
+.svc-mais img,.svc-mais video{width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none}
 </style>
 <script type="application/json" id="bio-config">${configJSON(d)}<\/script>
 </head>
@@ -1056,6 +1090,7 @@ ${links}
 ${catalogo}
 ${avaliar}
 ${mais}
+${svcsBloco}
 ${infoBloco}
 <footer>${esc(d.nome)}${d.cidade?" · "+esc(d.cidade):""}</footer>
 </div>
@@ -1128,6 +1163,7 @@ document.querySelectorAll(".model").forEach(b=>b.onclick=()=>{s.modelo=b.dataset
 const AG_DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 function renderAgenda(){
   const A=s.agenda;
+  renderVideos();
   $("agAtivo").checked=!!A.ativo;
   $("agBox").hidden=!A.ativo;
   $("agTermo").value=A.termo||"Profissional";
@@ -1174,6 +1210,42 @@ $("agBox").addEventListener("click",e=>{
     s.agenda.profissionais.forEach(p=>p.servicos=p.servicos.filter(x=>x!==id));
   }else s.agenda.profissionais.splice(i,1);
   renderAgenda();render();
+});
+
+/* ---------- Fotos e vídeos dos serviços ---------- */
+function renderVideos(){
+  const L=[];
+  s.agenda.servicos.forEach((v,i)=>(v.midia||[]).forEach((m,j)=>L.push(`<tr><td>${esc(v.nome)}</td><td>${m.tipo==="video"?"Vídeo":"Foto"}</td><td>${esc(m.titulo)||"—"}</td><td><button type="button" class="small" data-vdel="${i}:${j}">Remover</button></td></tr>`)));
+  $("vidSvc").innerHTML=s.agenda.servicos.map(v=>`<option value="${esc(v.id)}">${esc(v.nome)}</option>`).join("")||`<option value="">Cadastre um serviço primeiro</option>`;
+  $("vidCad").innerHTML=L.length?`<div class="tabwrap"><table class="tab"><thead><tr><th>Serviço</th><th>Tipo</th><th>Título</th><th></th></tr></thead><tbody>${L.join("")}</tbody></table></div>`:`<p class="note" style="margin:0">Nenhuma foto ou vídeo enviado.</p>`;
+}
+$("btnVideo").onclick=async()=>{
+  const f=$("vidArq").files[0];
+  const id=$("vidSvc").value;
+  if(!f){toast("Escolha uma foto ou um vídeo.");return}
+  if(!id){toast("Cadastre e escolha um serviço primeiro.");return}
+  $("btnVideo").disabled=true;$("vidStatus").textContent="Preparando envio…";
+  try{
+    const r=await fetch("/api/midia",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({senha:senhaAcesso(),slug:s.slug,servico:id,tipo:f.type,tamanho:f.size})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.message||"Não foi possível preparar o envio.");
+    $("vidStatus").textContent="Enviando…";
+    const up=await fetch(j.uploadUrl,{method:"PUT",headers:{"Content-Type":f.type},body:f});
+    if(!up.ok)throw new Error("Falha no envio.");
+    const svc=s.agenda.servicos.find(v=>v.id===id);
+    svc.midia=[...(svc.midia||[]),{tipo:j.tipo,url:j.publicUrl,titulo:$("vidTitulo").value.trim()}];
+    save("bio_rascunho",s);
+    $("vidArq").value="";$("vidTitulo").value="";
+    toast("Enviado. Republique o site para aparecer.");
+    renderVideos();render();
+  }catch(e){toast(e.message)}
+  finally{$("btnVideo").disabled=false;$("vidStatus").textContent=""}
+};
+$("vidCad").addEventListener("click",e=>{
+  const t=e.target.dataset.vdel;if(t==null)return;
+  const [i,j]=t.split(":");
+  s.agenda.servicos[i].midia.splice(j,1);
+  save("bio_rascunho",s);renderVideos();render();
 });
 
 /* ---------- Links extras ---------- */

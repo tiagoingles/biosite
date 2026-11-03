@@ -78,10 +78,21 @@ button.perigo{color:var(--erro)}
   <section id="modulos" hidden>
     <h2>Módulos</h2>
     <div class="grade">
-      <div class="em-breve">Agenda<br><small>Fase 2</small></div>
       <div class="em-breve">Serviços e fotos<br><small>Fase 3</small></div>
       <div class="em-breve">Financeiro<br><small>Fase 4</small></div>
     </div>
+  </section>
+
+  <!-- Agenda do dia: dono vê todos os pedidos; barbeiro vê os dele -->
+  <section id="agenda" hidden>
+    <h2>Agenda</h2>
+    <div class="linha">
+      <label style="flex:1">Dia<input type="date" id="agDia"></label>
+      <button type="button" id="agHoje">Hoje</button>
+    </div>
+    <p class="note">Atualiza sozinha a cada 30 segundos.</p>
+    <p class="msg" id="msgAgenda" role="status"></p>
+    <div id="listaAgenda"></div>
   </section>
 
   <!-- Equipe: só para dono e dono-barbeiro -->
@@ -234,6 +245,59 @@ button.perigo{color:var(--erro)}
       carregarEquipe();
     }).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
   });
+
+  // ---------- Agenda do dia ----------
+  var STATUS = { pendente: "Pendente", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso" };
+  var timerAgenda = null;
+
+  function hojeBrasilia() { return new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); }
+
+  function carregarAgenda() {
+    var dia = $("agDia").value || hojeBrasilia();
+    Conta.api("/api/pedidos?dia=" + dia).then(function (j) {
+      msg("msgAgenda", "");
+      var lista = $("listaAgenda");
+      lista.textContent = "";
+      j.pedidos.forEach(function (p) {
+        var linha = el("div", null, "item");
+        var texto = el("div");
+        texto.appendChild(el("b", p.horario + "  " + p.servico));
+        texto.appendChild(el("div", p.cliente + " · " + p.profissional + " · código " + p.codigo, "note"));
+        texto.appendChild(el("div", STATUS[p.status] || p.status, "note"));
+        linha.appendChild(texto);
+        if (p.status === "pendente") {
+          var grupo = el("div", null, "linha");
+          var ok = el("button", "Confirmar", "main");
+          ok.onclick = function () { decidir(p.id, "confirmado"); };
+          var no = el("button", "Recusar", "perigo");
+          no.onclick = function () { decidir(p.id, "recusado"); };
+          grupo.appendChild(ok); grupo.appendChild(no);
+          linha.appendChild(grupo);
+        }
+        lista.appendChild(linha);
+      });
+      if (!j.pedidos.length) lista.appendChild(el("p", "Nenhum pedido neste dia.", "note"));
+    }).catch(function (err) { msg("msgAgenda", err.message, "erro"); });
+  }
+
+  function decidir(id, status) {
+    Conta.api("/api/pedidos", { metodo: "PATCH", corpo: { id: id, status: status } })
+      .then(carregarAgenda)
+      .catch(function (err) { msg("msgAgenda", err.message, "erro"); carregarAgenda(); });
+  }
+
+  function mostrarAgenda() {
+    $("agenda").hidden = false;
+    if (!$("agDia").value) $("agDia").value = hojeBrasilia();
+    carregarAgenda();
+    if (!timerAgenda) timerAgenda = setInterval(carregarAgenda, 30000);
+  }
+
+  $("agDia").addEventListener("change", carregarAgenda);
+  $("agHoje").onclick = function () { $("agDia").value = hojeBrasilia(); carregarAgenda(); };
+
+  var mostrarComPerfilBase = mostrarComPerfil;
+  mostrarComPerfil = function (dados) { mostrarComPerfilBase(dados); mostrarAgenda(); };
 
   carregar();
 })();

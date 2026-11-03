@@ -370,6 +370,20 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
       <h2>9 · Publicar</h2>
       <div class="stack">
         <label>Endereço do site <small>(fica: <span id="urlShow"></span>)</small><input type="text" id="slug"></label>
+        <label>E-mail do dono <small>(opcional: gera o convite para ele criar o perfil)</small><input type="email" id="emailDono"></label>
+        <div class="nicho">
+          <p class="subtit">Conta de admin (quem publica)</p>
+          <div id="admLogado" class="row" hidden>
+            <p class="note" style="margin:0">Entrou como <b id="admEmail"></b></p>
+            <button class="small" id="admSair">Sair</button>
+          </div>
+          <div id="admLogin" class="stack" hidden>
+            <label>E-mail do admin<input type="email" id="admUser" autocomplete="username"></label>
+            <label>Senha<input type="password" id="admSenha" autocomplete="current-password"></label>
+            <div class="row"><button id="admEntrar">Entrar</button></div>
+            <p class="note" id="admMsg" role="status" style="margin:0"></p>
+          </div>
+        </div>
         <div class="row">
           <button class="primary big" id="btnPublicar">Publicar na Vercel</button>
         </div>
@@ -429,6 +443,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
   </aside>
 </div>
 
+<script src="/conta.js"></script>
 <script>
 const FONTS = {
   "Poppins":"Poppins:wght@400;600;700",
@@ -1835,6 +1850,7 @@ async function publicar(forcar,precosOk){
   if(publicando) return;
   clearPub();
   if(!ghReady()){$("ghDetails").open=true;msg("pubResult","Configure o GitHub primeiro (abri a configuração logo abaixo).");return}
+  if(!Conta.ler()){msg("pubResult","Entre com a conta de admin antes de publicar.");admAtualizar();return}
   s.slug=slugify(s.slug||s.nome);$("slug").value=s.slug;showUrl();
   if(!s.nome){msg("pubResult","Preencha o nome da empresa.");return}
   if(s.produtos.some(p=>p.nome)&&!(s.whatsapp||"").replace(/\D/g,"")){msg("pubResult","Preencha o WhatsApp: é para lá que os pedidos vão.");return}
@@ -1919,6 +1935,15 @@ async function publicar(forcar,precosOk){
     const novo=await gh("/git/commits",{method:"POST",body:JSON.stringify({message:`${existe.has(`${slug}.html`)?"Atualiza":"Publica"} site: ${d.nome}`,tree:novaArvore.sha,parents:[head]})});
     await gh(`/git/refs/heads/${encodeURIComponent(branch)}`,{method:"PATCH",body:JSON.stringify({sha:novo.sha})});
 
+    // Liga o site a uma barbearia no banco (a conta de admin), com o usuário de teste e o convite do dono
+    etapa("Ligando o site à conta…");
+    let reg;
+    try{
+      reg=await Conta.api("/api/barbearia",{corpo:{acao:"publicar",nome:d.nome,slug,emailDono:$("emailDono").value.trim()}});
+    }catch(e){
+      throw new Error(`O site foi publicado no GitHub, mas não consegui ligá-lo à conta: ${e.message}. Publique de novo para tentar outra vez.`);
+    }
+
     s._publicado=slug;
     if(novoAcesso){delete s._acesso;$("codigoBox").querySelector(".warn")?.replaceWith(Object.assign(document.createElement("div"),{textContent:"Código ativado. Já pode enviar para o dono."}))}
     save("bio_rascunho",s);
@@ -1926,6 +1951,8 @@ async function publicar(forcar,precosOk){
     const temBase=!!siteBase();
     $("pubResult").innerHTML=`<div class="okbox">
       <div>${existe.has(`${slug}.html`)?"Site atualizado":"Site publicado"}. Fica no ar em cerca de 1 minuto.</div>
+      ${reg.teste?`<div class="warn" style="margin:0"><small>Acesso de teste para os vendedores</small><br>E-mail: <b>${esc(reg.teste.email)}</b><br>Senha: <b>${esc(reg.teste.senha)}</b><br><small>Esta senha só aparece agora. Copie e guarde. Para trocar depois, use "Nova senha do teste" no painel.</small></div>`:`<div><small>O acesso de teste deste site já existia. Para trocar a senha, use "Nova senha do teste" no painel.</small></div>`}
+      ${reg.convite?`<div><small>Convite para o dono criar o perfil (vale 7 dias, só para o e-mail dele)</small><br><a href="${esc(reg.convite)}" target="_blank" rel="noopener">${esc(reg.convite)}</a><div class="row"><button class="small" data-copy="${esc(reg.convite)}">Copiar convite</button></div></div>`:""}
       ${temBase?`<div><small>Site (bio do Instagram, Google, WhatsApp)</small><br><a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a></div>
       ${safeUrl(d.review)?`<div><small>Plaquinha NFC (abre direto a avaliação)</small><br><a href="${esc(urlAv)}" target="_blank" rel="noopener">${esc(urlAv)}</a></div>`:""}
       <div class="row"><button class="small" data-copy="${esc(url)}">Copiar site</button>${safeUrl(d.review)?`<button class="small" data-copy="${esc(urlAv)}">Copiar link da plaquinha</button>`:""}</div>`
@@ -1935,6 +1962,16 @@ async function publicar(forcar,precosOk){
   }catch(e){msg("pubResult",e.message)}
   finally{publicando=false;$("btnPublicar").disabled=false}
 }
+// Conta de admin: quem publica precisa estar logado (a sessão fica no navegador)
+function admAtualizar(){const logado=!!Conta.ler();$("admLogado").hidden=!logado;$("admLogin").hidden=logado}
+$("admEntrar").onclick=async()=>{
+  $("admEntrar").disabled=true;$("admMsg").textContent="Entrando…";
+  try{await Conta.entrar($("admUser").value.trim(),$("admSenha").value);$("admSenha").value="";$("admMsg").textContent=""}
+  catch(e){$("admMsg").textContent=e.message||"Não consegui entrar."}
+  finally{$("admEntrar").disabled=false;admAtualizar()}
+};
+$("admSair").onclick=()=>{Conta.sair();admAtualizar()};
+admAtualizar();
 $("btnPublicar").onclick=()=>publicar(false);
 $("pubResult").addEventListener("click",async e=>{
   const u=e.target.dataset.copy;if(!u)return;

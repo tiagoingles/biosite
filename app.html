@@ -51,17 +51,15 @@ button.perigo{color:var(--erro)}
       <div class="linha"><button type="button" class="main" id="aceitarConvite">Aceitar convite</button></div>
       <p class="msg" id="msgConvite" role="status"></p>
     </div>
-    <h2>Criar minha barbearia</h2>
-    <form id="formBarbearia" style="display:grid;gap:10px">
-      <label>Nome da barbearia<input id="bNome" required maxlength="80" placeholder="Ex.: Barbearia do João"></label>
-      <label>Endereço do site <small>(só letras minúsculas, números e hífen)</small>
-        <input id="bSlug" required minlength="3" maxlength="40" pattern="[a-z0-9-]{3,40}" placeholder="barbearia-do-joao"></label>
-      <label style="display:flex;gap:8px;align-items:center;font-weight:500">
-        <input type="checkbox" id="bVirar" style="width:auto"> Também atendo clientes (sou barbeiro)
-      </label>
-      <div class="linha"><button type="submit" class="main" id="bEnviar">Criar barbearia</button></div>
-      <p class="msg" id="msgBarbearia" role="status"></p>
-    </form>
+    <p class="note">Sua conta ainda não está ligada a uma barbearia. Use o link de convite que você recebeu.</p>
+  </section>
+
+  <!-- Administrador da plataforma: vê e gerencia todos os sites -->
+  <section id="admin" hidden>
+    <h2>Sites</h2>
+    <div id="listaSites"></div>
+    <p class="msg" id="msgSites" role="status"></p>
+    <p class="note" id="agendaDe"></p>
   </section>
 
   <!-- Usuário com barbearia -->
@@ -136,6 +134,7 @@ button.perigo{color:var(--erro)}
     return Conta.api("/api/eu").then(function (dados) {
       estado = dados;
       $("carregando").hidden = true;
+      if (dados.admin) { mostrarAdmin(dados); return; }
       if (!dados.perfil) { mostrarSemPerfil(dados); return; }
       mostrarComPerfil(dados);
     }).catch(function (err) {
@@ -163,15 +162,6 @@ button.perigo{color:var(--erro)}
       carregar();
     }).catch(function (err) { msg("msgConvite", err.message, "erro"); $("aceitarConvite").disabled = false; });
   };
-
-  $("formBarbearia").addEventListener("submit", function (e) {
-    e.preventDefault();
-    $("bEnviar").disabled = true;
-    Conta.api("/api/barbearia", { corpo: { nome: $("bNome").value.trim(), slug: $("bSlug").value.trim().toLowerCase(), virarBarbeiro: $("bVirar").checked } })
-      .then(function () { msg("msgBarbearia", "Barbearia criada.", "ok"); return carregar(); })
-      .catch(function (err) { msg("msgBarbearia", err.message, "erro"); })
-      .finally(function () { $("bEnviar").disabled = false; });
-  });
 
   function mostrarComPerfil(dados) {
     var b = dados.barbearia || {};
@@ -254,7 +244,7 @@ button.perigo{color:var(--erro)}
 
   function carregarAgenda() {
     var dia = $("agDia").value || hojeBrasilia();
-    Conta.api("/api/pedido?dia=" + dia).then(function (j) {
+    Conta.api("/api/pedido?dia=" + dia + (barbeariaAdmin ? "&barbearia=" + barbeariaAdmin : "")).then(function (j) {
       msg("msgAgenda", "");
       var lista = $("listaAgenda");
       lista.textContent = "";
@@ -281,7 +271,7 @@ button.perigo{color:var(--erro)}
   }
 
   function decidir(id, status) {
-    Conta.api("/api/pedido", { metodo: "PATCH", corpo: { id: id, status: status } })
+    Conta.api("/api/pedido" + (barbeariaAdmin ? "?barbearia=" + barbeariaAdmin : ""), { metodo: "PATCH", corpo: { id: id, status: status } })
       .then(carregarAgenda)
       .catch(function (err) { msg("msgAgenda", err.message, "erro"); carregarAgenda(); });
   }
@@ -291,6 +281,47 @@ button.perigo{color:var(--erro)}
     if (!$("agDia").value) $("agDia").value = hojeBrasilia();
     carregarAgenda();
     if (!timerAgenda) timerAgenda = setInterval(carregarAgenda, 30000);
+  }
+
+  // ---------- Administrador da plataforma: lista os sites ----------
+  var barbeariaAdmin = "";
+
+  function mostrarAdmin(dados) {
+    $("admin").hidden = false;
+    var lista = $("listaSites");
+    lista.textContent = "";
+    if (!dados.barbearias.length) lista.appendChild(el("p", "Nenhum site ainda.", "note"));
+    dados.barbearias.forEach(function (b) {
+      var linha = el("div", null, "item");
+      var texto = el("div");
+      texto.appendChild(el("b", b.nome));
+      texto.appendChild(el("div", "/" + b.slug, "note"));
+      linha.appendChild(texto);
+      var grupo = el("div", null, "linha");
+      var ver = el("button", "Ver agenda");
+      ver.onclick = function () { abrirAgendaDe(b); };
+      grupo.appendChild(ver);
+      if (b.temTeste) {
+        var senha = el("button", "Nova senha do teste");
+        senha.onclick = function () { novaSenhaTeste(b); };
+        grupo.appendChild(senha);
+      }
+      linha.appendChild(grupo);
+      lista.appendChild(linha);
+    });
+  }
+
+  function abrirAgendaDe(b) {
+    barbeariaAdmin = b.id;
+    $("agendaDe").textContent = "Agenda de " + b.nome + ".";
+    mostrarAgenda();
+  }
+
+  function novaSenhaTeste(b) {
+    if (!confirm("Gerar nova senha para o usuário de teste de " + b.nome + "? A senha atual deixa de funcionar.")) return;
+    Conta.api("/api/barbearia", { corpo: { acao: "redefinir-teste", slug: b.slug } }).then(function (j) {
+      msg("msgSites", "Nova senha de " + b.nome + ": " + j.senha + " (e-mail " + j.email + "). Copie agora: ela não aparece de novo.", "ok");
+    }).catch(function (err) { msg("msgSites", err.message, "erro"); });
   }
 
   $("agDia").addEventListener("change", carregarAgenda);

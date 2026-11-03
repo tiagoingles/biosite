@@ -1,7 +1,7 @@
 // Dados da conta logada. GET mostra o perfil e a barbearia.
 // POST "virar-barbeiro": o dono passa a atender também (vira dono-barbeiro).
 const { rest } = require("../lib/supabase");
-const { usuarioDaRequisicao, perfilDe, barbeariaDe } = require("../lib/conta");
+const { usuarioDaRequisicao, perfilDe, barbeariaDe, ehAdminDaPlataforma } = require("../lib/conta");
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -12,6 +12,16 @@ module.exports = async (req, res) => {
     const perfil = await perfilDe(u.id);
 
     if (req.method === "GET") {
+      if (!perfil && (await ehAdminDaPlataforma(u.id))) {
+        // Administrador da plataforma: vê todos os sites
+        const barbearias = await rest("barbearias?select=id,slug,nome,teste_user_id&order=criado_em.desc");
+        return res.status(200).json({
+          usuario: { id: u.id, email: u.email },
+          perfil: null,
+          admin: true,
+          barbearias: barbearias.map((b) => ({ id: b.id, slug: b.slug, nome: b.nome, temTeste: !!b.teste_user_id })),
+        });
+      }
       if (!perfil) {
         // Sem perfil: mostra os convites recebidos por este e-mail
         const convites = await rest(

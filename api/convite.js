@@ -7,7 +7,7 @@ const TOKEN = /^[0-9a-f]{48}$/;
 
 async function conviteValido(token) {
   if (!TOKEN.test(token)) return null;
-  const linhas = await rest(`convites?token=eq.${token}&aceito_em=is.null&select=id,barbearia_id,email,expira_em`);
+  const linhas = await rest(`convites?token=eq.${token}&aceito_em=is.null&select=id,barbearia_id,email,expira_em,papel`);
   const c = linhas[0];
   if (!c || new Date(c.expira_em) < new Date()) return null;
   return c;
@@ -34,8 +34,10 @@ module.exports = async (req, res) => {
     if (c.email !== u.email) return res.status(403).json({ message: `Este convite é para ${c.email}. Entre com essa conta.` });
 
     const nome = texto(u.metadata.full_name || u.metadata.name || u.email.split("@")[0], 80);
-    await rest("perfis", { metodo: "POST", prefer: "return=minimal", corpo: { user_id: u.id, barbearia_id: c.barbearia_id, papel: "barbeiro", nome } });
-    await rest("profissionais", { metodo: "POST", prefer: "return=minimal", corpo: { barbearia_id: c.barbearia_id, perfil_user_id: u.id, nome } });
+    // Convite de dono: vira o administrador do site. Convite de barbeiro: entra na equipe e na agenda.
+    const dono = c.papel === "dono";
+    await rest("perfis", { metodo: "POST", prefer: "return=minimal", corpo: { user_id: u.id, barbearia_id: c.barbearia_id, papel: dono ? "dono" : "barbeiro", nome } });
+    if (!dono) await rest("profissionais", { metodo: "POST", prefer: "return=minimal", corpo: { barbearia_id: c.barbearia_id, perfil_user_id: u.id, nome } });
     await rest(`convites?id=eq.${c.id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { aceito_em: new Date().toISOString() } });
     const b = await barbeariaDe(c.barbearia_id);
     return res.status(201).json({ barbearia: b && b.nome });

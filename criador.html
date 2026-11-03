@@ -134,6 +134,22 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
   <main class="stack">
 
     <section class="panel">
+      <h2>Tipo de site</h2>
+      <div class="stack">
+        <div class="nicho">
+          <p class="subtit">Modelo pronto por tipo de site</p>
+          <div class="row">
+            <select id="nicho" aria-label="Tipo de site"></select>
+            <button class="primary" id="btnNicho">Aplicar modelo</button>
+          </div>
+          <label class="check"><input type="checkbox" id="nichoVisual" checked> Usar também as cores, fontes e o layout sugeridos</label>
+          <div id="nichoConfirm"></div>
+          <p class="note" style="margin:0">Traz categorias, produtos com preços de exemplo e as opções de pedido. Para barbearia, também traz dados gerais, serviços com duração e a equipe de exemplo. Ajuste tudo com o cliente.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>1 · Buscar no Google</h2>
       <div class="row">
         <input type="text" id="q" placeholder="Ex.: Dom Manolo Barbearia Paulista PE">
@@ -186,16 +202,6 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
     <section class="panel">
       <h2>3 · Produtos</h2>
       <div class="stack">
-        <div class="nicho">
-          <p class="subtit">Modelo pronto por nicho</p>
-          <div class="row">
-            <select id="nicho" aria-label="Nicho"></select>
-            <button class="primary" id="btnNicho">Aplicar modelo</button>
-          </div>
-          <label class="check"><input type="checkbox" id="nichoVisual" checked> Usar também as cores, fontes e o layout sugeridos</label>
-          <div id="nichoConfirm"></div>
-          <p class="note" style="margin:0">Traz categorias, produtos com preços de exemplo e as opções de pedido do nicho. Ajuste os preços com o cliente.</p>
-        </div>
         <div class="grid2">
           <label>Nome da seção <small>(ex.: Cardápio, Serviços)</small><input type="text" id="catalogoTitulo"></label>
         </div>
@@ -283,7 +289,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="secAgenda">
       <h2>5 · Agendamento de serviços</h2>
       <div class="stack">
         <label class="check"><input type="checkbox" id="agAtivo"> Ativar agendamento de serviços no site</label>
@@ -317,7 +323,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="secFotos">
       <h2>6 · Fotos e vídeos dos serviços</h2>
       <div class="stack">
         <p class="note" style="margin:0">Cada foto ou vídeo fica ligado a um serviço. Fotos até 5 MB e vídeos até 25 MB. Depois de enviar, republique o site.</p>
@@ -451,6 +457,8 @@ const P_=(nome,preco,desc="",unidade="")=>({nome,preco,desc,unidade});
 const NICHOS = {
   barbearia:{
     nome:"Barbearia", titulo:"Serviços",
+    dados:{nome:"Barbearia Exemplo", cidade:"Paulista - PE", descricao:"Cortes clássicos e modernos, com atendimento sem pressa.", horario:"Seg a Sáb: 9h às 19h\nDom: fechado", endereco:"Av. Exemplo, 123 - Janga, Paulista - PE", instagram:"@barbeariaexemplo"},
+    agenda:{termo:"Barbeiro", servicos:[{nome:"Corte social",duracao:"30 min",preco:"35,00"},{nome:"Corte degradê",duracao:"40 min",preco:"40,00"},{nome:"Barba tradicional",duracao:"20 min",preco:"25,00"},{nome:"Corte + barba",duracao:"50 min",preco:"60,00"},{nome:"Sobrancelha",duracao:"10 min",preco:"10,00"}], profissionais:["Barbeiro 1","Barbeiro 2","Dono 1","Dono barbeiro 1"]},
     visual:{modelo:"minimal",cor:"#b08d57",fundo:"#121212",texto:"#f2efe9",fonteTitulo:"Oswald",fonteTexto:"DM Sans"},
     pedido:{entrega:false,retirada:false,agendamento:true,taxa:"",minimo:"",pag:["Pix","Cartão","Dinheiro"],botao:"Agendar pelo WhatsApp",obsDica:"Ex.: prefiro com o barbeiro João"},
     cats:{
@@ -813,7 +821,7 @@ function bioHTML(d=s, img=R){
   const temCat=prods.length>0;
   const O=d.pedido||PEDIDO_PADRAO;
   // Agendamento de serviços: o cliente escolhe serviço, profissional e horário, e envia pelo WhatsApp
-  const AG=d.agenda||{};
+  const AG=(d.tipo==="barbearia"&&d.agenda)||{};
   const agOk=!!AG.ativo&&(AG.servicos||[]).length>0&&(AG.profissionais||[]).length>0;
   const agCta=agOk?`<nav class="links"><button type="button" class="btn destaque" id="abrirAgenda">${svg("whats")}<span>${esc(AG.botao||"Agendar um horário")}</span><em aria-hidden="true">→</em></button></nav>`:"";
   // Seção de serviços: cada serviço mostra as fotos e vídeos cadastrados para ele
@@ -1124,6 +1132,8 @@ function toForm(){
   for(const id in pagChecks) $(id).checked=(s.pedido.pag||[]).includes(pagChecks[id]);
   renderBairros();
   renderAgenda();
+  $("nicho").value=s.tipo||"";
+  renderTipo();
   showUrl();
   document.querySelectorAll(".model").forEach(b=>b.setAttribute("aria-pressed",b.dataset.model===s.modelo));
   renderExtras(); renderCats(); renderProdutos();
@@ -1310,14 +1320,29 @@ $("btnAddCat").onclick=()=>{if(addCategoria($("novaCat").value)){$("novaCat").va
 $("novaCat").addEventListener("keydown",e=>{if(e.key==="Enter")$("btnAddCat").click()});
 
 /* ---------- Modelos por nicho ---------- */
-$("nicho").innerHTML=`<option value="">Escolha um nicho…</option>`+Object.entries(NICHOS).map(([k,n])=>`<option value="${k}">${n.nome}</option>`).join("");
+$("nicho").innerHTML=`<option value="">Escolha o tipo de site…</option>`+Object.entries(NICHOS).map(([k,n])=>`<option value="${k}">${n.nome}</option>`).join("");
+$("nicho").onchange=()=>{s.tipo=$("nicho").value;renderTipo();render()};
+// Campos e blocos que só existem para barbearia (agendamento e fotos por serviço)
+function renderTipo(){
+  const barb=s.tipo==="barbearia";
+  $("secAgenda").hidden=!barb;
+  $("secFotos").hidden=!barb;
+}
 function aplicarNicho(k,modo){
   const N=NICHOS[k];if(!N)return;
+  s.tipo=k;
   const novos=[];
   for(const cat in N.cats) for(const p of N.cats[cat]) novos.push({id:uid(),nome:p.nome,preco:p.preco,cat,desc:p.desc,marca:"",unidade:p.unidade||"",foto:"",esgotado:false});
   if(modo==="substituir"){s.produtos=novos;s.categorias=Object.keys(N.cats)}
   else{s.produtos=[...s.produtos,...novos];s.categorias=[...new Set([...s.categorias,...Object.keys(N.cats)])]}
   s.catalogoTitulo=N.titulo;
+  // Dados gerais: só preenche o que está vazio ou ainda com o exemplo padrão
+  if(N.dados) for(const c in N.dados) if(!s[c]||s[c]===DEFAULT[c]) s[c]=N.dados[c];
+  if(N.agenda&&(modo==="substituir"||!s.agenda.servicos.length)){
+    const servicos=N.agenda.servicos.map(v=>({id:uid(),nome:v.nome,duracao:v.duracao,preco:v.preco,midia:[]}));
+    const ids=servicos.map(v=>v.id);
+    s.agenda={ativo:true,termo:N.agenda.termo,msg:s.agenda.msg||"",servicos,profissionais:N.agenda.profissionais.map(nome=>({id:uid(),nome,servicos:ids,dias:[1,2,3,4,5,6],inicio:"09:00",fim:"19:00"}))};
+  }
   s.pedido=Object.assign({},PEDIDO_PADRAO,N.pedido,{pix:s.pedido.pix||"",bairros:s.pedido.bairros||[]});
   if($("nichoVisual").checked) Object.assign(s,N.visual);
   $("nichoConfirm").innerHTML="";
@@ -1680,9 +1705,9 @@ $("results").onclick=async e=>{
   else if(site) s.extras=[{titulo:"Nosso site",url:site}];
   s.slug=slugify(s.nome);
   const nk=nichoDoTipo(tipo+" "+s.nome);
-  $("nicho").value=nk; $("nichoConfirm").innerHTML="";
+  s.tipo=nk; $("nichoConfirm").innerHTML="";
   toForm(); render(); clearPub();
-  toast((ig?"Dados importados, incluindo o Instagram.":"Dados importados. Confira o WhatsApp e digite o Instagram.")+(nk?` Já deixei o modelo ${NICHOS[nk].nome} selecionado na seção 3: é só clicar em Aplicar modelo.`:" Agora cadastre os produtos."));
+  toast((ig?"Dados importados, incluindo o Instagram.":"Dados importados. Confira o WhatsApp e digite o Instagram.")+(nk?` Já deixei o modelo ${NICHOS[nk].nome} selecionado em Tipo de site, no topo: é só clicar em Aplicar modelo.`:" Agora cadastre os produtos."));
   // A foto do Google vem com a sua chave no endereço: convertemos para imagem embutida
   try{
     if(p.photos?.length){s.capa=await imgToData(p.photos[0].getURI({maxWidth:1200}),1200);render()}

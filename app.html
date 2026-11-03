@@ -254,7 +254,7 @@ button.perigo{color:var(--erro)}
 
   function carregarAgenda() {
     var dia = $("agDia").value || hojeBrasilia();
-    Conta.api("/api/pedidos?dia=" + dia).then(function (j) {
+    Conta.api("/api/pedido?dia=" + dia).then(function (j) {
       msg("msgAgenda", "");
       var lista = $("listaAgenda");
       lista.textContent = "";
@@ -281,7 +281,7 @@ button.perigo{color:var(--erro)}
   }
 
   function decidir(id, status) {
-    Conta.api("/api/pedidos", { metodo: "PATCH", corpo: { id: id, status: status } })
+    Conta.api("/api/pedido", { metodo: "PATCH", corpo: { id: id, status: status } })
       .then(carregarAgenda)
       .catch(function (err) { msg("msgAgenda", err.message, "erro"); carregarAgenda(); });
   }

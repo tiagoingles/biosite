@@ -1,12 +1,17 @@
-// Recebe um pedido de horário feito no site. Grava como "pendente" e devolve o código
+// Pedidos de horário.
+// POST: recebe um pedido feito no site. Grava como "pendente" e devolve o código
 // que o cliente envia junto na mensagem do WhatsApp.
+// GET e PATCH: o painel lista e decide os pedidos (ver lib/pedidos-painel.js).
+// Usa a mesma função para não passar do limite de funções da Vercel no plano gratuito.
 const { rest } = require("../lib/supabase");
 const { codigoNovo, texto } = require("../lib/agenda");
+const painel = require("../lib/pedidos-painel");
 
 const LIMITE_DIA = 60; // pedidos por barbearia em 24 horas, para conter abuso
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
+  if (req.method === "GET" || req.method === "PATCH") return painel(req, res);
   if (req.method !== "POST") return res.status(405).json({ message: "Método não permitido." });
 
   const b = req.body || {};

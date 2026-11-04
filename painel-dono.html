@@ -67,6 +67,21 @@ button.perigo{color:var(--erro)}
     <p class="msg" id="msgPend" role="status"></p>
   </section>
 
+  <section id="secAvulso" hidden>
+    <h2>Atendimento espontâneo</h2>
+    <p class="note">Registre quem chegou sem agendar, para o barbeiro escolhido.</p>
+    <form id="formAvulso" style="display:grid;gap:10px">
+      <label>Barbeiro<select id="avProf" required style="font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto)"></select></label>
+      <label>Serviço<input id="avServico" required maxlength="80" placeholder="Ex.: Corte social"></label>
+      <label>Nome do cliente<input id="avCliente" required maxlength="80"></label>
+      <div class="linha">
+        <label style="flex:1">Horário<input type="time" id="avHora" required></label>
+        <label style="flex:1">Duração<select id="avDuracao" style="font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto)"><option value="30">30 min</option><option value="40">40 min</option><option value="60">60 min</option></select></label>
+      </div>
+      <div class="linha"><button type="submit" class="main">Registrar atendimento</button></div>
+      <p class="msg" id="msgAvulso" role="status"></p>
+    </form>
+  </section>
   <section id="secHoje" hidden>
     <h2>Agenda do dia</h2>
     <div class="linha">
@@ -88,7 +103,7 @@ button.perigo{color:var(--erro)}
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var PENDENTE = "pendente";
-  var ROTULO = { pendente: "Pendente", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso" };
+  var ROTULO = { pendente: "Pendente", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso", realizado: "Realizado", nao_realizado: "Não realizado" };
   var CLASSE = { pendente: "pend", confirmado: "conf", recusado: "rec" };
   var dia = hojeBrasilia();
 
@@ -120,7 +135,7 @@ button.perigo{color:var(--erro)}
     $("sub").textContent = d.perfil.papel === "dono_barbeiro" ? "Você administra e também atende" : "Você administra a barbearia";
     if (d.barbearia) { $("verSite").href = "/" + d.barbearia.slug; }
     $("carregando").hidden = true;
-    $("secPendentes").hidden = false; $("secHoje").hidden = false; $("secEquipe").hidden = false;
+    $("secPendentes").hidden = false; $("secHoje").hidden = false; $("secEquipe").hidden = false; $("secAvulso").hidden = false; carregarEquipeAvulso();
     $("dia").value = dia;
     carregarTudo();
     setInterval(carregarTudo, 30000);
@@ -144,14 +159,61 @@ button.perigo{color:var(--erro)}
     var hora = document.createElement("span"); hora.className = "hora";
     hora.textContent = (p.dia ? dataBr(p.dia) + " · " : "") + p.horario;
     var pill = document.createElement("span"); pill.className = "pill " + (CLASSE[p.status] || "");
-    pill.textContent = ROTULO[p.status] || p.status;
+    pill.textContent = rotuloComMotivo(p);
     topo.appendChild(hora); topo.appendChild(pill);
     var texto = document.createElement("div");
     texto.innerHTML = "<b>" + esc(p.servico) + "</b><br><span class='note'>" + esc(p.cliente) + " · " + esc(p.profissional) + " · código " + esc(p.codigo) + "</span>";
     item.appendChild(topo); item.appendChild(texto);
+    if (encerravel(p)) item.appendChild(botoesEncerrar(p));
     if (comBotoes && p.status === PENDENTE) item.appendChild(botoes(p));
     return item;
   }
+
+  // Encerramento do atendimento: realizado, ou não realizado com motivo
+  function encerravel(p) { return (p.status === "confirmado" || p.status === "avulso") && p.dia <= hojeBrasilia(); }
+  function botoesEncerrar(p) {
+    var box = document.createElement("div"); box.className = "encerrar";
+    var g = document.createElement("div"); g.className = "linha";
+    var feito = document.createElement("button"); feito.className = "main"; feito.textContent = "Realizado";
+    feito.onclick = function () { encerrar(p.id, { status: "realizado" }); };
+    var nao = document.createElement("button"); nao.className = "perigo"; nao.textContent = "Não realizado";
+    var motivos = document.createElement("div"); motivos.className = "linha"; motivos.hidden = true;
+    nao.onclick = function () { motivos.hidden = !motivos.hidden; };
+    [["reagendado", "Reagendado"], ["cliente_nao_apareceu", "Cliente não apareceu"]].forEach(function (m) {
+      var b = document.createElement("button"); b.textContent = m[1];
+      b.onclick = function () { encerrar(p.id, { status: "nao_realizado", motivo: m[0] }); };
+      motivos.appendChild(b);
+    });
+    g.appendChild(feito); g.appendChild(nao);
+    box.appendChild(g); box.appendChild(motivos);
+    return box;
+  }
+  function encerrar(id, corpo) {
+    Conta.api("/api/pedido", { metodo: "PATCH", corpo: Object.assign({ id: id }, corpo) })
+      .then(function () { msg("msgDia", "Atendimento registrado.", "ok"); carregarTudo(); })
+      .catch(function (err) { msg("msgDia", err.message, "erro"); carregarTudo(); });
+  }
+  function rotuloComMotivo(p) {
+    var r = ROTULO[p.status] || p.status;
+    if (p.motivo) r += " · " + (p.motivo === "reagendado" ? "reagendado" : "cliente não apareceu");
+    return r;
+  }
+
+  // Barbeiros da equipe para escolher no atendimento espontâneo
+  function carregarEquipeAvulso() {
+    Conta.api("/api/equipe").then(function (j) {
+      var sel = $("avProf"); sel.textContent = "";
+      j.profissionais.filter(function (p) { return p.ativo; }).forEach(function (p) {
+        var o = document.createElement("option"); o.value = p.id; o.textContent = p.nome; sel.appendChild(o);
+      });
+    }).catch(function () {});
+  }
+  $("formAvulso").addEventListener("submit", function (e) {
+    e.preventDefault();
+    Conta.api("/api/pedido", { corpo: { acao: "avulso", profissionalId: $("avProf").value, servico: $("avServico").value.trim(), cliente: $("avCliente").value.trim(), dia: dia, horario: $("avHora").value, duracao: +$("avDuracao").value } })
+      .then(function () { msg("msgAvulso", "Atendimento registrado.", "ok"); $("formAvulso").reset(); carregarEquipeAvulso(); carregarTudo(); })
+      .catch(function (err) { msg("msgAvulso", err.message, "erro"); });
+  });
 
   function carregarPendentes() {
     Conta.api("/api/pedido?pendentes=1").then(function (j) {

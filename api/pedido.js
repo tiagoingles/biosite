@@ -13,6 +13,8 @@ const LIMITE_DIA = 60; // pedidos por barbearia em 24 horas, para conter abuso
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "GET" || req.method === "PATCH") return painel(req, res);
+  // Atendimento espontâneo registrado pelo barbeiro ou pelo dono (exige login)
+  if (req.method === "POST" && req.body && req.body.acao === "avulso") return painel(req, res);
   if (req.method !== "POST") return res.status(405).json({ message: "Método não permitido." });
 
   const b = req.body || {};

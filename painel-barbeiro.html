@@ -53,6 +53,20 @@ button.perigo{color:var(--erro);flex:1}
     <p class="msg" id="msgPend" role="status"></p>
   </section>
 
+  <section id="secAvulso" hidden>
+    <h2>Atendimento espontâneo</h2>
+    <p class="note">Registre quem chegou sem agendar. Ele entra na sua agenda de hoje.</p>
+    <form id="formAvulso" style="display:grid;gap:10px">
+      <label>Serviço<input id="avServico" required maxlength="80" placeholder="Ex.: Corte social"></label>
+      <label>Nome do cliente<input id="avCliente" required maxlength="80"></label>
+      <div class="linha">
+        <label style="flex:1">Horário<input type="time" id="avHora" required></label>
+        <label style="flex:1">Duração<select id="avDuracao" style="font:inherit;padding:12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto)"><option value="30">30 min</option><option value="40">40 min</option><option value="60">60 min</option></select></label>
+      </div>
+      <button type="submit" class="main">Registrar atendimento</button>
+      <p class="msg" id="msgAvulso" role="status"></p>
+    </form>
+  </section>
   <section id="secDia" hidden>
     <h2>Meus horários</h2>
     <label>Dia<input type="date" id="dia"></label>
@@ -65,7 +79,7 @@ button.perigo{color:var(--erro);flex:1}
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var ROTULO = { pendente: "Aguardando sua confirmação", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso" };
+  var ROTULO = { pendente: "Aguardando sua confirmação", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso", realizado: "Realizado", nao_realizado: "Não realizado" };
   var dia = hojeBrasilia();
 
   function hojeBrasilia() { return new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); }
@@ -95,7 +109,7 @@ button.perigo{color:var(--erro);flex:1}
     $("titulo").textContent = d.perfil.nome ? "Olá, " + d.perfil.nome : "Minha agenda";
     $("sub").textContent = d.barbearia ? d.barbearia.nome : "";
     $("carregando").hidden = true;
-    $("secPend").hidden = false; $("secDia").hidden = false;
+    $("secPend").hidden = false; $("secDia").hidden = false; $("secAvulso").hidden = false;
     carregarTudo();
     setInterval(carregarTudo, 30000);
   }).catch(function (err) { $("carregando").textContent = err.message; });
@@ -107,10 +121,11 @@ button.perigo{color:var(--erro);flex:1}
     var hora = document.createElement("div"); hora.className = "hora";
     hora.textContent = (p.dia && pendente ? dataBr(p.dia) + " · " : "") + p.horario;
     var pill = document.createElement("span"); pill.className = "pill";
-    pill.textContent = ROTULO[p.status] || p.status;
+    pill.textContent = rotuloComMotivo(p);
     var texto = document.createElement("div");
     texto.innerHTML = "<b>" + esc(p.servico) + "</b><br><span class='note'>" + esc(p.cliente) + " · código " + esc(p.codigo) + "</span>";
     c.appendChild(hora); c.appendChild(pill); c.appendChild(texto);
+    if (encerravel(p)) c.appendChild(botoesEncerrar(p));
     if (pendente) {
       var g = document.createElement("div"); g.className = "linha";
       var ok = document.createElement("button"); ok.className = "main"; ok.textContent = "Confirmar";
@@ -121,6 +136,43 @@ button.perigo{color:var(--erro);flex:1}
     }
     return c;
   }
+
+  // Encerramento do atendimento: realizado, ou não realizado com motivo
+  function encerravel(p) { return (p.status === "confirmado" || p.status === "avulso") && p.dia <= hojeBrasilia(); }
+  function botoesEncerrar(p) {
+    var box = document.createElement("div"); box.className = "encerrar";
+    var g = document.createElement("div"); g.className = "linha";
+    var feito = document.createElement("button"); feito.className = "main"; feito.textContent = "Realizado";
+    feito.onclick = function () { encerrar(p.id, { status: "realizado" }); };
+    var nao = document.createElement("button"); nao.className = "perigo"; nao.textContent = "Não realizado";
+    var motivos = document.createElement("div"); motivos.className = "linha"; motivos.hidden = true;
+    nao.onclick = function () { motivos.hidden = !motivos.hidden; };
+    [["reagendado", "Reagendado"], ["cliente_nao_apareceu", "Cliente não apareceu"]].forEach(function (m) {
+      var b = document.createElement("button"); b.textContent = m[1];
+      b.onclick = function () { encerrar(p.id, { status: "nao_realizado", motivo: m[0] }); };
+      motivos.appendChild(b);
+    });
+    g.appendChild(feito); g.appendChild(nao);
+    box.appendChild(g); box.appendChild(motivos);
+    return box;
+  }
+  function encerrar(id, corpo) {
+    Conta.api("/api/pedido", { metodo: "PATCH", corpo: Object.assign({ id: id }, corpo) })
+      .then(function () { msg("msgDia", "Atendimento registrado.", "ok"); carregarTudo(); })
+      .catch(function (err) { msg("msgDia", err.message, "erro"); carregarTudo(); });
+  }
+  function rotuloComMotivo(p) {
+    var r = ROTULO[p.status] || p.status;
+    if (p.motivo) r += " · " + (p.motivo === "reagendado" ? "reagendado" : "cliente não apareceu");
+    return r;
+  }
+
+  $("formAvulso").addEventListener("submit", function (e) {
+    e.preventDefault();
+    Conta.api("/api/pedido", { corpo: { acao: "avulso", servico: $("avServico").value.trim(), cliente: $("avCliente").value.trim(), dia: hojeBrasilia(), horario: $("avHora").value, duracao: +$("avDuracao").value } })
+      .then(function () { msg("msgAvulso", "Atendimento registrado na sua agenda.", "ok"); $("formAvulso").reset(); carregarTudo(); })
+      .catch(function (err) { msg("msgAvulso", err.message, "erro"); });
+  });
 
   function carregarPendentes() {
     Conta.api("/api/pedido?pendentes=1").then(function (j) {

@@ -70,6 +70,7 @@ button.perigo{color:var(--erro)}
     <h2 id="nomeBarbearia"></h2>
     <p class="note" id="infoPapel"></p>
     <p class="note">Seu site: <a id="linkSite" href="#" target="_blank" rel="noopener"></a></p>
+    <div class="linha"><button type="button" class="main" id="irPainel">Abrir painel</button></div>
     <div class="linha" id="acoesBarbeiro" hidden>
       <button type="button" id="virarBarbeiro">Também atendo clientes</button>
     </div>
@@ -173,6 +174,9 @@ button.perigo{color:var(--erro)}
     $("titulo").textContent = b.nome || "Painel";
     $("nomeBarbearia").textContent = b.nome || "";
     $("infoPapel").textContent = "Você entrou como: " + (PAPEIS[dados.perfil.papel] || dados.perfil.papel);
+    var barbeiroSo = dados.perfil.papel === "barbeiro";
+    $("irPainel").textContent = barbeiroSo ? "Minha agenda" : "Painel do dono";
+    $("irPainel").onclick = function () { location.href = barbeiroSo ? "painel-barbeiro.html" : "painel-dono.html"; };
     $("linkSite").textContent = location.origin + "/" + (b.slug || "");
     $("linkSite").href = "/" + (b.slug || "");
     var admin = dados.perfil.papel === "dono" || dados.perfil.papel === "dono_barbeiro";
@@ -310,8 +314,26 @@ button.perigo{color:var(--erro)}
         grupo.appendChild(senha);
       }
       linha.appendChild(grupo);
+      (b.equipe || []).forEach(function (p) {
+        var item = el("div", null, "item");
+        item.appendChild(el("span", p.nome + (p.temAcesso ? "" : " · sem acesso")));
+        var botao = el("button", p.temAcesso ? "Nova senha do barbeiro" : "Criar acesso de teste");
+        botao.onclick = function () { acessoBarbeiro(b, p); };
+        item.appendChild(botao);
+        linha.appendChild(item);
+      });
       lista.appendChild(linha);
     });
+  }
+
+  function acessoBarbeiro(b, p) {
+    var nova = p.temAcesso;
+    if (nova && !confirm("Gerar nova senha para " + p.nome + "? A senha atual deixa de funcionar.")) return;
+    Conta.api("/api/barbearia", { corpo: { acao: nova ? "redefinir-teste-barbeiro" : "teste-barbeiro", slug: b.slug, profissionalId: p.id } }).then(function (j) {
+      p.temAcesso = true;
+      var login = j.email ? "E-mail " + j.email + ", " : "";
+      msg("msgSites", (nova ? "Nova senha de " : "Acesso de teste de ") + p.nome + ": " + login + "senha " + j.senha + ". Copie agora: ela não aparece de novo.", "ok");
+    }).catch(function (err) { msg("msgSites", err.message, "erro"); });
   }
 
   function abrirAgendaDe(b) {

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painel do dono | Bio Site</title>
+<style>
+:root{--cor:#1f4e79;--fundo:#f4f5f8;--texto:#1c2430;--linha:#d6dce5;--suave:#fff;--erro:#b03a2e;--ok:#1e7d4f;--aviso:#9a5b00;--aviso-fundo:#fff4e0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#11151c;--texto:#e7ebf1;--linha:#2a313c;--suave:#1a202a;--aviso:#f0b357;--aviso-fundo:#2d2414}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.45 system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 16px;background:var(--suave);border-bottom:1px solid var(--linha);position:sticky;top:0;z-index:5}
+header b{font-size:17px}
+header nav{display:flex;gap:8px;flex-wrap:wrap}
+main{max-width:640px;margin:0 auto;padding:16px;display:grid;gap:14px}
+@media (min-width:900px){main{max-width:1100px;grid-template-columns:1fr 1fr;align-items:start;padding:24px}.pendentes{grid-column:1 / -1}}
+section{background:var(--suave);border:1px solid var(--linha);border-radius:16px;padding:16px;display:grid;gap:10px}
+h2{font-size:17px;margin:0}
+h3{font-size:14px;margin:6px 0 0;opacity:.8}
+label{display:grid;gap:4px;font-size:13px;font-weight:600}
+input{font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto);width:100%}
+button,a.botao{font:inherit;font-weight:600;padding:9px 12px;border-radius:10px;border:1px solid var(--linha);background:var(--suave);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-block}
+button.main{background:var(--cor);border-color:var(--cor);color:#fff}
+button.perigo{color:var(--erro)}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.item{display:grid;gap:8px;padding:12px 0;border-bottom:1px solid var(--linha)}
+.item:last-child{border-bottom:0}
+.item .topo{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.hora{font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
+.note{margin:0;font-size:13px;opacity:.75}
+.msg{margin:0;font-size:14px;min-height:18px}
+.erro{color:var(--erro)}.ok{color:var(--ok)}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--linha)}
+.pill.pend{color:var(--aviso);background:var(--aviso-fundo);border-color:transparent}
+.pill.conf{color:var(--ok)}
+.pill.rec{color:var(--erro)}
+.vazio{opacity:.7;margin:0}
+.contagem{font-size:13px;font-weight:700;background:var(--aviso-fundo);color:var(--aviso);padding:4px 10px;border-radius:999px}
+.equipe{display:grid;gap:6px}
+.equipe div{display:flex;justify-content:space-between;gap:8px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div><b id="titulo">Painel do dono</b><p class="note" id="sub"></p></div>
+  <nav>
+    <a class="botao" href="app.html">Equipe e convites</a>
+    <a class="botao" id="verSite" href="#" target="_blank" rel="noopener">Ver site</a>
+    <button type="button" id="sair">Sair</button>
+  </nav>
+</header>
+<main>
+  <p class="note" id="carregando">Carregando…</p>
+
+  <section class="pendentes" id="secPendentes" hidden>
+    <div class="linha"><h2>Pedidos para confirmar</h2><span class="contagem" id="qtdPend">0</span></div>
+    <p class="note">Confirme ou recuse. O cliente recebe a resposta pelo WhatsApp.</p>
+    <div id="listaPend"></div>
+    <p class="msg" id="msgPend" role="status"></p>
+  </section>
+
+  <section id="secHoje" hidden>
+    <h2>Agenda do dia</h2>
+    <div class="linha">
+      <label style="flex:1">Dia<input type="date" id="dia"></label>
+      <button type="button" id="hoje">Hoje</button>
+    </div>
+    <div id="listaDia"></div>
+    <p class="msg" id="msgDia" role="status"></p>
+  </section>
+
+  <section id="secEquipe" hidden>
+    <h2>Equipe no dia</h2>
+    <div class="equipe" id="listaEquipe"></div>
+  </section>
+</main>
+<script src="/conta.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var PENDENTE = "pendente";
+  var ROTULO = { pendente: "Pendente", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso" };
+  var CLASSE = { pendente: "pend", confirmado: "conf", recusado: "rec" };
+  var dia = hojeBrasilia();
+
+  function hojeBrasilia() { return new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); }
+  function esc(t) { return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function msg(id, t, tipo) { $(id).textContent = t; $(id).className = "msg " + (tipo || ""); }
+  function dataBr(iso) { var p = iso.split("-"); return p[2] + "/" + p[1]; }
+
+  if (!Conta.ler()) { location.replace("entrar.html"); return; }
+  $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
+  $("hoje").onclick = function () { $("dia").value = hojeBrasilia(); dia = $("dia").value; carregarDia(); };
+  $("dia").addEventListener("change", function () { dia = $("dia").value || hojeBrasilia(); carregarDia(); });
+
+  // Só o dono e o dono-barbeiro usam esta tela; barbeiro vai para a própria
+  Conta.api("/api/eu").then(function (d) {
+    if (d.admin || !d.perfil) { location.replace("app.html"); return; }
+    if (d.perfil.papel === "barbeiro") { location.replace("painel-barbeiro.html"); return; }
+    $("titulo").textContent = d.barbearia ? d.barbearia.nome : "Painel do dono";
+    $("sub").textContent = d.perfil.papel === "dono_barbeiro" ? "Você administra e também atende" : "Você administra a barbearia";
+    if (d.barbearia) { $("verSite").href = "/" + d.barbearia.slug; }
+    $("carregando").hidden = true;
+    $("secPendentes").hidden = false; $("secHoje").hidden = false; $("secEquipe").hidden = false;
+    $("dia").value = dia;
+    carregarTudo();
+    setInterval(carregarTudo, 30000);
+  }).catch(function (err) { $("carregando").textContent = err.message; });
+
+  function carregarTudo() { carregarPendentes(); carregarDia(); }
+
+  function botoes(p) {
+    var g = document.createElement("div"); g.className = "linha";
+    var ok = document.createElement("button"); ok.className = "main"; ok.textContent = "Confirmar";
+    ok.onclick = function () { decidir(p.id, "confirmado", "msgPend"); };
+    var no = document.createElement("button"); no.className = "perigo"; no.textContent = "Recusar";
+    no.onclick = function () { decidir(p.id, "recusado", "msgPend"); };
+    g.appendChild(ok); g.appendChild(no);
+    return g;
+  }
+
+  function linhaPedido(p, comBotoes) {
+    var item = document.createElement("div"); item.className = "item";
+    var topo = document.createElement("div"); topo.className = "topo";
+    var hora = document.createElement("span"); hora.className = "hora";
+    hora.textContent = (p.dia ? dataBr(p.dia) + " · " : "") + p.horario;
+    var pill = document.createElement("span"); pill.className = "pill " + (CLASSE[p.status] || "");
+    pill.textContent = ROTULO[p.status] || p.status;
+    topo.appendChild(hora); topo.appendChild(pill);
+    var texto = document.createElement("div");
+    texto.innerHTML = "<b>" + esc(p.servico) + "</b><br><span class='note'>" + esc(p.cliente) + " · " + esc(p.profissional) + " · código " + esc(p.codigo) + "</span>";
+    item.appendChild(topo); item.appendChild(texto);
+    if (comBotoes && p.status === PENDENTE) item.appendChild(botoes(p));
+    return item;
+  }
+
+  function carregarPendentes() {
+    Conta.api("/api/pedido?pendentes=1").then(function (j) {
+      var lista = $("listaPend"); lista.textContent = "";
+      $("qtdPend").textContent = j.pedidos.length;
+      if (!j.pedidos.length) { lista.innerHTML = "<p class='vazio'>Nenhum pedido esperando confirmação.</p>"; return; }
+      j.pedidos.forEach(function (p) { lista.appendChild(linhaPedido(p, true)); });
+    }).catch(function (err) { msg("msgPend", err.message, "erro"); });
+  }
+
+  function carregarDia() {
+    Conta.api("/api/pedido?dia=" + dia).then(function (j) {
+      var lista = $("listaDia"); lista.textContent = "";
+      if (!j.pedidos.length) lista.innerHTML = "<p class='vazio'>Nenhum pedido neste dia.</p>";
+      j.pedidos.forEach(function (p) { lista.appendChild(linhaPedido(p, true)); });
+      desenharEquipe(j.pedidos);
+      msg("msgDia", "");
+    }).catch(function (err) { msg("msgDia", err.message, "erro"); });
+  }
+
+  function desenharEquipe(pedidos) {
+    var porNome = {};
+    pedidos.forEach(function (p) {
+      var k = p.profissional || "Sem barbeiro";
+      porNome[k] = porNome[k] || { total: 0, pend: 0 };
+      porNome[k].total++; if (p.status === PENDENTE) porNome[k].pend++;
+    });
+    var box = $("listaEquipe"); box.textContent = "";
+    var nomes = Object.keys(porNome);
+    if (!nomes.length) { box.innerHTML = "<p class='vazio'>Sem atendimentos neste dia.</p>"; return; }
+    nomes.forEach(function (n) {
+      var linha = document.createElement("div");
+      linha.innerHTML = "<span>" + esc(n) + "</span><span class='note'>" + porNome[n].total + " pedido(s)" + (porNome[n].pend ? " · " + porNome[n].pend + " para confirmar" : "") + "</span>";
+      box.appendChild(linha);
+    });
+  }
+
+  function decidir(id, status, onde) {
+    Conta.api("/api/pedido", { metodo: "PATCH", corpo: { id: id, status: status } })
+      .then(function () { msg(onde, status === "confirmado" ? "Confirmado." : "Recusado.", "ok"); carregarTudo(); })
+      .catch(function (err) { msg(onde, err.message, "erro"); carregarTudo(); });
+  }
+})();
+</script>
+</body>
+</html>

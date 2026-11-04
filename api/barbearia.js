@@ -3,7 +3,7 @@
 // POST acao "redefinir-teste": gera nova senha para o usuário de teste de um site.
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
-const { publicar, redefinirTeste } = require("../lib/publicar");
+const { publicar, redefinirTeste, criarTesteBarbeiro, redefinirTesteBarbeiro } = require("../lib/publicar");
 
 function origemDo(req) {
   const proto = req.headers["x-forwarded-proto"] || "https";
@@ -33,6 +33,8 @@ module.exports = async (req, res) => {
     }
 
     if (b.acao === "redefinir-teste") return res.status(200).json(await redefinirTeste(slug));
+    if (b.acao === "teste-barbeiro") return res.status(201).json(await criarTesteBarbeiro({ slug, profissionalId: b.profissionalId }));
+    if (b.acao === "redefinir-teste-barbeiro") return res.status(200).json(await redefinirTesteBarbeiro({ slug, profissionalId: b.profissionalId }));
 
     return res.status(400).json({ message: "Ação desconhecida." });
   } catch (e) {

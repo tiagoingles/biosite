@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Minha agenda | Bio Site</title>
+<style>
+:root{--cor:#1f4e79;--fundo:#f4f5f8;--texto:#1c2430;--linha:#d6dce5;--suave:#fff;--erro:#b03a2e;--ok:#1e7d4f;--aviso:#9a5b00;--aviso-fundo:#fff4e0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#11151c;--texto:#e7ebf1;--linha:#2a313c;--suave:#1a202a;--aviso:#f0b357;--aviso-fundo:#2d2414}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font:16px/1.45 system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;background:var(--suave);border-bottom:1px solid var(--linha);position:sticky;top:0;z-index:5}
+header b{font-size:17px}
+main{max-width:560px;margin:0 auto;padding:16px;display:grid;gap:14px}
+section{background:var(--suave);border:1px solid var(--linha);border-radius:16px;padding:16px;display:grid;gap:10px}
+h2{font-size:18px;margin:0}
+label{display:grid;gap:4px;font-size:14px;font-weight:600}
+input{font:inherit;padding:12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto);width:100%}
+button{font:inherit;font-weight:700;padding:12px 14px;border-radius:12px;border:1px solid var(--linha);background:var(--suave);color:var(--texto);cursor:pointer}
+button.main{background:var(--cor);border-color:var(--cor);color:#fff;flex:1}
+button.perigo{color:var(--erro);flex:1}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{border:1px solid var(--linha);border-radius:14px;padding:14px;display:grid;gap:10px}
+.card.pend{border-color:var(--aviso);background:var(--aviso-fundo)}
+.hora{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.note{margin:0;font-size:14px;opacity:.75}
+.msg{margin:0;font-size:15px;min-height:18px}
+.erro{color:var(--erro)}.ok{color:var(--ok)}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--linha);justify-self:start}
+.vazio{opacity:.7;margin:0;text-align:center;padding:10px 0}
+.contagem{font-size:13px;font-weight:700;background:var(--aviso-fundo);color:var(--aviso);padding:4px 10px;border-radius:999px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div><b id="titulo">Minha agenda</b><p class="note" id="sub"></p></div>
+  <button type="button" id="sair">Sair</button>
+</header>
+<main>
+  <p class="note" id="carregando">Carregando…</p>
+
+  <section id="secPend" hidden>
+    <div class="linha"><h2>Para confirmar</h2><span class="contagem" id="qtdPend">0</span></div>
+    <div id="listaPend"></div>
+    <p class="msg" id="msgPend" role="status"></p>
+  </section>
+
+  <section id="secDia" hidden>
+    <h2>Meus horários</h2>
+    <label>Dia<input type="date" id="dia"></label>
+    <div id="listaDia"></div>
+    <p class="msg" id="msgDia" role="status"></p>
+  </section>
+</main>
+<script src="/conta.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var ROTULO = { pendente: "Aguardando sua confirmação", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso" };
+  var dia = hojeBrasilia();
+
+  function hojeBrasilia() { return new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); }
+  function esc(t) { return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function msg(id, t, tipo) { $(id).textContent = t; $(id).className = "msg " + (tipo || ""); }
+  function dataBr(iso) { var p = iso.split("-"); return p[2] + "/" + p[1]; }
+
+  if (!Conta.ler()) { location.replace("entrar.html"); return; }
+  $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
+  $("dia").value = dia;
+  $("dia").addEventListener("change", function () { dia = $("dia").value || hojeBrasilia(); carregarDia(); });
+
+  // Só o barbeiro usa esta tela; dono e dono-barbeiro vão para o painel do dono
+  Conta.api("/api/eu").then(function (d) {
+    if (d.admin || !d.perfil) { location.replace("app.html"); return; }
+    if (d.perfil.papel !== "barbeiro") { location.replace("painel-dono.html"); return; }
+    $("titulo").textContent = d.perfil.nome ? "Olá, " + d.perfil.nome : "Minha agenda";
+    $("sub").textContent = d.barbearia ? d.barbearia.nome : "";
+    $("carregando").hidden = true;
+    $("secPend").hidden = false; $("secDia").hidden = false;
+    carregarTudo();
+    setInterval(carregarTudo, 30000);
+  }).catch(function (err) { $("carregando").textContent = err.message; });
+
+  function carregarTudo() { carregarPendentes(); carregarDia(); }
+
+  function cardPedido(p, pendente) {
+    var c = document.createElement("div"); c.className = "card" + (pendente ? " pend" : "");
+    var hora = document.createElement("div"); hora.className = "hora";
+    hora.textContent = (p.dia && pendente ? dataBr(p.dia) + " · " : "") + p.horario;
+    var pill = document.createElement("span"); pill.className = "pill";
+    pill.textContent = ROTULO[p.status] || p.status;
+    var texto = document.createElement("div");
+    texto.innerHTML = "<b>" + esc(p.servico) + "</b><br><span class='note'>" + esc(p.cliente) + " · código " + esc(p.codigo) + "</span>";
+    c.appendChild(hora); c.appendChild(pill); c.appendChild(texto);
+    if (pendente) {
+      var g = document.createElement("div"); g.className = "linha";
+      var ok = document.createElement("button"); ok.className = "main"; ok.textContent = "Confirmar";
+      ok.onclick = function () { decidir(p.id, "confirmado"); };
+      var no = document.createElement("button"); no.className = "perigo"; no.textContent = "Recusar";
+      no.onclick = function () { decidir(p.id, "recusado"); };
+      g.appendChild(ok); g.appendChild(no); c.appendChild(g);
+    }
+    return c;
+  }
+
+  function carregarPendentes() {
+    Conta.api("/api/pedido?pendentes=1").then(function (j) {
+      var lista = $("listaPend"); lista.textContent = "";
+      $("qtdPend").textContent = j.pedidos.length;
+      if (!j.pedidos.length) { lista.innerHTML = "<p class='vazio'>Nenhum pedido esperando sua confirmação.</p>"; return; }
+      j.pedidos.forEach(function (p) { lista.appendChild(cardPedido(p, true)); });
+    }).catch(function (err) { msg("msgPend", err.message, "erro"); });
+  }
+
+  function carregarDia() {
+    Conta.api("/api/pedido?dia=" + dia).then(function (j) {
+      var lista = $("listaDia"); lista.textContent = "";
+      if (!j.pedidos.length) lista.innerHTML = "<p class='vazio'>Nenhum horário neste dia.</p>";
+      j.pedidos.forEach(function (p) { lista.appendChild(cardPedido(p, false)); });
+      msg("msgDia", "");
+    }).catch(function (err) { msg("msgDia", err.message, "erro"); });
+  }
+
+  function decidir(id, status) {
+    Conta.api("/api/pedido", { metodo: "PATCH", corpo: { id: id, status: status } })
+      .then(function () { msg("msgPend", status === "confirmado" ? "Confirmado." : "Recusado.", "ok"); carregarTudo(); })
+      .catch(function (err) { msg("msgPend", err.message, "erro"); carregarTudo(); });
+  }
+})();
+</script>
+</body>
+</html>

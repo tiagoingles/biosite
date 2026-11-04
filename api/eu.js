@@ -15,11 +15,20 @@ module.exports = async (req, res) => {
       if (!perfil && (await ehAdminDaPlataforma(u.id))) {
         // Administrador da plataforma: vê todos os sites
         const barbearias = await rest("barbearias?select=id,slug,nome,teste_user_id&order=criado_em.desc");
+        const equipe = await rest("profissionais?ativo=eq.true&select=id,nome,barbearia_id,perfil_user_id&order=criado_em.asc");
         return res.status(200).json({
           usuario: { id: u.id, email: u.email },
           perfil: null,
           admin: true,
-          barbearias: barbearias.map((b) => ({ id: b.id, slug: b.slug, nome: b.nome, temTeste: !!b.teste_user_id })),
+          barbearias: barbearias.map((b) => ({
+            id: b.id,
+            slug: b.slug,
+            nome: b.nome,
+            temTeste: !!b.teste_user_id,
+            equipe: equipe
+              .filter((p) => p.barbearia_id === b.id)
+              .map((p) => ({ id: p.id, nome: p.nome, temAcesso: !!p.perfil_user_id })),
+          })),
         });
       }
       if (!perfil) {

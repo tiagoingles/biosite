@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
   try {
     const barb = await rest(`barbearias?slug=eq.${slug}&select=id`);
     if (!barb.length) return res.status(404).json({ message: "Barbearia não encontrada." });
-    const lista = await rest(`profissionais?barbearia_id=eq.${barb[0].id}&ativo=eq.true&select=id,nome&order=nome`);
+    const lista = await rest(`profissionais?barbearia_id=eq.${barb[0].id}&ativo=eq.true&select=id,nome,foto_url&order=nome`);
     return res.status(200).json({ profissionais: lista });
   } catch (e) {
     return res.status(500).json({ message: e.message });

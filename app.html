@@ -36,6 +36,8 @@ button.perigo{color:var(--erro)}
 .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .em-breve{opacity:.6;border:1px dashed var(--linha);border-radius:12px;padding:12px;font-size:14px}
 [hidden]{display:none!important}
+.foto-barbeiro{width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--cor,#1f4e79);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.foto-barbeiro img{width:100%;height:100%;object-fit:cover;display:block}
 </style>
 </head>
 <body>
@@ -192,13 +194,47 @@ button.perigo{color:var(--erro)}
       .catch(function (err) { msg("msgPerfil", err.message, "erro"); });
   };
 
+  // Foto do barbeiro (ou iniciais) e troca de foto pelo dono
+  function fotoDoBarbeiro(p) {
+    var f = el("span", null, "foto-barbeiro");
+    if (p.foto_url) { var img = document.createElement("img"); img.src = p.foto_url; img.alt = p.nome; f.appendChild(img); }
+    else f.textContent = p.nome.trim().split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0); }).join("").toUpperCase();
+    return f;
+  }
+  function botaoFoto(p) {
+    var inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/jpeg,image/png,image/webp"; inp.hidden = true;
+    inp.onchange = function () { trocarFoto(p, inp.files[0]); };
+    var b = el("button", p.foto_url ? "Trocar foto" : "Adicionar foto");
+    b.onclick = function () { inp.click(); };
+    var g = document.createDocumentFragment();
+    g.appendChild(b); g.appendChild(inp);
+    return g;
+  }
+  // A foto vai direto ao Storage por um link assinado; depois o servidor grava o endereço no barbeiro
+  function trocarFoto(p, arquivo) {
+    if (!arquivo) return;
+    msg("msgEquipe", "Enviando foto…", "");
+    Conta.api("/api/equipe", { corpo: { acao: "foto-link", profissionalId: p.id, tipo: arquivo.type, tamanho: arquivo.size } })
+      .then(function (l) {
+        return fetch(l.uploadUrl, { method: "PUT", headers: { "Content-Type": arquivo.type }, body: arquivo })
+          .then(function (r) { if (!r.ok) throw new Error("Não consegui enviar a foto. Tente de novo."); return l.publicUrl; });
+      })
+      .then(function (url) { return Conta.api("/api/equipe", { corpo: { acao: "foto-salvar", profissionalId: p.id, foto: url } }); })
+      .then(function () { msg("msgEquipe", "Foto de " + p.nome + " atualizada.", "ok"); carregarEquipe(); })
+      .catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+  }
+
   function carregarEquipe() {
     Conta.api("/api/equipe").then(function (j) {
       var lista = $("listaEquipe");
       lista.textContent = "";
       j.profissionais.forEach(function (p) {
         var linha = el("div", null, "item");
+        linha.style.cssText = "display:flex;align-items:center;gap:10px;flex-wrap:wrap";
+        linha.appendChild(fotoDoBarbeiro(p));
         linha.appendChild(el("span", p.nome + (p.perfil_user_id === estado.usuario.id ? " (você)" : "")));
+        linha.appendChild(botaoFoto(p));
         if (p.perfil_user_id !== estado.usuario.id) {
           var b = el("button", "Remover", "perigo");
           b.onclick = function () {

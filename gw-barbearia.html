@@ -181,6 +181,12 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 .ag-sub{margin:4px 0 0;font-weight:700;font-size:14px}
 /* Serviços com fotos e vídeos */
 .svc-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.barbeiros{margin-top:24px}.barbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px}
+.barb{display:grid;justify-items:center;gap:6px;padding:16px 8px;background:var(--suave);border:1px solid var(--linha);border-radius:16px;color:var(--texto);font:inherit;cursor:pointer;transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
+.barb:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px var(--cor)}
+.barb-foto{width:84px;height:84px;border-radius:50%;overflow:hidden;background:var(--cor);color:var(--sobre);display:flex;align-items:center;justify-content:center;font:800 26px/1 var(--fb)}
+.barb-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.barb b{font-size:15px}.barb small{color:var(--cor);font-weight:700;font-size:13px}
 .svc{margin:0;min-width:0;background:var(--suave);border:1px solid var(--linha);border-radius:14px;overflow:hidden;transition:transform .4s var(--ease),box-shadow .4s var(--ease)}
 .svc:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
 .svc-midia{aspect-ratio:4/5;background:var(--linha)}
@@ -192,7 +198,7 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 .svc[data-agendar]{cursor:pointer}.svc-ag{margin-top:4px;color:var(--cor);font-weight:700;font-size:14px}
 @media (min-width:640px){.svc-lista{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
-<script type="application/json" id="bio-config">{"modelo":"vitrine","nome":"GW Barbearia","cidade":"Abreu e Lima - PE","descricao":"Barbearia em Abreu e Lima - PE","whatsapp":"5581988617534","whatsMsg":"Olá! Vim pelo site.","instagram":"@barbeariagwofc","review":"https://search.google.com/local/writereview?placeid=ChIJdYLW33gVqwcRv6LJttDsL1g","endereco":"Av. D, 5 - Caetés I, Abreu e Lima - PE, 53530-466","maps":"https://maps.google.com/?cid=6354557980407079615&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&hl=pt-BR&gl=br&source=apiv3","horario":"segunda-feira: 09:00 – 19:00\nterça-feira: 09:00 – 19:00\nquarta-feira: 09:00 – 19:00\nquinta-feira: 09:00 – 19:00\nsexta-feira: 09:00 – 19:00\nsábado: 09:00 – 19:00\ndomingo: Fechado","logo":"/img/gw-barbearia/logo-zeeabk.jpg","capa":"/img/gw-barbearia/capa-jawd4x.jpg","nota":5,"totalAval":2,"mostrarNota":true,"extras":[],"catalogoTitulo":"Serviços","categorias":["Cortes","Barba","Combos","Química e extras","Produtos"],"produtos":[{"id":"pmvvteie5l5bl","nome":"Corte social","preco":"35,00","cat":"Cortes","desc":"Máquina e tesoura, acabamento na navalha.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5b8wv","nome":"Corte degradê","preco":"40,00","cat":"Cortes","desc":"Degradê com navalhado.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5vxh0","nome":"Corte na tesoura","preco":"45,00","cat":"Cortes","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5tcyg","nome":"Corte infantil","preco":"30,00","cat":"Cortes","desc":"Até 10 anos.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5du0x","nome":"Barba tradicional","preco":"25,00","cat":"Barba","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5mbvx","nome":"Barba com toalha quente","preco":"30,00","cat":"Barba","desc":"Toalha quente, óleo e navalha.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5g6la","nome":"Pezinho / acabamento","preco":"10,00","cat":"Barba","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie59s78","nome":"Corte + barba","preco":"60,00","cat":"Combos","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5lbkw","nome":"Corte + barba + sobrancelha","preco":"70,00","cat":"Combos","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5olq4","nome":"Sobrancelha","preco":"10,00","cat":"Química e extras","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie59nz6","nome":"Pigmentação","preco":"25,00","cat":"Química e extras","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5h2gc","nome":"Hidratação capilar","preco":"30,00","cat":"Química e extras","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5e0b7","nome":"Luzes ou platinado","preco":"120,00","cat":"Química e extras","desc":"A partir de. Valor final na avaliação.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5lnyo","nome":"Pomada modeladora","preco":"35,00","cat":"Produtos","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5w3cd","nome":"Óleo para barba","preco":"30,00","cat":"Produtos","desc":"","marca":"","unidade":"","foto":"","esgotado":false}],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o barbeiro João"},"cor":"#b08d57","fundo":"#121212","texto":"#f2efe9","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"gw-barbearia","tipo":"barbearia","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"s1","nome":"Corte social","duracao":"30 min","preco":"35,00","midia":[{"tipo":"video","url":"https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/gw-barbearia/s1/mw1em8p9f314f7.mp4","titulo":""}]},{"id":"s2","nome":"Barba tradicional","duracao":"20 min","preco":"25,00","midia":[]},{"id":"s3","nome":"Corte + barba","duracao":"50 min","preco":"60,00","midia":[]},{"id":"pmw1f8dc5b1n6","nome":"Corte degradê","duracao":"40 min","preco":"40,00"}],"profissionais":[{"id":"p1","nome":"Rafael (teste)","servicos":["s1","s2","s3"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"18:00"},{"id":"p2","nome":"Bruno (teste)","servicos":["s1","s2","s3"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"18:00"},{"id":"pmw1f8x8u284s","nome":"Tiago","servicos":["s1","s2","s3","pmw1f8dc5b1n6"],"dias":[0,1,2,3,4,5,6],"inicio":"09:00","fim":"18:00"}]}}</script>
+<script type="application/json" id="bio-config">{"modelo":"vitrine","nome":"GW Barbearia","cidade":"Abreu e Lima - PE","descricao":"Barbearia em Abreu e Lima - PE","whatsapp":"5581988617534","whatsMsg":"Olá! Vim pelo site.","instagram":"@barbeariagwofc","review":"https://search.google.com/local/writereview?placeid=ChIJdYLW33gVqwcRv6LJttDsL1g","endereco":"Av. D, 5 - Caetés I, Abreu e Lima - PE, 53530-466","maps":"https://maps.google.com/?cid=6354557980407079615&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&hl=pt-BR&gl=br&source=apiv3","horario":"segunda-feira: 09:00 – 19:00\nterça-feira: 09:00 – 19:00\nquarta-feira: 09:00 – 19:00\nquinta-feira: 09:00 – 19:00\nsexta-feira: 09:00 – 19:00\nsábado: 09:00 – 19:00\ndomingo: Fechado","logo":"/img/gw-barbearia/logo-zeeabk.jpg","capa":"/img/gw-barbearia/capa-jawd4x.jpg","nota":5,"totalAval":2,"mostrarNota":true,"extras":[],"catalogoTitulo":"Serviços","categorias":["Cortes","Barba","Combos","Química e extras","Produtos"],"produtos":[{"id":"pmvvteie5l5bl","nome":"Corte social","preco":"35,00","cat":"Cortes","desc":"Máquina e tesoura, acabamento na navalha.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5b8wv","nome":"Corte degradê","preco":"40,00","cat":"Cortes","desc":"Degradê com navalhado.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5vxh0","nome":"Corte na tesoura","preco":"45,00","cat":"Cortes","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5tcyg","nome":"Corte infantil","preco":"30,00","cat":"Cortes","desc":"Até 10 anos.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5du0x","nome":"Barba tradicional","preco":"25,00","cat":"Barba","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5mbvx","nome":"Barba com toalha quente","preco":"30,00","cat":"Barba","desc":"Toalha quente, óleo e navalha.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5g6la","nome":"Pezinho / acabamento","preco":"10,00","cat":"Barba","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie59s78","nome":"Corte + barba","preco":"60,00","cat":"Combos","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5lbkw","nome":"Corte + barba + sobrancelha","preco":"70,00","cat":"Combos","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5olq4","nome":"Sobrancelha","preco":"10,00","cat":"Química e extras","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie59nz6","nome":"Pigmentação","preco":"25,00","cat":"Química e extras","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5h2gc","nome":"Hidratação capilar","preco":"30,00","cat":"Química e extras","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5e0b7","nome":"Luzes ou platinado","preco":"120,00","cat":"Química e extras","desc":"A partir de. Valor final na avaliação.","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5lnyo","nome":"Pomada modeladora","preco":"35,00","cat":"Produtos","desc":"","marca":"","unidade":"","foto":"","esgotado":false},{"id":"pmvvteie5w3cd","nome":"Óleo para barba","preco":"30,00","cat":"Produtos","desc":"","marca":"","unidade":"","foto":"","esgotado":false}],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o barbeiro João"},"cor":"#b08d57","fundo":"#121212","texto":"#f2efe9","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"gw-barbearia","tipo":"barbearia","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"s1","nome":"Corte social","duracao":"30 min","preco":"35,00","midia":[{"tipo":"video","url":"https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/gw-barbearia/s1/mw1em8p9f314f7.mp4","titulo":""}]},{"id":"s2","nome":"Barba tradicional","duracao":"20 min","preco":"25,00","midia":[]},{"id":"s3","nome":"Corte + barba","duracao":"50 min","preco":"60,00","midia":[]},{"id":"pmw1f8dc5b1n6","nome":"Corte degradê","duracao":"40 min","preco":"40,00","midia":[]}],"profissionais":[{"id":"p1","nome":"Rafael (teste)","servicos":["s1","s2","s3"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"18:00"},{"id":"p2","nome":"Bruno (teste)","servicos":["s1","s2","s3"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"18:00"},{"id":"pmw1f8x8u284s","nome":"Tiago","servicos":["s1","s2","s3","pmw1f8dc5b1n6"],"dias":[0,1,2,3,4,5,6],"inicio":"09:00","fim":"18:00"}]}}</script>
 </head>
 <body class="t-vitrine"><div class="pg">
 <div class="capa" style="background-image:url('/img/gw-barbearia/capa-jawd4x.jpg')"></div>
@@ -204,6 +210,7 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 
 </header>
 <nav class="links"><button type="button" class="btn destaque" id="abrirAgenda"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Agendar um horário</span><em aria-hidden="true">→</em></button></nav>
+<section class="bloco barbeiros" id="barbeiros" hidden><h2>Escolha seu barbeiro</h2><div class="barbs" id="barbsLista"></div></section>
 <section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista"><article class="svc" data-agendar="s1" role="button" tabindex="0" aria-label="Agendar Corte social"><div class="svc-midia"><video src="https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/gw-barbearia/s1/mw1em8p9f314f7.mp4" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video></div><div class="svc-t"><b>Corte social</b><small>30 min · R$ 35,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="s2" role="button" tabindex="0" aria-label="Agendar Barba tradicional"><div class="svc-midia"></div><div class="svc-t"><b>Barba tradicional</b><small>20 min · R$ 25,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="s3" role="button" tabindex="0" aria-label="Agendar Corte + barba"><div class="svc-midia"></div><div class="svc-t"><b>Corte + barba</b><small>50 min · R$ 60,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmw1f8dc5b1n6" role="button" tabindex="0" aria-label="Agendar Corte degradê"><div class="svc-midia"></div><div class="svc-t"><b>Corte degradê</b><small>40 min · R$ 40,00</small><span class="svc-ag">Agendar →</span></div></article></div></section>
 <nav class="links"><a class="btn destaque" href="https://search.google.com/local/writereview?placeid=ChIJdYLW33gVqwcRv6LJttDsL1g" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg><span>Avalie a gente no Google</span><em aria-hidden="true">→</em></a><a class="btn" href="https://wa.me/5581988617534?text=Ol%C3%A1!%20Vim%20pelo%20site." target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Fale no WhatsApp</span><em aria-hidden="true">→</em></a><a class="btn" href="https://instagram.com/barbeariagwofc" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M7.5 3h9A4.5 4.5 0 0 1 21 7.5v9a4.5 4.5 0 0 1-4.5 4.5h-9A4.5 4.5 0 0 1 3 16.5v-9A4.5 4.5 0 0 1 7.5 3zm0 1.8A2.7 2.7 0 0 0 4.8 7.5v9a2.7 2.7 0 0 0 2.7 2.7h9a2.7 2.7 0 0 0 2.7-2.7v-9a2.7 2.7 0 0 0-2.7-2.7zM12 7.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zm0 1.8a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2zm4.7-2.3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg><span>Siga no Instagram</span><em aria-hidden="true">→</em></a><a class="btn" href="https://maps.google.com/?cid=6354557980407079615&amp;g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&amp;hl=pt-BR&amp;gl=br&amp;source=apiv3" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 7 12 7 12s7-6.9 7-12a7 7 0 0 0-7-7zm0 4.3a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z"/></svg><span>Como chegar</span><em aria-hidden="true">→</em></a></nav>
 
@@ -228,15 +235,37 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
   var DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   var MSG_PADRAO="Olá! Quero agendar:\n*{servico}*\nCom: {profissional}\nDia: {dia} às {horario}\nNome: {nome}{obs}";
   var passo=0,sel={},dias=[];
+  // Ordem do caminho: "servico" (serviço, depois barbeiro) ou "barbeiro" (barbeiro, depois serviço)
+  var ordem="servico";
   // Equipe: a lista do banco (com o id usado no pedido). Sem barbeiros no banco, usa a do próprio site.
   var equipe=null,cacheHoras={};
   function carregarEquipe(cb){
     fetch("/api/profissionais?slug="+encodeURIComponent(C.slug)).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
       var lista=j&&j.profissionais?j.profissionais:[];
-      equipe=lista.length?lista.map(function(p){return {id:p.id,dbId:p.id,nome:p.nome,servicos:(AG.servicos||[]).map(function(v){return v.id}),dias:[0,1,2,3,4,5,6]}}):(AG.profissionais||[]);
+      equipe=lista.length?lista.map(function(p){return {id:p.id,dbId:p.id,nome:p.nome,foto:p.foto_url||"",servicos:(AG.servicos||[]).map(function(v){return v.id}),dias:[0,1,2,3,4,5,6]}}):(AG.profissionais||[]);
       cb();
+      desenharBarbeiros();
     });
   }
+  function iniciais(nome){return String(nome||"").trim().split(/\s+/).slice(0,2).map(function(p){return p.charAt(0)}).join("").toUpperCase()}
+  // Painel de barbeiros: foto (ou iniciais). Tocar num barbeiro agenda com ele.
+  function desenharBarbeiros(){
+    var sec=document.getElementById("barbeiros"),box=document.getElementById("barbsLista");
+    if(!sec||!box)return;
+    var lista=(equipe||[]).filter(function(p){return p.dbId});
+    sec.hidden=!lista.length;
+    box.textContent="";
+    lista.forEach(function(p){
+      var b=document.createElement("button");b.type="button";b.className="barb";b.setAttribute("data-barb",p.id);
+      var f=document.createElement("span");f.className="barb-foto";
+      if(p.foto&&/^https:\/\//.test(p.foto)){var img=document.createElement("img");img.src=p.foto;img.alt=p.nome;img.loading="lazy";f.appendChild(img)}else{f.textContent=iniciais(p.nome)}
+      var n=document.createElement("b");n.textContent=p.nome;
+      var s=document.createElement("small");s.textContent="Agendar →";
+      b.appendChild(f);b.appendChild(n);b.appendChild(s);box.appendChild(b);
+    });
+  }
+  function abrirBarbeiro(id){abrir();sel.prof=porId(equipe||[],id);if(sel.prof){ordem="barbeiro";passo=1;render()}}
+  function servicosDo(p){return (AG.servicos||[]).filter(function(s){return !p||(p.servicos||[]).indexOf(s.id)>-1})}
   function profs(){return (equipe||[]).filter(function(p){return !sel.servico||(p.servicos||[]).indexOf(sel.servico.id)>-1})}
   function duracaoDe(s){var m=parseInt(String(s&&s.duracao||""),10);return m>=5&&m<=240?m:30}
   function diasDe(p){var out=[],h=new Date();for(var i=0;i<30&&out.length<10;i++){var dt=new Date(h.getFullYear(),h.getMonth(),h.getDate()+i);if((p.dias||[]).indexOf(dt.getDay())>-1)out.push(dt)}return out}
@@ -257,14 +286,15 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
     var h=passo>0?'<button type="button" class="ag-voltar" data-ag="voltar">← Voltar</button>':"";
     var titulo="";
     $("agEnviar").hidden=passo!==3;
-    if(passo===0){
+    var tela=(passo===0)===(ordem==="servico")?"servico":"prof";
+    if(passo<2&&tela==="servico"){
       titulo="Escolha o serviço";
-      (AG.servicos||[]).forEach(function(s){
+      servicosDo(ordem==="barbeiro"?sel.prof:null).forEach(function(s){
         var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
         var info=[s.duracao,preco].filter(Boolean).join(" · ");
         h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
       });
-    }else if(passo===1){
+    }else if(passo<2){
       titulo="Escolha quem vai atender";
       var lista=profs();
       lista.forEach(function(p){h+='<button type="button" class="ag-op" data-ag="prof" data-id="'+esc(p.id)+'"><b>'+esc(p.nome)+'</b></button>'});
@@ -289,11 +319,12 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
     $("agTitulo").textContent=titulo;
     $("agSteps").innerHTML=h;
   }
-  function abrir(){passo=0;sel={};cacheHoras={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
+  function abrir(){passo=0;sel={};cacheHoras={};ordem="servico";$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
   function fechar(){if(dlg.close)dlg.close();else dlg.removeAttribute("open")}
   $("abrirAgenda").addEventListener("click",abrir);
   // Cada serviço da vitrine abre o agendamento já com ele escolhido (pula para a escolha do profissional)
   function abrirServico(id){abrir();sel.servico=porId(AG.servicos||[],id);if(sel.servico){passo=1;render()}}
+  document.addEventListener("click",function(e){var c=e.target.closest("[data-barb]");if(c)abrirBarbeiro(c.getAttribute("data-barb"))});
   document.addEventListener("click",function(e){var c=e.target.closest("[data-agendar]");if(c)abrirServico(c.getAttribute("data-agendar"))});
   document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
   carregarEquipe(function(){if(dlg.open)render()});
@@ -305,11 +336,11 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
     if(a==="voltar"){
       if(passo===3)sel.hora=null;
       if(passo===2){sel.dia=null}
-      if(passo===1)sel.prof=null;
+      if(passo===1){if(ordem==="servico")sel.prof=null;else sel.servico=null}
       passo--;
     }
-    else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));passo=1}
-    else if(a==="prof"){sel.prof=porId(equipe||[],b.getAttribute("data-id"));sel.dia=null;passo=2}
+    else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));passo=ordem==="barbeiro"?2:1}
+    else if(a==="prof"){sel.prof=porId(equipe||[],b.getAttribute("data-id"));sel.dia=null;passo=ordem==="barbeiro"?1:2}
     else if(a==="dia"){sel.dia=+b.getAttribute("data-i");var dt=dias[sel.dia];sel.diaTxt=rotuloDia(dt);sel.diaISO=dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());sel.hora=null}
     else if(a==="hora"){sel.hora=b.getAttribute("data-v");passo=3}
     render();

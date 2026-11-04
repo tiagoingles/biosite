@@ -160,6 +160,25 @@ button.perigo{color:var(--erro);flex:1}
       .then(function () { $("arquivoFoto").value = ""; });
   };
 
+  // Valor do atendimento: aparece em cada pedido. O desconto é editado só quando o barbeiro pede.
+  function valorLinha(p) {
+    var l = document.createElement("div"); l.className = "linha";
+    var v = document.createElement("span"); v.className = "note";
+    v.textContent = p.valor == null ? "Sem preço" : "Valor: " + Number(p.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    var b = document.createElement("button"); b.textContent = "Editar valor";
+    b.onclick = function () { editarValor(p); };
+    l.appendChild(v); l.appendChild(b);
+    return l;
+  }
+  function editarValor(p) {
+    var atual = p.valor == null ? "" : String(p.valor).replace(".", ",");
+    var novo = prompt("Novo valor do atendimento em R$ (ex.: 40,00). Deixe vazio para tirar o valor.", atual);
+    if (novo === null) return;
+    Conta.api("/api/pedido", { metodo: "PATCH", corpo: { id: p.id, valor: novo.trim() } })
+      .then(function () { carregarTudo(); })
+      .catch(function (err) { alert(err.message); });
+  }
+
   function cardPedido(p, pendente) {
     var c = document.createElement("div"); c.className = "card" + (pendente ? " pend" : "");
     var hora = document.createElement("div"); hora.className = "hora";
@@ -168,7 +187,7 @@ button.perigo{color:var(--erro);flex:1}
     pill.textContent = rotuloComMotivo(p);
     var texto = document.createElement("div");
     texto.innerHTML = "<b>" + esc(p.servico) + "</b><br><span class='note'>" + esc(p.cliente) + " · código " + esc(p.codigo) + "</span>";
-    c.appendChild(hora); c.appendChild(pill); c.appendChild(texto);
+    c.appendChild(hora); c.appendChild(pill); c.appendChild(texto); c.appendChild(valorLinha(p));
     if (encerravel(p)) c.appendChild(botoesEncerrar(p));
     if (pendente) {
       var g = document.createElement("div"); g.className = "linha";

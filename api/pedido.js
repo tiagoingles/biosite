@@ -7,6 +7,8 @@ const { rest } = require("../lib/supabase");
 const { codigoNovo, texto } = require("../lib/agenda");
 const painel = require("../lib/pedidos-painel");
 const { avisarNovoPedido } = require("../lib/avisos");
+const { horariosDoProfissional } = require("../lib/disponibilidade");
+const { precoDoServico } = require("../lib/precos");
 
 const LIMITE_DIA = 60; // pedidos por barbearia em 24 horas, para conter abuso
 
@@ -27,6 +29,8 @@ module.exports = async (req, res) => {
   const servico = texto(b.servico, 80);
   let profissional = texto(b.profissional, 80);
   const profissionalId = texto(b.profissionalId, 36);
+  // Cliente não tem preferência de barbeiro: o sistema escolhe um livre naquele horário
+  const qualquer = b.qualquer === true;
   const cliente = texto(b.cliente, 80);
   const observacao = texto(b.observacao, 200);
   // Duração do serviço, para bloquear o horário certo na agenda. Sem valor válido, assume 30 min.
@@ -35,7 +39,7 @@ module.exports = async (req, res) => {
   if (!/^[a-z0-9-]+$/.test(slug)) return res.status(400).json({ message: "Barbearia inválida." });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dia) || !/^\d{2}:\d{2}$/.test(horario)) return res.status(400).json({ message: "Data ou horário inválido." });
   if (profissionalId && !/^[0-9a-f-]{36}$/i.test(profissionalId)) return res.status(400).json({ message: "Profissional inválido." });
-  if (!servico || !cliente || (!profissional && !profissionalId)) return res.status(400).json({ message: "Preencha serviço, profissional e nome." });
+  if (!servico || !cliente || (!profissional && !profissionalId && !qualquer)) return res.status(400).json({ message: "Preencha serviço, profissional e nome." });
 
   try {
     const barb = await rest(`barbearias?slug=eq.${slug}&select=id`);
@@ -49,12 +53,27 @@ module.exports = async (req, res) => {
       if (!p.length) return res.status(400).json({ message: "Profissional não encontrado nesta barbearia." });
       profissional_id = p[0].id;
       profissional = p[0].nome;
+    } else if (qualquer) {
+      // Atribui o primeiro barbeiro livre neste horário; se nenhum estiver livre, recusa
+      const equipe = await rest(`profissionais?barbearia_id=eq.${barbearia_id}&ativo=eq.true&select=id,nome&order=criado_em.asc`);
+      let escolhido = null;
+      for (const c of equipe) {
+        if ((await horariosDoProfissional(c.id, dia, duracao)).includes(horario)) {
+          escolhido = c;
+          break;
+        }
+      }
+      if (!escolhido) return res.status(409).json({ message: "Este horário não está mais livre. Escolha outro." });
+      profissional_id = escolhido.id;
+      profissional = escolhido.nome;
     }
 
     const desde = new Date(Date.now() - 864e5).toISOString();
     const recentes = await rest(`pedidos?barbearia_id=eq.${barbearia_id}&criado_em=gte.${desde}&select=id`);
     if (recentes.length >= LIMITE_DIA) return res.status(429).json({ message: "Muitos pedidos hoje. Fale com a barbearia pelo WhatsApp." });
 
+    // Valor do atendimento já no agendamento: preço cadastrado pelo dono, ou o preço que o site mostrou
+    const valor = await precoDoServico(barbearia_id, servico, b.preco);
     // Se o código sorteado já existir na mesma barbearia, tenta outro
     for (let tentativa = 0; tentativa < 3; tentativa++) {
       const codigo = codigoNovo();
@@ -62,11 +81,11 @@ module.exports = async (req, res) => {
         await rest("pedidos", {
           metodo: "POST",
           prefer: "return=minimal",
-          corpo: { slug, barbearia_id, profissional_id, codigo, servico, profissional, dia, horario, cliente, observacao, duracao_min: duracao, status: "pendente" },
+          corpo: { slug, barbearia_id, profissional_id, codigo, servico, profissional, dia, horario, cliente, observacao, duracao_min: duracao, valor, status: "pendente" },
         });
         // Aviso no celular do dono e do barbeiro; se falhar, o pedido já foi gravado
         await avisarNovoPedido({ barbearia_id, profissional_id, cliente, servico, dia, horario }).catch((e) => console.error("aviso de pedido:", e.message));
-        return res.status(201).json({ codigo });
+        return res.status(201).json({ codigo, profissional });
       } catch (e) {
         if (!/duplicate|unique/i.test(e.message)) throw e;
       }

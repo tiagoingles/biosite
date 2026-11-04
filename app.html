@@ -13,6 +13,9 @@ body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.45 system-u
 header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;background:var(--suave);border-bottom:1px solid var(--linha);position:sticky;top:0}
 header b{font-size:17px}
 main{max-width:640px;margin:0 auto;padding:16px;display:grid;gap:14px}
+@media (min-width:768px){main{max-width:960px;padding:24px}}
+@media (min-width:1100px){main{max-width:1200px;grid-template-columns:1fr 1fr;align-items:start}#semPerfil,#comPerfil,#modulos,#agenda,#admin,#equipe{grid-column:auto}#semPerfil,#admin,#equipe{grid-column:1 / -1}}
+@media (min-width:768px){header{padding:14px 24px}}
 section{background:var(--suave);border:1px solid var(--linha);border-radius:16px;padding:16px;display:grid;gap:10px;animation:sobe .5s cubic-bezier(.2,.7,.2,1) both}
 @keyframes sobe{from{opacity:0;transform:translateY(12px)}}
 h2{font-size:17px;margin:0}

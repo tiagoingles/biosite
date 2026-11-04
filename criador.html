@@ -473,16 +473,11 @@ const NICHOS = {
   barbearia:{
     nome:"Barbearia", titulo:"Serviços",
     dados:{nome:"Barbearia Exemplo", cidade:"Paulista - PE", descricao:"Cortes clássicos e modernos, com atendimento sem pressa.", horario:"Seg a Sáb: 9h às 19h\nDom: fechado", endereco:"Av. Exemplo, 123 - Janga, Paulista - PE", instagram:"@barbeariaexemplo"},
-    agenda:{termo:"Barbeiro", servicos:[{nome:"Corte social",duracao:"30 min",preco:"35,00"},{nome:"Corte degradê",duracao:"40 min",preco:"40,00"},{nome:"Barba tradicional",duracao:"20 min",preco:"25,00"},{nome:"Corte + barba",duracao:"50 min",preco:"60,00"},{nome:"Sobrancelha",duracao:"10 min",preco:"10,00"}], profissionais:["Barbeiro 1","Barbeiro 2","Dono 1","Dono barbeiro 1"]},
+    agenda:{termo:"Barbeiro", servicos:[{nome:"Corte social",duracao:"30 min",preco:"35,00"},{nome:"Corte degradê",duracao:"40 min",preco:"40,00"},{nome:"Corte na tesoura",duracao:"40 min",preco:"45,00"},{nome:"Corte infantil",duracao:"30 min",preco:"30,00"},{nome:"Barba tradicional",duracao:"20 min",preco:"25,00"},{nome:"Barba com toalha quente",duracao:"30 min",preco:"30,00"},{nome:"Pezinho / acabamento",duracao:"10 min",preco:"10,00"},{nome:"Corte + barba",duracao:"50 min",preco:"60,00"},{nome:"Corte + barba + sobrancelha",duracao:"60 min",preco:"70,00"},{nome:"Sobrancelha",duracao:"10 min",preco:"10,00"},{nome:"Pigmentação",duracao:"40 min",preco:"25,00"},{nome:"Hidratação capilar",duracao:"40 min",preco:"30,00"},{nome:"Luzes ou platinado",duracao:"120 min",preco:"120,00"}], profissionais:["Barbeiro 1","Barbeiro 2","Dono 1","Dono barbeiro 1"]},
     visual:{modelo:"minimal",cor:"#b08d57",fundo:"#121212",texto:"#f2efe9",fonteTitulo:"Oswald",fonteTexto:"DM Sans"},
     pedido:{entrega:false,retirada:false,agendamento:true,taxa:"",minimo:"",pag:["Pix","Cartão","Dinheiro"],botao:"Agendar pelo WhatsApp",obsDica:"Ex.: prefiro com o barbeiro João"},
-    cats:{
-      "Cortes":[P_("Corte social","35,00","Máquina e tesoura, acabamento na navalha."),P_("Corte degradê","40,00","Degradê com navalhado."),P_("Corte na tesoura","45,00"),P_("Corte infantil","30,00","Até 10 anos.")],
-      "Barba":[P_("Barba tradicional","25,00"),P_("Barba com toalha quente","30,00","Toalha quente, óleo e navalha."),P_("Pezinho / acabamento","10,00")],
-      "Combos":[P_("Corte + barba","60,00"),P_("Corte + barba + sobrancelha","70,00")],
-      "Química e extras":[P_("Sobrancelha","10,00"),P_("Pigmentação","25,00"),P_("Hidratação capilar","30,00"),P_("Luzes ou platinado","120,00","A partir de. Valor final na avaliação.")],
-      "Produtos":[P_("Pomada modeladora","35,00"),P_("Óleo para barba","30,00")]
-    }
+    // Os serviços são a vitrine (agenda acima); sem catálogo de produtos
+    cats:{}
   },
   embalagens:{
     nome:"Embalagens", titulo:"Produtos",
@@ -805,6 +800,10 @@ function agendaRuntime(){
   function abrir(){passo=0;sel={};cacheHoras={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
   function fechar(){if(dlg.close)dlg.close();else dlg.removeAttribute("open")}
   $("abrirAgenda").addEventListener("click",abrir);
+  // Cada serviço da vitrine abre o agendamento já com ele escolhido (pula para a escolha do profissional)
+  function abrirServico(id){abrir();sel.servico=porId(AG.servicos||[],id);if(sel.servico){passo=1;render()}}
+  document.addEventListener("click",function(e){var c=e.target.closest("[data-agendar]");if(c)abrirServico(c.getAttribute("data-agendar"))});
+  document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
   carregarEquipe(function(){if(dlg.open)render()});
   dlg.querySelector("[data-close]").addEventListener("click",fechar);
   $("agSteps").addEventListener("click",function(e){
@@ -857,15 +856,16 @@ function bioHTML(d=s, img=R){
   const desc=d.descricao||`${d.nome} em ${d.cidade}`;
   const logo=safeImg(img(d.logo)), capa=safeImg(img(d.capa));
   const iniciais=esc((d.nome||"?").split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join("").toUpperCase());
-  const prods=(d.produtos||[]).filter(p=>p.nome);
-  const temCat=prods.length>0;
   const O=d.pedido||PEDIDO_PADRAO;
-  // Agendamento de serviços: o cliente escolhe serviço, profissional e horário, e envia pelo WhatsApp
+  // Agendamento de serviços: o cliente escolhe serviço, profissional e horário, e envia pelo WhatsApp.
+  // Com agendamento, os serviços são a vitrine: sem catálogo de produtos e sem carrinho.
   const AG=(d.tipo==="barbearia"&&d.agenda)||{};
   const agOk=!!AG.ativo&&(AG.servicos||[]).length>0&&(AG.profissionais||[]).length>0;
+  const prods=agOk?[]:(d.produtos||[]).filter(p=>p.nome);
+  const temCat=prods.length>0;
   const agCta=agOk?`<nav class="links"><button type="button" class="btn destaque" id="abrirAgenda">${svg("whats")}<span>${esc(AG.botao||"Agendar um horário")}</span><em aria-hidden="true">→</em></button></nav>`:"";
   // Seção de serviços: cada serviço mostra as fotos e vídeos cadastrados para ele
-  const svcsBloco=agOk?`<section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista">${(AG.servicos||[]).map(v=>{const m=(v.midia||[]).filter(x=>safeUrl(x.url));const preco=v.preco?(isNaN(num(v.preco))?v.preco:brl(num(v.preco))):"";const midia=x=>x.tipo==="video"?`<video src="${esc(x.url)}" muted playsinline controls preload="metadata"></video>`:`<img src="${esc(x.url)}" alt="${esc(x.titulo||v.nome)}" loading="lazy">`;return `<article class="svc"><div class="svc-midia">${m[0]?midia(m[0]):""}</div><div class="svc-t"><b>${esc(v.nome)}</b><small>${esc([v.duracao,preco].filter(Boolean).join(" · "))}</small></div>${m.length>1?`<div class="svc-mais">${m.slice(1).map(midia).join("")}</div>`:""}</article>`}).join("")}</div></section>`:"";
+  const svcsBloco=agOk?`<section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista">${(AG.servicos||[]).map(v=>{const m=(v.midia||[]).filter(x=>safeUrl(x.url));const preco=v.preco?(isNaN(num(v.preco))?v.preco:brl(num(v.preco))):"";const midia=x=>x.tipo==="video"?`<video src="${esc(x.url)}" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video>`:`<img src="${esc(x.url)}" alt="${esc(x.titulo||v.nome)}" loading="lazy">`;return `<article class="svc" data-agendar="${esc(v.id)}" role="button" tabindex="0" aria-label="Agendar ${esc(v.nome)}"><div class="svc-midia">${m[0]?midia(m[0]):""}</div><div class="svc-t"><b>${esc(v.nome)}</b><small>${esc([v.duracao,preco].filter(Boolean).join(" · "))}</small><span class="svc-ag">Agendar →</span></div>${m.length>1?`<div class="svc-mais">${m.slice(1).map(midia).join("")}</div>`:""}</article>`}).join("")}</div></section>`:"";
   const agDlg=agOk?`<dialog id="agenda" aria-labelledby="agTitulo"><div class="sheet"><div class="sh-top"><h2 id="agTitulo">Agendar</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div><div id="agSteps" class="ag-steps"></div><p class="erro" id="agErro" role="alert"></p><button type="button" class="enviar" id="agEnviar" hidden>${svg("whats")}<span>Enviar pedido pelo WhatsApp</span></button></div></dialog>`:"";
 
   const notaTxt=(d.mostrarNota&&d.nota)?`${svg("star")}<b>${String(d.nota).replace(".",",")}</b>${d.totalAval?` · ${d.totalAval} avaliações`:""} no Google`:"";
@@ -1121,6 +1121,8 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 .svc-t small{opacity:.7;font-size:13px}
 .svc-mais{display:flex;gap:6px;padding:0 10px 10px;overflow-x:auto}
 .svc-mais img,.svc-mais video{width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none}
+.svc[data-agendar]{cursor:pointer}.svc-ag{margin-top:4px;color:var(--cor);font-weight:700;font-size:14px}
+@media (min-width:640px){.svc-lista{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 <script type="application/json" id="bio-config">${configJSON(d)}<\/script>
 </head>
@@ -1134,11 +1136,11 @@ ${nota}
 ${temCat?acoes:""}
 </header>
 ${agCta}
+${svcsBloco}
 ${links}
 ${catalogo}
 ${avaliar}
 ${mais}
-${svcsBloco}
 ${infoBloco}
 <footer>${esc(d.nome)}${d.cidade?" · "+esc(d.cidade):""}</footer>
 </div>

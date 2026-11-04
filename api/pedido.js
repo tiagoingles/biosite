@@ -63,7 +63,7 @@ module.exports = async (req, res) => {
           corpo: { slug, barbearia_id, profissional_id, codigo, servico, profissional, dia, horario, cliente, observacao, duracao_min: duracao, status: "pendente" },
         });
         // Aviso no celular do dono e do barbeiro; se falhar, o pedido já foi gravado
-        await avisarNovoPedido({ barbearia_id, profissional_id, cliente, servico, dia, horario }).catch(() => {});
+        await avisarNovoPedido({ barbearia_id, profissional_id, cliente, servico, dia, horario }).catch((e) => console.error("aviso de pedido:", e.message));
         return res.status(201).json({ codigo });
       } catch (e) {
         if (!/duplicate|unique/i.test(e.message)) throw e;

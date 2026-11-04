@@ -31,6 +31,8 @@ button.perigo{color:var(--erro);flex:1}
 .vazio{opacity:.7;margin:0;text-align:center;padding:10px 0}
 .contagem{font-size:13px;font-weight:700;background:var(--aviso-fundo);color:var(--aviso);padding:4px 10px;border-radius:999px}
 [hidden]{display:none!important}
+.foto-barbeiro{width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--cor,#1f4e79);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;flex:none}
+.foto-barbeiro img{width:100%;height:100%;object-fit:cover;display:block}
 </style>
 </head>
 <body>
@@ -46,6 +48,16 @@ button.perigo{color:var(--erro);flex:1}
     <p class="note">Receba um aviso no celular quando chegar um pedido novo.</p>
     <div class="linha"><button type="button" class="main" id="ativarAvisos">Ativar avisos</button></div>
     <p class="msg" id="msgAvisos" role="status"></p>
+  </section>
+  <section id="secFoto" hidden>
+    <h2>Minha foto</h2>
+    <p class="note">Sua foto aparece para os clientes na hora de escolher o barbeiro. Sem foto, aparecem suas iniciais.</p>
+    <div class="linha" style="align-items:center">
+      <span class="foto-barbeiro" id="fotoAtual"></span>
+      <button type="button" class="main" id="trocarFoto">Enviar foto</button>
+      <input type="file" id="arquivoFoto" accept="image/jpeg,image/png,image/webp" hidden>
+    </div>
+    <p class="msg" id="msgFoto" role="status"></p>
   </section>
   <section id="secPend" hidden>
     <div class="linha"><h2>Para confirmar</h2><span class="contagem" id="qtdPend">0</span></div>
@@ -110,11 +122,43 @@ button.perigo{color:var(--erro);flex:1}
     $("sub").textContent = d.barbearia ? d.barbearia.nome : "";
     $("carregando").hidden = true;
     $("secPend").hidden = false; $("secDia").hidden = false; $("secAvulso").hidden = false;
+    $("secFoto").hidden = !d.profissional;
+    meuNome = d.profissional ? d.profissional.nome : "";
+    mostrarFoto(d.profissional);
     carregarTudo();
     setInterval(carregarTudo, 30000);
   }).catch(function (err) { $("carregando").textContent = err.message; });
 
   function carregarTudo() { carregarPendentes(); carregarDia(); }
+
+  // Minha foto: o barbeiro envia a própria; o servidor só altera o perfil ligado a esta conta
+  var meuNome = "";
+  function iniciais(nome) { return String(nome || "").trim().split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0); }).join("").toUpperCase(); }
+  function mostrarFoto(p) {
+    var box = $("fotoAtual"); box.textContent = "";
+    if (p && p.foto_url) { var img = document.createElement("img"); img.src = p.foto_url; img.alt = "Sua foto"; box.appendChild(img); }
+    else box.textContent = iniciais(p ? p.nome : "");
+  }
+  $("trocarFoto").onclick = function () { $("arquivoFoto").click(); };
+  $("arquivoFoto").onchange = function () {
+    var arquivo = $("arquivoFoto").files[0];
+    if (!arquivo) return;
+    msg("msgFoto", "Enviando foto…", "");
+    Conta.api("/api/eu", { corpo: { acao: "foto-propria-link", tipo: arquivo.type, tamanho: arquivo.size } })
+      .then(function (l) {
+        return fetch(l.uploadUrl, { method: "PUT", headers: { "Content-Type": arquivo.type }, body: arquivo })
+          .then(function (r) { if (!r.ok) throw new Error("Não consegui enviar a foto. Tente de novo."); return l.publicUrl; });
+      })
+      .then(function (url) {
+        return Conta.api("/api/eu", { corpo: { acao: "foto-propria-salvar", foto: url } }).then(function () { return url; });
+      })
+      .then(function (url) {
+        mostrarFoto({ nome: meuNome, foto_url: url });
+        msg("msgFoto", "Foto atualizada. Os clientes já podem vê-la.", "ok");
+      })
+      .catch(function (err) { msg("msgFoto", err.message, "erro"); })
+      .then(function () { $("arquivoFoto").value = ""; });
+  };
 
   function cardPedido(p, pendente) {
     var c = document.createElement("div"); c.className = "card" + (pendente ? " pend" : "");

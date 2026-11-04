@@ -1,6 +1,11 @@
 // Dados da conta logada. GET mostra o perfil e a barbearia.
 // POST "virar-barbeiro": o dono passa a atender também (vira dono-barbeiro).
-const { rest } = require("../lib/supabase");
+const crypto = require("crypto");
+const { rest, linkDeEnvio, cfg } = require("../lib/supabase");
+
+// Foto do próprio barbeiro: JPG, PNG ou WebP até 5 MB, no bucket público "midia"
+const FOTOS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const FOTO_MAX = 5 * 1024 * 1024;
 const { usuarioDaRequisicao, perfilDe, barbeariaDe, ehAdminDaPlataforma } = require("../lib/conta");
 
 module.exports = async (req, res) => {
@@ -39,7 +44,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ usuario: { id: u.id, email: u.email }, perfil: null, convites: convites.length });
       }
       const barbearia = await barbeariaDe(perfil.barbearia_id);
-      const prof = await rest(`profissionais?perfil_user_id=eq.${u.id}&select=id,nome,ativo`);
+      const prof = await rest(`profissionais?perfil_user_id=eq.${u.id}&select=id,nome,ativo,foto_url`);
       return res.status(200).json({ usuario: { id: u.id, email: u.email }, perfil, barbearia, profissional: prof[0] || null });
     }
 
@@ -63,6 +68,27 @@ module.exports = async (req, res) => {
       if (b.acao === "cancelar-push") {
         const endpoint = String(b.endpoint || "");
         await rest(`push_inscricoes?endpoint=eq.${encodeURIComponent(endpoint)}&user_id=eq.${u.id}`, { metodo: "DELETE", prefer: "return=minimal" });
+        return res.status(200).json({ ok: true });
+      }
+
+      // Foto do próprio barbeiro: mexe só no profissional ligado a esta conta
+      if (b.acao === "foto-propria-link" || b.acao === "foto-propria-salvar") {
+        const meu = (await rest(`profissionais?perfil_user_id=eq.${u.id}&select=id,barbearia_id`))[0];
+        if (!meu) return res.status(403).json({ message: "Sua conta não tem agenda de atendimento." });
+        const prefixo = `${cfg().url}/storage/v1/object/public/midia/barbeiros/${meu.barbearia_id}/${meu.id}-`;
+
+        if (b.acao === "foto-propria-link") {
+          const ext = FOTOS[b.tipo];
+          if (!ext) return res.status(400).json({ message: "Use uma foto em JPG, PNG ou WebP." });
+          if (!(Number(b.tamanho) > 0) || Number(b.tamanho) > FOTO_MAX) return res.status(400).json({ message: "A foto deve ter no máximo 5 MB." });
+          const caminho = `barbeiros/${meu.barbearia_id}/${meu.id}-${crypto.randomBytes(6).toString("hex")}.${ext}`;
+          const uploadUrl = await linkDeEnvio("midia", caminho);
+          return res.status(200).json({ uploadUrl, publicUrl: `${cfg().url}/storage/v1/object/public/midia/${caminho}` });
+        }
+
+        const foto = String(b.foto || "");
+        if (!foto.startsWith(prefixo) || foto.includes("..") || foto.length > 500) return res.status(400).json({ message: "Foto inválida." });
+        await rest(`profissionais?id=eq.${meu.id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { foto_url: foto } });
         return res.status(200).json({ ok: true });
       }
 

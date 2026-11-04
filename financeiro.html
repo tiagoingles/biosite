@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Financeiro | Bio Site</title>
+<style>
+:root{--cor:#1f4e79;--fundo:#f4f5f8;--texto:#1c2430;--linha:#d6dce5;--suave:#fff;--erro:#b03a2e;--ok:#1e7d4f;--aviso:#9a5b00;--aviso-fundo:#fff4e0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#11151c;--texto:#e7ebf1;--linha:#2a313c;--suave:#1a202a;--aviso:#f0b357;--aviso-fundo:#2d2414}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.45 system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 16px;background:var(--suave);border-bottom:1px solid var(--linha);position:sticky;top:0;z-index:5}
+header b{font-size:17px}
+header nav{display:flex;gap:8px;flex-wrap:wrap}
+main{max-width:640px;margin:0 auto;padding:16px;display:grid;gap:14px}
+@media (min-width:900px){main{max-width:1100px;grid-template-columns:1fr 1fr;align-items:start;padding:24px}.largo{grid-column:1 / -1}}
+section{background:var(--suave);border:1px solid var(--linha);border-radius:16px;padding:16px;display:grid;gap:10px}
+h2{font-size:17px;margin:0}
+label{display:grid;gap:4px;font-size:13px;font-weight:600}
+input,select{font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto);width:100%}
+button,a.botao{font:inherit;font-weight:600;padding:9px 12px;border-radius:10px;border:1px solid var(--linha);background:var(--suave);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-block}
+button:disabled{opacity:.6;cursor:default}
+button.main{background:var(--cor);border-color:var(--cor);color:#fff}
+button.perigo{color:var(--erro)}
+.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.linha>*{flex:0 0 auto}
+.linha>label{flex:1 1 140px}
+.item{display:grid;gap:8px;padding:12px 0;border-bottom:1px solid var(--linha)}
+.item:last-child{border-bottom:0}
+.topo{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.note{margin:0;font-size:13px;opacity:.75}
+.msg{margin:0;font-size:14px;min-height:18px}
+.erro{color:var(--erro)}.ok{color:var(--ok)}
+.vazio{opacity:.7;margin:0}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--linha)}
+.pill.aviso{color:var(--aviso);background:var(--aviso-fundo);border-color:transparent}
+.sim{font-size:12px;font-weight:700;background:var(--aviso-fundo);color:var(--aviso);padding:4px 10px;border-radius:999px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (min-width:900px){.cards{grid-template-columns:repeat(4,1fr)}}
+.card{border:1px solid var(--linha);border-radius:12px;padding:12px;display:grid;gap:6px;background:var(--fundo);align-content:start}
+.card .valor{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.detalhe{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.detalhe b{font-variant-numeric:tabular-nums}
+.aviso-card{font-size:12px;color:var(--aviso)}
+.grafico{display:flex;align-items:flex-end;gap:3px;height:150px;border-bottom:1px solid var(--linha);padding-top:6px}
+.barra{flex:1;min-width:4px;background:var(--cor);border-radius:4px 4px 0 0}
+.eixo{display:flex;justify-content:space-between;font-size:12px;opacity:.7}
+.check{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px}
+.check input{width:auto}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div><b>Financeiro</b><p class="note" id="sub"></p></div>
+  <nav>
+    <a class="botao" href="painel-dono.html">Painel do dono</a>
+    <a class="botao" href="app.html">Administração</a>
+    <button type="button" id="sair">Sair</button>
+  </nav>
+</header>
+<main>
+  <p class="note" id="carregando">Carregando…</p>
+
+  <section class="largo" id="secAdmin" hidden>
+    <div class="linha"><h2>Simulação para apresentação</h2><span class="sim" id="simBadge" hidden>dados de simulação</span></div>
+    <p class="note">Cria 30 dias de atendimentos, gastos, insumos e preços de exemplo, marcados como simulados. Zerar apaga só esses dados.</p>
+    <div class="linha">
+      <button type="button" class="main" id="simular">Simular 30 dias</button>
+      <button type="button" class="perigo" id="zerar">Zerar simulação</button>
+    </div>
+    <p class="msg" id="msgAdmin" role="status"></p>
+  </section>
+
+  <section class="largo" id="secPeriodos" hidden>
+    <h2>Faturamento</h2>
+    <p class="note">Faturamento = atendimentos realizados. Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos.</p>
+    <div class="cards" id="cardsPeriodos"></div>
+  </section>
+
+  <section class="largo" id="secGrafico" hidden>
+    <h2>Últimos 30 dias</h2>
+    <div class="grafico" id="grafico" role="img" aria-label="Faturamento dos últimos 30 dias"></div>
+    <div class="eixo"><span id="eixoIni"></span><span id="eixoFim"></span></div>
+  </section>
+
+  <section id="secComissoes" hidden>
+    <h2>Comissão dos barbeiros</h2>
+    <p class="note">Quanto cada barbeiro recebe sobre o valor de cada atendimento realizado. Mudar a porcentagem vale para os próximos atendimentos; os já realizados mantêm a comissão do dia.</p>
+    <div id="listaComissoes"></div>
+    <p class="msg" id="msgComissoes" role="status"></p>
+  </section>
+
+  <section id="secDespesas" hidden>
+    <h2>Gastos fixos</h2>
+    <p class="note" id="totalDespesas"></p>
+    <div id="listaDespesas"></div>
+    <form id="formDespesa" style="display:grid;gap:10px">
+      <label>Descrição<input id="despDescricao" required maxlength="80" placeholder="Ex.: Aluguel do ponto"></label>
+      <div class="linha">
+        <label>Categoria<select id="despCategoria"><option value="aluguel">Aluguel</option><option value="contas">Contas</option><option value="software">Software</option><option value="servicos">Serviços</option><option value="impostos">Impostos</option><option value="outros">Outros</option></select></label>
+        <label>Valor mensal (R$)<input id="despValor" type="number" min="0" step="0.01" required></label>
+      </div>
+      <div class="linha"><button type="submit" class="main">Adicionar gasto fixo</button></div>
+      <p class="msg" id="msgDespesas" role="status"></p>
+    </form>
+  </section>
+
+  <section class="largo" id="secInsumos" hidden>
+    <h2>Insumos e estoque</h2>
+    <p class="note">Estoque = entradas (compras) menos saídas (uso). O custo entra no resumo na data da compra.</p>
+    <div id="listaInsumos"></div>
+    <div class="linha" style="align-items:flex-end">
+      <form id="formMov" style="display:grid;gap:10px;flex:1 1 320px">
+        <h3 style="margin:0;font-size:14px">Movimentar estoque</h3>
+        <label>Insumo<select id="movInsumo" required></select></label>
+        <div class="linha">
+          <label>Tipo<select id="movTipo"><option value="entrada">Compra (entrada)</option><option value="saida">Uso (saída)</option></select></label>
+          <label>Quantidade<input id="movQtd" type="number" min="0.01" step="0.01" required></label>
+        </div>
+        <div class="linha">
+          <label id="rotMovValor">Valor pago (R$)<input id="movValor" type="number" min="0" step="0.01"></label>
+          <label>Data<input id="movData" type="date"></label>
+        </div>
+        <label>Observação<input id="movMotivo" maxlength="80" placeholder="Ex.: Compra no atacado"></label>
+        <div class="linha"><button type="submit" class="main">Registrar</button></div>
+      </form>
+      <form id="formInsumo" style="display:grid;gap:10px;flex:1 1 280px">
+        <h3 style="margin:0;font-size:14px">Novo insumo</h3>
+        <label>Nome<input id="insNome" required maxlength="80" placeholder="Ex.: Pomada modeladora"></label>
+        <div class="linha">
+          <label>Unidade<input id="insUnidade" maxlength="12" value="un"></label>
+          <label>Estoque mínimo<input id="insMinimo" type="number" min="0" step="0.01" value="0"></label>
+        </div>
+        <div class="linha"><button type="submit">Adicionar insumo</button></div>
+      </form>
+    </div>
+    <p class="msg" id="msgInsumos" role="status"></p>
+  </section>
+
+  <section class="largo" id="secPrecos" hidden>
+    <h2>Preços dos serviços</h2>
+    <p class="note">O valor do atendimento é gravado quando ele é marcado como realizado. Quem já tinha atendimento realizado sem preço recebe o valor ao salvar aqui.</p>
+    <div id="listaPrecos"></div>
+    <div id="semPreco" class="linha"></div>
+    <form id="formPreco" class="linha" style="align-items:flex-end">
+      <label style="flex:2 1 180px">Serviço<input id="precoNome" required maxlength="80" placeholder="Nome igual ao do site"></label>
+      <label style="flex:1 1 120px">Preço (R$)<input id="precoValor" type="number" min="0" step="0.01" required></label>
+      <button type="submit" class="main">Salvar preço</button>
+    </form>
+    <p class="msg" id="msgPrecos" role="status"></p>
+  </section>
+</main>
+<script src="/conta.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var q = new URLSearchParams(location.search).get("barbearia") || "";
+  var CATEGORIAS = { aluguel: "Aluguel", contas: "Contas", software: "Software", servicos: "Serviços", impostos: "Impostos", outros: "Outros" };
+  var hoje = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
+
+  function brl(n) { return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+  function dataBr(iso) { var p = iso.split("-"); return p[2] + "/" + p[1]; }
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function msg(id, t, tipo) { $(id).textContent = t; $(id).className = "msg " + (tipo || ""); }
+  function caminho() { return "/api/equipe?area=financeiro" + (q ? "&barbearia=" + encodeURIComponent(q) : ""); }
+  function enviar(acao, corpo) {
+    return Conta.api(caminho(), { corpo: Object.assign({ acao: acao, barbearia: q || undefined }, corpo || {}) });
+  }
+
+  if (!Conta.ler()) { location.replace("entrar.html"); return; }
+  $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
+  $("movData").value = hoje;
+
+  function carregar() {
+    Conta.api(caminho()).then(function (j) {
+      $("carregando").hidden = true;
+      $("sub").textContent = j.plataforma ? "Visão da administração" : "Resumo e controle da barbearia";
+      if (j.plataforma) $("secAdmin").hidden = false;
+      $("simBadge").hidden = !j.temSimulacao;
+      ["secPeriodos", "secGrafico", "secComissoes", "secDespesas", "secInsumos", "secPrecos"].forEach(function (s) { $(s).hidden = false; });
+      desenharPeriodos(j);
+      desenharGrafico(j.serie);
+      desenharComissoes(j.comissoes);
+      desenharDespesas(j.despesas);
+      desenharInsumos(j.insumos);
+      desenharPrecos(j);
+    }).catch(function (err) {
+      $("carregando").textContent = err.message;
+      $("carregando").className = "msg erro";
+    });
+  }
+
+  // Cartões dia, semana, mês e trimestre
+  function desenharPeriodos(j) {
+    var box = $("cardsPeriodos"); box.textContent = "";
+    ["dia", "semana", "mes", "trimestre"].forEach(function (k) {
+      var p = j.resumo[k];
+      var c = el("div", "card");
+      c.appendChild(el("span", "note", p.rotulo + " · " + dataBr(p.de) + (p.de !== p.ate ? " a " + dataBr(p.ate) : "")));
+      c.appendChild(el("span", "valor", brl(p.faturamento)));
+      c.appendChild(el("span", "note", p.atendimentos + " atendimento(s)" + (p.naoRealizados ? " · " + p.naoRealizados + " não realizado(s)" : "")));
+      [["Comissões", p.comissoes], ["Gastos fixos", p.gastosFixos], ["Insumos comprados", p.insumosComprados], ["Lucro", p.lucro]].forEach(function (linha) {
+        var d = el("div", "detalhe");
+        d.appendChild(el("span", null, linha[0]));
+        d.appendChild(el("b", null, brl(linha[1])));
+        c.appendChild(d);
+      });
+      if (p.semPreco) c.appendChild(el("span", "aviso-card", p.semPreco + " atendimento(s) sem preço"));
+      box.appendChild(c);
+    });
+  }
+
+  function desenharGrafico(serie) {
+    var box = $("grafico"); box.textContent = "";
+    var max = Math.max.apply(null, serie.map(function (s) { return s.faturamento; })) || 1;
+    serie.forEach(function (s) {
+      var b = el("div", "barra");
+      b.style.height = Math.max(2, (s.faturamento / max) * 100) + "%";
+      b.title = dataBr(s.dia) + ": " + brl(s.faturamento) + " · " + s.atendimentos + " atendimento(s)";
+      box.appendChild(b);
+    });
+    $("eixoIni").textContent = serie.length ? dataBr(serie[0].dia) : "";
+    $("eixoFim").textContent = serie.length ? dataBr(serie[serie.length - 1].dia) : "";
+  }
+
+  function desenharComissoes(lista) {
+    var box = $("listaComissoes"); box.textContent = "";
+    if (!lista.length) { box.appendChild(el("p", "vazio", "Nenhum barbeiro ativo na equipe.")); return; }
+    lista.forEach(function (p) {
+      var item = el("div", "item");
+      var topo = el("div", "topo");
+      topo.appendChild(el("b", null, p.nome));
+      topo.appendChild(el("span", "note", p.atendimentos + " atend. no mês · faturamento " + brl(p.faturamento) + " · comissão " + brl(p.comissao)));
+      var linha = el("div", "linha");
+      var inp = el("input"); inp.type = "number"; inp.min = "0"; inp.max = "100"; inp.step = "1"; inp.value = p.comissaoPct;
+      inp.style.width = "120px"; inp.setAttribute("aria-label", "Comissão de " + p.nome + " em porcentagem");
+      var btn = el("button", "main", "Salvar comissão");
+      btn.onclick = function () {
+        enviar("comissao", { profissionalId: p.id, pct: inp.value })
+          .then(function () { msg("msgComissoes", "Comissão de " + p.nome + " salva: " + inp.value + "%.", "ok"); carregar(); })
+          .catch(function (err) { msg("msgComissoes", err.message, "erro"); });
+      };
+      linha.appendChild(el("span", "note", "Comissão (%)")); linha.appendChild(inp); linha.appendChild(btn);
+      item.appendChild(topo); item.appendChild(linha);
+      box.appendChild(item);
+    });
+  }
+
+  function desenharDespesas(lista) {
+    var box = $("listaDespesas"); box.textContent = "";
+    var total = 0;
+    if (!lista.length) box.appendChild(el("p", "vazio", "Nenhum gasto fixo cadastrado."));
+    lista.forEach(function (d) {
+      if (d.ativo) total += d.valor;
+      var item = el("div", "item");
+      var topo = el("div", "topo");
+      topo.appendChild(el("b", null, d.descricao));
+      topo.appendChild(el("span", "note", (CATEGORIAS[d.categoria] || d.categoria) + " · " + brl(d.valor) + " por mês"));
+      var linha = el("div", "linha");
+      var lab = el("label", "check");
+      var cb = el("input"); cb.type = "checkbox"; cb.checked = d.ativo;
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" Entra no resumo"));
+      cb.onchange = function () {
+        enviar("alterar-despesa", { id: d.id, ativo: cb.checked }).then(carregar)
+          .catch(function (err) { msg("msgDespesas", err.message, "erro"); carregar(); });
+      };
+      var rem = el("button", "perigo", "Remover");
+      rem.onclick = function () {
+        if (!confirm("Remover \"" + d.descricao + "\"?")) return;
+        enviar("remover-despesa", { id: d.id }).then(carregar)
+          .catch(function (err) { msg("msgDespesas", err.message, "erro"); });
+      };
+      linha.appendChild(lab); linha.appendChild(rem);
+      item.appendChild(topo); item.appendChild(linha);
+      box.appendChild(item);
+    });
+    $("totalDespesas").textContent = "Gasto fixo mensal ativo: " + brl(total);
+  }
+  $("formDespesa").addEventListener("submit", function (e) {
+    e.preventDefault();
+    enviar("criar-despesa", { descricao: $("despDescricao").value.trim(), categoria: $("despCategoria").value, valor: $("despValor").value })
+      .then(function () { msg("msgDespesas", "Gasto fixo adicionado.", "ok"); e.target.reset(); carregar(); })
+      .catch(function (err) { msg("msgDespesas", err.message, "erro"); });
+  });
+
+  var insumosAtuais = [];
+  function desenharInsumos(lista) {
+    insumosAtuais = lista;
+    var box = $("listaInsumos"); box.textContent = "";
+    if (!lista.length) box.appendChild(el("p", "vazio", "Nenhum insumo cadastrado."));
+    var sel = $("movInsumo"); sel.textContent = "";
+    lista.forEach(function (i) {
+      var o = el("option", null, i.nome); o.value = i.id; sel.appendChild(o);
+      var item = el("div", "item");
+      var topo = el("div", "topo");
+      topo.appendChild(el("b", null, i.nome));
+      if (i.abaixoDoMinimo) topo.appendChild(el("span", "pill aviso", "abaixo do mínimo"));
+      item.appendChild(topo);
+      item.appendChild(el("span", "note", "Estoque: " + i.estoque + " " + i.unidade + " · mínimo " + i.estoqueMinimo + " " + i.unidade));
+      var rem = el("button", "perigo", "Remover insumo");
+      rem.onclick = function () {
+        if (!confirm("Remover \"" + i.nome + "\" e o histórico dele?")) return;
+        enviar("remover-insumo", { id: i.id }).then(carregar)
+          .catch(function (err) { msg("msgInsumos", err.message, "erro"); });
+      };
+      item.appendChild(rem);
+      box.appendChild(item);
+    });
+  }
+  // Valor pago só aparece para compra
+  $("movTipo").addEventListener("change", function () { $("rotMovValor").hidden = $("movTipo").value !== "entrada"; });
+  $("formMov").addEventListener("submit", function (e) {
+    e.preventDefault();
+    enviar("movimento", {
+      insumoId: $("movInsumo").value,
+      tipo: $("movTipo").value,
+      quantidade: $("movQtd").value,
+      valorTotal: $("movValor").value,
+      data: $("movData").value,
+      motivo: $("movMotivo").value.trim(),
+    }).then(function () { msg("msgInsumos", "Movimento registrado.", "ok"); $("movQtd").value = ""; $("movValor").value = ""; $("movMotivo").value = ""; carregar(); })
+      .catch(function (err) { msg("msgInsumos", err.message, "erro"); });
+  });
+  $("formInsumo").addEventListener("submit", function (e) {
+    e.preventDefault();
+    enviar("criar-insumo", { nome: $("insNome").value.trim(), unidade: $("insUnidade").value.trim(), minimo: $("insMinimo").value })
+      .then(function () { msg("msgInsumos", "Insumo adicionado.", "ok"); e.target.reset(); $("insUnidade").value = "un"; $("insMinimo").value = "0"; carregar(); })
+      .catch(function (err) { msg("msgInsumos", err.message, "erro"); });
+  });
+
+  function desenharPrecos(j) {
+    var box = $("listaPrecos"); box.textContent = "";
+    if (!j.precos.length) box.appendChild(el("p", "vazio", "Nenhum preço cadastrado ainda."));
+    j.precos.forEach(function (p) {
+      var item = el("div", "linha");
+      item.style.justifyContent = "space-between";
+      item.appendChild(el("b", null, p.nome));
+      var inp = el("input"); inp.type = "number"; inp.min = "0"; inp.step = "0.01"; inp.value = p.preco;
+      inp.style.width = "130px"; inp.setAttribute("aria-label", "Preço de " + p.nome);
+      var btn = el("button", null, "Salvar");
+      btn.onclick = function () {
+        enviar("salvar-preco", { nome: p.nome, preco: inp.value })
+          .then(function () { msg("msgPrecos", "Preço de " + p.nome + " salvo.", "ok"); carregar(); })
+          .catch(function (err) { msg("msgPrecos", err.message, "erro"); });
+      };
+      item.appendChild(inp); item.appendChild(btn);
+      box.appendChild(item);
+    });
+    // Serviços já atendidos sem preço: um toque preenche o nome no formulário
+    var sem = $("semPreco"); sem.textContent = "";
+    if (j.servicosSemPreco.length) sem.appendChild(el("span", "note", "Sem preço:"));
+    j.servicosSemPreco.forEach(function (n) {
+      var b = el("button", null, n);
+      b.onclick = function () { $("precoNome").value = n; $("precoValor").focus(); };
+      sem.appendChild(b);
+    });
+  }
+  $("formPreco").addEventListener("submit", function (e) {
+    e.preventDefault();
+    enviar("salvar-preco", { nome: $("precoNome").value.trim(), preco: $("precoValor").value })
+      .then(function () { msg("msgPrecos", "Preço salvo.", "ok"); e.target.reset(); carregar(); })
+      .catch(function (err) { msg("msgPrecos", err.message, "erro"); });
+  });
+
+  // Simulação e zeragem (só a conta da plataforma)
+  $("simular").onclick = function () {
+    if (!confirm("Criar 30 dias de simulação nesta barbearia? Os dados ficam marcados como simulados.")) return;
+    $("simular").disabled = true;
+    msg("msgAdmin", "Simulando… pode levar alguns segundos.", "");
+    enviar("simular-30-dias", {})
+      .then(function (r) { msg("msgAdmin", r.pedidos + " atendimentos criados (" + r.realizados + " realizados).", "ok"); carregar(); })
+      .catch(function (err) { msg("msgAdmin", err.message, "erro"); })
+      .then(function () { $("simular").disabled = false; });
+  };
+  $("zerar").onclick = function () {
+    var t = prompt("Isto apaga os dados simulados desta barbearia (atendimentos, gastos, insumos e preços de exemplo). Os dados reais não são afetados.\n\nDigite ZERAR para confirmar:");
+    if (t !== "ZERAR") { msg("msgAdmin", "Zeragem cancelada.", ""); return; }
+    enviar("zerar-simulacao", { confirmar: "ZERAR" })
+      .then(function () { msg("msgAdmin", "Dados simulados apagados.", "ok"); carregar(); })
+      .catch(function (err) { msg("msgAdmin", err.message, "erro"); });
+  };
+
+  carregar();
+})();
+</script>
+</body>
+</html>

@@ -40,12 +40,17 @@ button.perigo{color:var(--erro)}
 .equipe{display:grid;gap:6px}
 .equipe div{display:flex;justify-content:space-between;gap:8px}
 [hidden]{display:none!important}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (min-width:900px){.cards{grid-template-columns:repeat(4,1fr)}}
+.card{border:1px solid var(--linha);border-radius:12px;padding:12px;display:grid;gap:4px;background:var(--fundo)}
+.card .valor{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
 <header>
   <div><b id="titulo">Painel do dono</b><p class="note" id="sub"></p></div>
   <nav>
+    <a class="botao" href="financeiro.html">Financeiro</a>
     <a class="botao" href="app.html">Equipe e convites</a>
     <a class="botao" id="verSite" href="#" target="_blank" rel="noopener">Ver site</a>
     <button type="button" id="sair">Sair</button>
@@ -65,6 +70,13 @@ button.perigo{color:var(--erro)}
     <p class="note">Confirme ou recuse. O cliente recebe a resposta pelo WhatsApp.</p>
     <div id="listaPend"></div>
     <p class="msg" id="msgPend" role="status"></p>
+  </section>
+
+  <section class="pendentes" id="secResumo" hidden>
+    <div class="linha"><h2>Faturamento</h2><span class="contagem" id="resumoSim" hidden>dados de simulação</span></div>
+    <div class="cards" id="cardsResumo"></div>
+    <p class="note">Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias) − compras de insumos.</p>
+    <div class="linha"><a class="botao main" href="financeiro.html">Abrir financeiro</a></div>
   </section>
 
   <section id="secAvulso" hidden>
@@ -139,9 +151,29 @@ button.perigo{color:var(--erro)}
     $("dia").value = dia;
     carregarTudo();
     setInterval(carregarTudo, 30000);
+    carregarResumo();
+    setInterval(carregarResumo, 120000);
   }).catch(function (err) { $("carregando").textContent = err.message; });
 
   function carregarTudo() { carregarPendentes(); carregarDia(); }
+
+  // Cartões de faturamento: dia, semana, mês e trimestre
+  function carregarResumo() {
+    Conta.api("/api/equipe?area=financeiro").then(function (j) {
+      $("secResumo").hidden = false;
+      $("resumoSim").hidden = !j.temSimulacao;
+      var box = $("cardsResumo"); box.textContent = "";
+      ["dia", "semana", "mes", "trimestre"].forEach(function (k) {
+        var p = j.resumo[k];
+        var c = document.createElement("div"); c.className = "card";
+        c.innerHTML = "<span class='note'>" + esc(p.rotulo) + "</span>" +
+          "<span class='valor'>" + brl(p.faturamento) + "</span>" +
+          "<span class='note'>" + p.atendimentos + " atendimento(s) · lucro " + brl(p.lucro) + "</span>";
+        box.appendChild(c);
+      });
+    }).catch(function () {});
+  }
+  function brl(n) { return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
   function botoes(p) {
     var g = document.createElement("div"); g.className = "linha";

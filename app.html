@@ -308,6 +308,9 @@ button.perigo{color:var(--erro)}
       var ver = el("button", "Ver agenda");
       ver.onclick = function () { abrirAgendaDe(b); };
       grupo.appendChild(ver);
+      var fin = el("button", "Financeiro e simulação");
+      fin.onclick = function () { location.href = "financeiro.html?barbearia=" + encodeURIComponent(b.id); };
+      grupo.appendChild(fin);
       if (b.temTeste) {
         var senha = el("button", "Nova senha do teste");
         senha.onclick = function () { novaSenhaTeste(b); };

@@ -15,8 +15,12 @@ function enderecoDoSite(req) {
   return `${proto}://${req.headers.host}`;
 }
 
+// Financeiro usa esta mesma função (?area=financeiro) para não passar do limite de funções da Vercel
+const financeiro = require("../lib/financeiro");
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
+  if (req.query && req.query.area === "financeiro") return financeiro(req, res);
   try {
     const u = await usuarioDaRequisicao(req);
     if (!u) return res.status(401).json({ message: "Entre na sua conta para continuar." });

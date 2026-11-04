@@ -6,6 +6,7 @@
 const { rest } = require("../lib/supabase");
 const { codigoNovo, texto } = require("../lib/agenda");
 const painel = require("../lib/pedidos-painel");
+const { avisarNovoPedido } = require("../lib/avisos");
 
 const LIMITE_DIA = 60; // pedidos por barbearia em 24 horas, para conter abuso
 
@@ -61,6 +62,8 @@ module.exports = async (req, res) => {
           prefer: "return=minimal",
           corpo: { slug, barbearia_id, profissional_id, codigo, servico, profissional, dia, horario, cliente, observacao, duracao_min: duracao, status: "pendente" },
         });
+        // Aviso no celular do dono e do barbeiro; se falhar, o pedido já foi gravado
+        await avisarNovoPedido({ barbearia_id, profissional_id, cliente, servico, dia, horario }).catch(() => {});
         return res.status(201).json({ codigo });
       } catch (e) {
         if (!/duplicate|unique/i.test(e.message)) throw e;

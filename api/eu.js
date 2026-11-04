@@ -45,6 +45,27 @@ module.exports = async (req, res) => {
 
     if (req.method === "POST") {
       const b = req.body || {};
+
+      // Avisos no celular: qualquer conta logada pode ativar os avisos do próprio aparelho
+      if (b.acao === "inscrever-push") {
+        const s = b.subscription || {};
+        const endpoint = String(s.endpoint || "");
+        const p256dh = String((s.keys || {}).p256dh || "");
+        const auth = String((s.keys || {}).auth || "");
+        if (!/^https:\/\//.test(endpoint) || endpoint.length > 2000 || !p256dh || !auth) return res.status(400).json({ message: "Assinatura inválida." });
+        await rest("push_inscricoes?on_conflict=endpoint", {
+          metodo: "POST",
+          prefer: "resolution=merge-duplicates,return=minimal",
+          corpo: { user_id: u.id, endpoint, p256dh, auth_key: auth },
+        });
+        return res.status(200).json({ ok: true });
+      }
+      if (b.acao === "cancelar-push") {
+        const endpoint = String(b.endpoint || "");
+        await rest(`push_inscricoes?endpoint=eq.${encodeURIComponent(endpoint)}&user_id=eq.${u.id}`, { metodo: "DELETE", prefer: "return=minimal" });
+        return res.status(200).json({ ok: true });
+      }
+
       if (b.acao !== "virar-barbeiro") return res.status(400).json({ message: "Ação desconhecida." });
       if (!perfil || perfil.papel !== "dono") return res.status(403).json({ message: "Só o dono pode fazer isso." });
       const nome = perfil.nome || u.email.split("@")[0];

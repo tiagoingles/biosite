@@ -41,6 +41,12 @@ button.perigo{color:var(--erro);flex:1}
 <main>
   <p class="note" id="carregando">Carregando…</p>
 
+  <section id="secAvisos" hidden>
+    <h2>Avisos de pedido</h2>
+    <p class="note">Receba um aviso no celular quando chegar um pedido novo.</p>
+    <div class="linha"><button type="button" class="main" id="ativarAvisos">Ativar avisos</button></div>
+    <p class="msg" id="msgAvisos" role="status"></p>
+  </section>
   <section id="secPend" hidden>
     <div class="linha"><h2>Para confirmar</h2><span class="contagem" id="qtdPend">0</span></div>
     <div id="listaPend"></div>
@@ -55,6 +61,7 @@ button.perigo{color:var(--erro);flex:1}
   </section>
 </main>
 <script src="/conta.js"></script>
+<script src="/avisos.js"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -68,6 +75,16 @@ button.perigo{color:var(--erro);flex:1}
 
   if (!Conta.ler()) { location.replace("entrar.html"); return; }
   $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
+  // Avisos de pedido neste aparelho
+  if (window.Avisos && Avisos.suportado()) {
+    $("secAvisos").hidden = false;
+    $("ativarAvisos").onclick = function () {
+      $("ativarAvisos").disabled = true;
+      Avisos.ativar().then(function () { msg("msgAvisos", "Avisos ativados neste aparelho.", "ok"); })
+        .catch(function (err) { msg("msgAvisos", err.message, "erro"); })
+        .finally(function () { $("ativarAvisos").disabled = false; });
+    };
+  }
   $("dia").value = dia;
   $("dia").addEventListener("change", function () { dia = $("dia").value || hojeBrasilia(); carregarDia(); });
 

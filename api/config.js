@@ -5,5 +5,6 @@ module.exports = async (req, res) => {
   const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const anon = process.env.SUPABASE_ANON_KEY || "";
   if (!url || !anon) return res.status(500).json({ message: "Login não configurado (faltam SUPABASE_URL ou SUPABASE_ANON_KEY na Vercel)." });
-  return res.status(200).json({ url, anon });
+  // Chave pública do Web Push (não é segredo): o navegador precisa dela para assinar os avisos
+  return res.status(200).json({ url, anon, vapidPublic: process.env.VAPID_PUBLIC_KEY || "" });
 };

@@ -1,0 +1,13 @@
+# Arquivos que não vão para a Vercel (não ficam públicos no site).
+# lib/ continua: as funções da API usam esses arquivos (o vercel.json bloqueia o acesso direto).
+tests
+scripts
+docs
+supabase
+planilha
+admin
+.github
+package.json
+package-lock.json
+node_modules
+README.md

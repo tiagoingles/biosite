@@ -3,6 +3,7 @@
 //   GITHUB_TOKEN  token do GitHub com "Contents: Read and write" no repositório
 //   GITHUB_REPO   ex.: tiagoingles/bios
 const crypto = require("crypto");
+const { bloqueadoPorTentativas, registrarErroDeSenha } = require("../lib/seguranca");
 
 const INI = '<script type="application/json" id="bio-config">';
 
@@ -22,7 +23,7 @@ function gh(path, opt = {}) {
 }
 
 async function lerArquivo(path) {
-  const r = await gh("/contents/" + path);
+  const r = await gh("/contents/" + encodeURI(path));
   if (r.status === 404) return null;
   if (!r.ok) throw new Error("GitHub " + r.status);
   const j = await r.json();
@@ -72,9 +73,13 @@ module.exports = async (req, res) => {
     const site = String(b.site || "").toLowerCase();
     if (!/^[a-z0-9-]{1,60}$/.test(site)) return res.status(400).json({ erro: "Endereço do site inválido." });
 
+    // Até 10 códigos errados por origem em 15 minutos
+    if (await bloqueadoPorTentativas(req, "painel")) return res.status(429).json({ erro: "Muitas tentativas. Espere 15 minutos e tente de novo." });
+
     const acessoArq = await lerArquivo("admin/" + site + ".json");
     if (!acessoArq) return res.status(404).json({ erro: "Este site ainda não tem painel liberado. Fale com quem criou o seu site." });
     if (!verificar(b.codigo, JSON.parse(acessoArq.texto))) {
+      await registrarErroDeSenha(req, "painel");
       await new Promise((r) => setTimeout(r, 800));
       return res.status(401).json({ erro: "Código de acesso incorreto." });
     }

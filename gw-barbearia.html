@@ -172,6 +172,8 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 .ag-op{display:grid;gap:2px;width:100%;text-align:left;padding:13px 14px;border:1px solid var(--linha);border-radius:12px;background:var(--fundo);color:inherit;font:inherit;cursor:pointer;transition:background .3s,transform .35s var(--ease),box-shadow .35s var(--ease)}
 .ag-op:hover{background:var(--suave);transform:translateY(-2px);box-shadow:var(--sombra)}
 .ag-op small{opacity:.7;font-size:13px}
+a.ag-op{text-decoration:none}
+.erro .ag-op{margin-top:8px;color:var(--texto);font-weight:600}
 .ag-steps{display:grid;gap:12px}
 .ag-chips{display:flex;flex-wrap:wrap;gap:8px}
 .ag-chips button{border:1px solid var(--linha);background:var(--fundo);color:inherit;border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;transition:background .3s,color .3s,transform .3s var(--ease)}
@@ -181,12 +183,12 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 .ag-sub{margin:4px 0 0;font-weight:700;font-size:14px}
 /* Serviços com fotos e vídeos */
 .svc-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.barbeiros{margin-top:24px}.barbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px}
-.barb{display:grid;justify-items:center;gap:6px;padding:16px 8px;background:var(--suave);border:1px solid var(--linha);border-radius:16px;color:var(--texto);font:inherit;cursor:pointer;transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
+.barbeiros{margin-top:14px}.barbs{display:flex;flex-wrap:wrap;gap:8px}
+.barb{display:inline-flex;align-items:center;gap:8px;padding:4px 14px 4px 4px;background:var(--suave);border:1px solid var(--linha);border-radius:999px;color:var(--texto);font:inherit;cursor:pointer;transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
 .barb:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px var(--cor)}
-.barb-foto{width:84px;height:84px;border-radius:50%;overflow:hidden;background:var(--cor);color:var(--sobre);display:flex;align-items:center;justify-content:center;font:800 26px/1 var(--fb)}
+.barb-foto{width:36px;height:36px;border-radius:50%;overflow:hidden;background:var(--cor);color:var(--sobre);display:flex;align-items:center;justify-content:center;font:800 13px/1 var(--fb)}
 .barb-foto img{width:100%;height:100%;object-fit:cover;display:block}
-.barb b{font-size:15px}.barb small{color:var(--cor);font-weight:700;font-size:13px}
+.barb b{font-size:14px}
 .svc{margin:0;min-width:0;background:var(--suave);border:1px solid var(--linha);border-radius:14px;overflow:hidden;transition:transform .4s var(--ease),box-shadow .4s var(--ease)}
 .svc:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
 .svc-midia{aspect-ratio:4/5;background:var(--linha)}
@@ -210,7 +212,7 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 
 </header>
 <nav class="links"><button type="button" class="btn destaque" id="abrirAgenda"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Agendar um horário</span><em aria-hidden="true">→</em></button></nav>
-<section class="bloco barbeiros" id="barbeiros" hidden><h2>Escolha seu barbeiro</h2><div class="barbs" id="barbsLista"></div></section>
+<section class="barbeiros" id="barbeiros" hidden><div class="barbs" id="barbsLista"></div></section>
 <section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista"><article class="svc" data-agendar="s1" role="button" tabindex="0" aria-label="Agendar Corte social"><div class="svc-midia"><video src="https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/gw-barbearia/s1/mw1em8p9f314f7.mp4" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video></div><div class="svc-t"><b>Corte social</b><small>30 min · R$ 35,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="s2" role="button" tabindex="0" aria-label="Agendar Barba tradicional"><div class="svc-midia"><video src="https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/gw-barbearia/s2/mw2to696a0ea11.mp4" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video></div><div class="svc-t"><b>Barba tradicional</b><small>20 min · R$ 25,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="s3" role="button" tabindex="0" aria-label="Agendar Corte + barba"><div class="svc-midia"></div><div class="svc-t"><b>Corte + barba</b><small>50 min · R$ 60,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmw1f8dc5b1n6" role="button" tabindex="0" aria-label="Agendar Corte degradê"><div class="svc-midia"></div><div class="svc-t"><b>Corte degradê</b><small>40 min · R$ 40,00</small><span class="svc-ag">Agendar →</span></div></article></div></section>
 <nav class="links"><a class="btn destaque" href="https://search.google.com/local/writereview?placeid=ChIJdYLW33gVqwcRv6LJttDsL1g" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg><span>Avalie a gente no Google</span><em aria-hidden="true">→</em></a><a class="btn" href="https://wa.me/5581988617534?text=Ol%C3%A1!%20Vim%20pelo%20site." target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Fale no WhatsApp</span><em aria-hidden="true">→</em></a><a class="btn" href="https://instagram.com/barbeariagwofc" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M7.5 3h9A4.5 4.5 0 0 1 21 7.5v9a4.5 4.5 0 0 1-4.5 4.5h-9A4.5 4.5 0 0 1 3 16.5v-9A4.5 4.5 0 0 1 7.5 3zm0 1.8A2.7 2.7 0 0 0 4.8 7.5v9a2.7 2.7 0 0 0 2.7 2.7h9a2.7 2.7 0 0 0 2.7-2.7v-9a2.7 2.7 0 0 0-2.7-2.7zM12 7.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zm0 1.8a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2zm4.7-2.3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg><span>Siga no Instagram</span><em aria-hidden="true">→</em></a><a class="btn" href="https://maps.google.com/?cid=6354557980407079615&amp;g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&amp;hl=pt-BR&amp;gl=br&amp;source=apiv3" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 7 12 7 12s7-6.9 7-12a7 7 0 0 0-7-7zm0 4.3a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z"/></svg><span>Como chegar</span><em aria-hidden="true">→</em></a></nav>
 
@@ -234,21 +236,129 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
   function pad(n){return n<10?"0"+n:""+n}
   var DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   var MSG_PADRAO="Olá! Quero agendar:\n*{servico}*\nCom: {profissional}\nDia: {dia} às {horario}\nNome: {nome}{obs}";
-  var passo=0,sel={},dias=[];
-  // Ordem do caminho: "servico" (serviço, depois barbeiro) ou "barbeiro" (barbeiro, depois serviço)
-  var ordem="servico";
-  // Equipe: a lista do banco (com o id usado no pedido). Sem barbeiros no banco, usa a do próprio site.
-  var equipe=null,cacheHoras={};
+  // Etapas: servico -> pref (tem preferência de barbeiro?) -> prof (só se sim) -> dia -> dados -> ok
+  var etapa="servico",pilha=[],sel={},dias=[],enviando=false,ultimo=null;
+  var equipe=null,cacheHoras={},cacheDias={};
   function carregarEquipe(cb){
     fetch("/api/profissionais?slug="+encodeURIComponent(C.slug)).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
       var lista=j&&j.profissionais?j.profissionais:[];
       equipe=lista.length?lista.map(function(p){return {id:p.id,dbId:p.id,nome:p.nome,foto:p.foto_url||"",servicos:(AG.servicos||[]).map(function(v){return v.id}),dias:[0,1,2,3,4,5,6]}}):(AG.profissionais||[]);
       cb();
-      desenharBarbeiros();
     });
   }
-  function iniciais(nome){return String(nome||"").trim().split(/\s+/).slice(0,2).map(function(p){return p.charAt(0)}).join("").toUpperCase()}
-  // Painel de barbeiros: foto (ou iniciais). Tocar num barbeiro agenda com ele.
+  function profs(){return (equipe||[]).filter(function(p){return !sel.servico||(p.servicos||[]).indexOf(sel.servico.id)>-1})}
+  function duracaoDe(s){var m=parseInt(String(s&&s.duracao||""),10);return m>=5&&m<=240?m:30}
+  function isoDe(dt){return dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate())}
+  function dataDe(iso){var p=String(iso).split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+  function doBanco(){return !!(sel.qualquer||(sel.prof&&sel.prof.dbId))}
+  // Dias com agenda publicada no banco (null enquanto carrega)
+  function diasDoBanco(){
+    var pid=sel.qualquer?"qualquer":sel.prof.dbId;
+    if(cacheDias[pid])return cacheDias[pid];
+    if(!cacheDias[pid+"!"]){
+      cacheDias[pid+"!"]=1;
+      fetch("/api/horarios?slug="+encodeURIComponent(C.slug)+"&profissional="+encodeURIComponent(pid)+"&dias=1").then(function(r){return r.ok?r.json():{dias:[]}}).catch(function(){return {dias:[]}}).then(function(j){cacheDias[pid]=(j.dias||[]).slice(0,14).map(dataDe);render()});
+    }
+    return null;
+  }
+  // Site sem equipe no banco: dias da semana e horários cadastrados no Criador
+  function diasDe(p){var out=[],h=new Date();for(var i=0;i<30&&out.length<10;i++){var dt=new Date(h.getFullYear(),h.getMonth(),h.getDate()+i);if(!p||(p.dias||[]).indexOf(dt.getDay())>-1)out.push(dt)}return out}
+  function horasDe(p){var h=[],a=String((p&&p.inicio)||"09:00").split(":"),b=String((p&&p.fim)||"18:00").split(":");var t=+a[0]*60+ +a[1],f=+b[0]*60+ +b[1];for(;t<f;t+=30)h.push(pad(Math.floor(t/60))+":"+pad(t%60));return h}
+  // Horários livres do banco: de um barbeiro, ou de qualquer um (qualquer=true). Devolve null enquanto carrega.
+  function horasDoBanco(dia){
+    var pid=sel.qualquer?"qualquer":sel.prof.dbId;
+    var k=pid+"|"+dia+"|"+duracaoDe(sel.servico);
+    if(cacheHoras[k])return cacheHoras[k];
+    if(!cacheHoras[k+"!"]){
+      cacheHoras[k+"!"]=1;
+      fetch("/api/horarios?slug="+encodeURIComponent(C.slug)+"&profissional="+encodeURIComponent(pid)+"&dia="+dia+"&duracao="+duracaoDe(sel.servico)).then(function(r){return r.ok?r.json():{horarios:[]}}).catch(function(){return {horarios:[]}}).then(function(j){cacheHoras[k]=j.horarios||[];render()});
+    }
+    return null;
+  }
+  function rotuloDia(dt){return DIAS[dt.getDay()]+" "+pad(dt.getDate())+"/"+pad(dt.getMonth()+1)}
+  function porId(lista,id){return lista.filter(function(x){return x.id===id})[0]}
+  function whats(){var w=String(C.whatsapp||"").replace(/\D/g,"");if(w&&w.indexOf("55")!==0)w="55"+w;return w}
+  function linkWhats(txt){return "https://wa.me/"+whats()+"?text="+encodeURIComponent(txt)}
+  function abrirLink(url){var a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
+  function botaoWhats(rotulo){return whats()?'<button type="button" class="ag-op" data-ag="whats"><b>'+esc(rotulo||"Falar com a barbearia no WhatsApp")+'</b><small>A barbearia combina o horário com você</small></button>':""}
+  function ir(e){pilha.push(etapa);etapa=e;render()}
+  // Ao voltar para uma etapa, limpa o que foi escolhido depois dela
+  function limpar(depois){
+    if(depois==="servico"){sel.pref=null;sel.prof=null;sel.qualquer=false}
+    if(depois==="servico"||depois==="pref"){sel.prof=null;sel.qualquer=false}
+    if(depois!=="dados"){sel.hora=null}
+    if(depois==="servico"||depois==="pref"||depois==="prof"||depois==="dia"){sel.dia=null}
+  }
+  function escolherDia(i){var dt=dias[i];if(!dt)return;sel.dia=i;sel.diaTxt=rotuloDia(dt);sel.diaISO=isoDe(dt);sel.hora=null}
+  // Arquivo de calendário (.ics) do agendamento, para o cliente salvar no celular
+  function linkCalendario(){
+    if(!ultimo||!window.Blob||!window.URL||!URL.createObjectURL)return "";
+    var p=ultimo.diaISO.split("-"),h=ultimo.hora.split(":"),ini=new Date(+p[0],+p[1]-1,+p[2],+h[0],+h[1]),fim=new Date(ini.getTime()+ultimo.duracao*60000);
+    function f(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+"00"}
+    var limpa=function(t){return String(t||"").replace(/[\r\n,;\\]/g," ")};
+    var ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//biosite//agenda//PT","BEGIN:VEVENT","UID:"+ultimo.codigo+"-"+Date.now()+"@biosite","DTSTAMP:"+f(new Date()),"DTSTART:"+f(ini),"DTEND:"+f(fim),"SUMMARY:"+limpa(ultimo.servico+" - "+C.nome),"DESCRIPTION:"+limpa("Com "+ultimo.quem+(ultimo.codigo?". Código "+ultimo.codigo:"")),(C.endereco?"LOCATION:"+limpa(C.endereco):""),"BEGIN:VALARM","TRIGGER:-PT1H","ACTION:DISPLAY","DESCRIPTION:Lembrete","END:VALARM","END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n");
+    try{return URL.createObjectURL(new Blob([ics],{type:"text/calendar"}))}catch(e){return ""}
+  }
+  function render(){
+    var h=pilha.length&&etapa!=="ok"?'<button type="button" class="ag-voltar" data-ag="voltar">← Voltar</button>':"";
+    var titulo="";
+    $("agEnviar").hidden=etapa!=="dados";
+    if(etapa==="servico"){
+      titulo="Escolha o serviço";
+      (AG.servicos||[]).forEach(function(s){
+        var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
+        var info=[s.duracao,preco].filter(Boolean).join(" · ");
+        h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
+      });
+    }else if(etapa==="pref"){
+      titulo="Você tem preferência de barbeiro?";
+      h+='<button type="button" class="ag-op" data-ag="tem-pref"><b>Sim, quero escolher</b><small>Ver os barbeiros disponíveis</small></button>';
+      h+='<button type="button" class="ag-op" data-ag="sem-pref"><b>Não, tanto faz</b><small>Vejo os horários livres de toda a equipe</small></button>';
+    }else if(etapa==="prof"){
+      titulo="Escolha seu barbeiro";
+      var lista=profs();
+      lista.forEach(function(p){h+='<button type="button" class="ag-op" data-ag="prof" data-id="'+esc(p.id)+'"><b>'+esc(p.nome)+'</b></button>'});
+      if(!equipe)h+='<p class="note">Carregando a equipe…</p>';
+      else if(!lista.length)h+='<p class="note">Nenhum profissional faz este serviço no momento.</p>';
+    }else if(etapa==="dia"){
+      titulo="Escolha o dia e o horário";
+      var lidos=doBanco()?diasDoBanco():diasDe(sel.qualquer?null:sel.prof);
+      if(lidos===null){dias=[];h+='<p class="note">Carregando a agenda…</p>'}
+      else{
+        dias=lidos;
+        if(!dias.length){h+='<p class="note">Ainda não há horários publicados para agendar pelo site.</p>'+botaoWhats()}
+        else{
+          if(sel.dia==null)escolherDia(0);
+          h+='<div class="ag-chips">'+dias.map(function(dt,i){return '<button type="button" data-ag="dia" data-i="'+i+'"'+(sel.dia===i?' aria-pressed="true"':'')+'>'+rotuloDia(dt)+'</button>'}).join("")+'</div>';
+          var hs=doBanco()?horasDoBanco(sel.diaISO):horasDe(sel.prof);
+          if(hs===null)h+='<p class="note">Carregando horários…</p>';
+          else if(!hs.length)h+='<p class="note">Sem horários livres neste dia. Escolha outro dia.</p>';
+          else h+='<p class="ag-sub">Horários</p><div class="ag-chips">'+hs.map(function(t){return '<button type="button" data-ag="hora" data-v="'+t+'">'+t+'</button>'}).join("")+'</div>';
+        }
+      }
+    }else if(etapa==="dados"){
+      titulo="Seus dados";
+      var com=sel.qualquer?"Qualquer barbeiro disponível":sel.prof.nome;
+      h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
+      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80"></label><label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
+    }else{
+      titulo="Pedido enviado";
+      var cal=linkCalendario();
+      h+='<p class="cobertura"><b>'+esc(ultimo.servico)+'</b> com '+esc(ultimo.quem)+'<br>'+esc(ultimo.diaTxt)+' às '+esc(ultimo.hora)+(ultimo.codigo?'<br>Código do pedido: <b>'+esc(ultimo.codigo)+'</b>':'')+'</p>';
+      h+='<p class="note">A barbearia confirma pelo WhatsApp. Se o WhatsApp não abriu sozinho, toque abaixo.</p>';
+      h+='<a class="ag-op" href="'+esc(ultimo.link)+'" target="_blank" rel="noopener"><b>Abrir o WhatsApp</b><small>Enviar a mensagem com o pedido</small></a>';
+      if(cal)h+='<a class="ag-op" href="'+cal+'" download="agendamento.ics"><b>Salvar na agenda do celular</b><small>Com lembrete 1 hora antes</small></a>';
+    }
+    $("agTitulo").textContent=titulo;
+    $("agSteps").innerHTML=h;
+  }
+  function abrir(){pilha=[];etapa="servico";sel={};cacheHoras={};cacheDias={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
+  function fechar(){if(dlg.close)dlg.close();else dlg.removeAttribute("open")}
+  $("abrirAgenda").addEventListener("click",abrir);
+  // Cada serviço da vitrine abre o agendamento já com ele escolhido: pergunta a preferência de barbeiro
+  function abrirServico(id){abrir();sel.servico=porId(AG.servicos||[],id);if(sel.servico){pilha=["servico"];etapa="pref";render()}}
+  // Um barbeiro do painel abre o agendamento já com ele escolhido: segue direto para o serviço
+  function abrirBarbeiro(id){abrir();sel.prof=porId(equipe||[],id);if(sel.prof){sel.qualquer=false;etapa="servico";render()}}
   function desenharBarbeiros(){
     var sec=document.getElementById("barbeiros"),box=document.getElementById("barbsLista");
     if(!sec||!box)return;
@@ -257,108 +367,61 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
     box.textContent="";
     lista.forEach(function(p){
       var b=document.createElement("button");b.type="button";b.className="barb";b.setAttribute("data-barb",p.id);
+      b.setAttribute("aria-label","Agendar com "+p.nome);
       var f=document.createElement("span");f.className="barb-foto";
-      if(p.foto&&/^https:\/\//.test(p.foto)){var img=document.createElement("img");img.src=p.foto;img.alt=p.nome;img.loading="lazy";f.appendChild(img)}else{f.textContent=iniciais(p.nome)}
+      if(p.foto&&/^https:\/\//.test(p.foto)){var img=document.createElement("img");img.src=p.foto;img.alt=p.nome;img.loading="lazy";f.appendChild(img)}else{f.textContent=String(p.nome||"").trim().split(/\s+/).slice(0,2).map(function(x){return x.charAt(0)}).join("").toUpperCase()}
       var n=document.createElement("b");n.textContent=p.nome;
-      var s=document.createElement("small");s.textContent="Agendar →";
-      b.appendChild(f);b.appendChild(n);b.appendChild(s);box.appendChild(b);
+      b.appendChild(f);b.appendChild(n);box.appendChild(b);
     });
   }
-  function abrirBarbeiro(id){abrir();sel.prof=porId(equipe||[],id);if(sel.prof){ordem="barbeiro";passo=1;render()}}
-  function servicosDo(p){return (AG.servicos||[]).filter(function(s){return !p||(p.servicos||[]).indexOf(s.id)>-1})}
-  function profs(){return (equipe||[]).filter(function(p){return !sel.servico||(p.servicos||[]).indexOf(sel.servico.id)>-1})}
-  function duracaoDe(s){var m=parseInt(String(s&&s.duracao||""),10);return m>=5&&m<=240?m:30}
-  function diasDe(p){var out=[],h=new Date();for(var i=0;i<30&&out.length<10;i++){var dt=new Date(h.getFullYear(),h.getMonth(),h.getDate()+i);if((p.dias||[]).indexOf(dt.getDay())>-1)out.push(dt)}return out}
-  function horasDe(p){var h=[],a=String(p.inicio||"09:00").split(":"),b=String(p.fim||"18:00").split(":");var t=+a[0]*60+ +a[1],f=+b[0]*60+ +b[1];for(;t<f;t+=30)h.push(pad(Math.floor(t/60))+":"+pad(t%60));return h}
-  // Horários livres do banco para um barbeiro, num dia. Devolve null enquanto carrega.
-  function horasDoBanco(p,dia){
-    var k=p.dbId+"|"+dia+"|"+duracaoDe(sel.servico);
-    if(cacheHoras[k])return cacheHoras[k];
-    if(!cacheHoras[k+"!"]){
-      cacheHoras[k+"!"]=1;
-      fetch("/api/horarios?slug="+encodeURIComponent(C.slug)+"&profissional="+encodeURIComponent(p.dbId)+"&dia="+dia+"&duracao="+duracaoDe(sel.servico)).then(function(r){return r.ok?r.json():{horarios:[]}}).catch(function(){return {horarios:[]}}).then(function(j){cacheHoras[k]=j.horarios||[];render()});
-    }
-    return null;
-  }
-  function rotuloDia(dt){return DIAS[dt.getDay()]+" "+pad(dt.getDate())+"/"+pad(dt.getMonth()+1)}
-  function porId(lista,id){return lista.filter(function(x){return x.id===id})[0]}
-  function render(){
-    var h=passo>0?'<button type="button" class="ag-voltar" data-ag="voltar">← Voltar</button>':"";
-    var titulo="";
-    $("agEnviar").hidden=passo!==3;
-    var tela=(passo===0)===(ordem==="servico")?"servico":"prof";
-    if(passo<2&&tela==="servico"){
-      titulo="Escolha o serviço";
-      servicosDo(ordem==="barbeiro"?sel.prof:null).forEach(function(s){
-        var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
-        var info=[s.duracao,preco].filter(Boolean).join(" · ");
-        h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
-      });
-    }else if(passo<2){
-      titulo="Escolha quem vai atender";
-      var lista=profs();
-      lista.forEach(function(p){h+='<button type="button" class="ag-op" data-ag="prof" data-id="'+esc(p.id)+'"><b>'+esc(p.nome)+'</b></button>'});
-      if(!equipe)h+='<p class="note">Carregando a equipe…</p>';
-      else if(!lista.length)h+='<p class="note">Nenhum profissional faz este serviço no momento.</p>';
-    }else if(passo===2){
-      titulo="Escolha o dia e o horário";
-      dias=diasDe(sel.prof);
-      h+='<div class="ag-chips">'+dias.map(function(dt,i){return '<button type="button" data-ag="dia" data-i="'+i+'"'+(sel.dia===i?' aria-pressed="true"':'')+'>'+rotuloDia(dt)+'</button>'}).join("")+'</div>';
-      if(!dias.length)h+='<p class="note">Sem dias disponíveis nos próximos 30 dias.</p>';
-      if(sel.dia!=null){
-        var hs=sel.prof.dbId?horasDoBanco(sel.prof,sel.diaISO):horasDe(sel.prof);
-        if(hs===null)h+='<p class="note">Carregando horários…</p>';
-        else if(!hs.length)h+='<p class="note">Sem horários livres neste dia.</p>';
-        else h+='<p class="ag-sub">Horários</p><div class="ag-chips">'+hs.map(function(t){return '<button type="button" data-ag="hora" data-v="'+t+'">'+t+'</button>'}).join("")+'</div>';
-      }
-    }else{
-      titulo="Seus dados";
-      h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(sel.prof.nome)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
-      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome"></label><label>Observação <small>(opcional)</small><textarea id="agObs" rows="2"></textarea></label></div>';
-    }
-    $("agTitulo").textContent=titulo;
-    $("agSteps").innerHTML=h;
-  }
-  function abrir(){passo=0;sel={};cacheHoras={};ordem="servico";$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
-  function fechar(){if(dlg.close)dlg.close();else dlg.removeAttribute("open")}
-  $("abrirAgenda").addEventListener("click",abrir);
-  // Cada serviço da vitrine abre o agendamento já com ele escolhido (pula para a escolha do profissional)
-  function abrirServico(id){abrir();sel.servico=porId(AG.servicos||[],id);if(sel.servico){passo=1;render()}}
   document.addEventListener("click",function(e){var c=e.target.closest("[data-barb]");if(c)abrirBarbeiro(c.getAttribute("data-barb"))});
   document.addEventListener("click",function(e){var c=e.target.closest("[data-agendar]");if(c)abrirServico(c.getAttribute("data-agendar"))});
   document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
-  carregarEquipe(function(){if(dlg.open)render()});
+  carregarEquipe(function(){desenharBarbeiros();if(dlg.open)render()});
   dlg.querySelector("[data-close]").addEventListener("click",fechar);
+  function cliqueWhats(){abrirLink(linkWhats("Olá! Quero agendar um horário"+(sel.servico?" para "+sel.servico.nome:"")+"."))}
   $("agSteps").addEventListener("click",function(e){
     var b=e.target.closest("[data-ag]");if(!b)return;
     var a=b.getAttribute("data-ag");
     $("agErro").textContent="";
     if(a==="voltar"){
-      if(passo===3)sel.hora=null;
-      if(passo===2){sel.dia=null}
-      if(passo===1){if(ordem==="servico")sel.prof=null;else sel.servico=null}
-      passo--;
+      if(pilha.length){etapa=pilha.pop();limpar(etapa)}
     }
-    else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));passo=ordem==="barbeiro"?2:1}
-    else if(a==="prof"){sel.prof=porId(equipe||[],b.getAttribute("data-id"));sel.dia=null;passo=ordem==="barbeiro"?1:2}
-    else if(a==="dia"){sel.dia=+b.getAttribute("data-i");var dt=dias[sel.dia];sel.diaTxt=rotuloDia(dt);sel.diaISO=dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());sel.hora=null}
-    else if(a==="hora"){sel.hora=b.getAttribute("data-v");passo=3}
+    else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));if(sel.prof){ir("dia")}else{ir("pref")}}
+    else if(a==="tem-pref"){ir("prof")}
+    else if(a==="sem-pref"){sel.qualquer=true;sel.prof=null;sel.dia=null;ir("dia")}
+    else if(a==="prof"){sel.prof=porId(equipe||[],b.getAttribute("data-id"));sel.qualquer=false;sel.dia=null;ir("dia")}
+    else if(a==="dia"){escolherDia(+b.getAttribute("data-i"))}
+    else if(a==="hora"){sel.hora=b.getAttribute("data-v");ir("dados")}
+    else if(a==="whats"){cliqueWhats();return}
     render();
   });
+  // Falha ao registrar: o cliente ainda pode falar com a barbearia, sabendo que o pedido não ficou registrado
+  $("agErro").addEventListener("click",function(e){if(e.target.closest("[data-ag='whats']"))cliqueWhats()});
   $("agEnviar").addEventListener("click",function(){
+    if(enviando)return;
     var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
-    if(!nome){$("agErro").textContent="Informe seu nome.";return}
-    var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.prof.nome,profissionalId:sel.prof.dbId||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
-    $("agEnviar").disabled=true;
-    // Grava o pedido como pendente e recebe o código; se falhar, o cliente ainda envia a mensagem
-    fetch("/api/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){return r.ok?r.json():{}}).catch(function(){return {}}).then(function(j){
+    if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
+    var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
+    var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
+    enviando=true;botao.disabled=true;if(rotulo)rotulo.textContent="Enviando…";
+    // Grava o pedido como pendente e recebe o código; se o horário já foi ocupado, avisa e volta à escolha da hora
+    fetch("/api/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {status:r.status,ok:r.ok,j:j}})}).catch(function(){return {status:0,ok:false,j:{}}}).then(function(res){
+      enviando=false;botao.disabled=false;if(rotulo)rotulo.textContent=original;
+      if(res.status===409){$("agErro").textContent=res.j.message||"Este horário não está mais livre. Escolha outro.";sel.hora=null;cacheHoras={};etapa="dia";render();return}
+      if(!res.ok){
+        var m=(res.j&&res.j.message)||(res.status===0?"Sem conexão com a internet.":"Não conseguimos registrar seu pedido agora.");
+        $("agErro").innerHTML=esc(m)+" Seu pedido não foi registrado."+(whats()?'<br><button type="button" class="ag-op" data-ag="whats"><b>Falar com a barbearia no WhatsApp</b></button>':"");
+        return;
+      }
+      var j=res.j||{};
       var cod=j.codigo||"";
-      var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(sel.prof.nome).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
+      var quem=sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
+      var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
       if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
-      var w=String(C.whatsapp||"").replace(/\D/g,"");if(w.indexOf("55")!==0)w="55"+w;
-      var a=document.createElement("a");a.href="https://wa.me/"+w+"?text="+encodeURIComponent(txt);a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
-      $("agEnviar").disabled=false;
-      fechar();
+      ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),link:linkWhats(txt)};
+      pilha=[];etapa="ok";render();
+      abrirLink(ultimo.link);
     });
   });
 })()</script>

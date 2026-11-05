@@ -1,0 +1,11 @@
+{
+  "name": "biosite",
+  "private": true,
+  "description": "Plataforma de sites e agendamento para barbearias. Sem dependências: só o Node.",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "sincronizar-criador": "node scripts/sincronizar-criador.js",
+    "checar-criador": "node scripts/sincronizar-criador.js --checar",
+    "fumaca": "node scripts/fumaca.js"
+  }
+}

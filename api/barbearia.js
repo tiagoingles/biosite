@@ -4,6 +4,7 @@
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
 const { publicar, redefinirTeste, criarTesteBarbeiro, redefinirTesteBarbeiro } = require("../lib/publicar");
+const { falha, corpoDe } = require("../lib/seguranca");
 
 function origemDo(req) {
   const proto = req.headers["x-forwarded-proto"] || "https";
@@ -19,7 +20,7 @@ module.exports = async (req, res) => {
     if (!u) return res.status(401).json({ message: "Entre na sua conta para continuar." });
     if (!(await ehAdminDaPlataforma(u.id))) return res.status(403).json({ message: "Só a conta da plataforma publica sites." });
 
-    const b = req.body || {};
+    const b = corpoDe(req);
     const slug = texto(b.slug, 40).toLowerCase();
 
     if (b.acao === "publicar") {
@@ -38,6 +39,6 @@ module.exports = async (req, res) => {
 
     return res.status(400).json({ message: "Ação desconhecida." });
   } catch (e) {
-    return res.status(e.status || 500).json({ message: e.message });
+    return falha(res, e, "POST /api/barbearia");
   }
 };

@@ -2,6 +2,7 @@
 const { rest } = require("../lib/supabase");
 const { usuarioDaRequisicao, perfilDe, barbeariaDe } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
+const { falha, corpoDe } = require("../lib/seguranca");
 
 const TOKEN = /^[0-9a-f]{48}$/;
 
@@ -28,7 +29,7 @@ module.exports = async (req, res) => {
     if (!u) return res.status(401).json({ message: "Entre com o e-mail convidado para aceitar." });
     if (await perfilDe(u.id)) return res.status(409).json({ message: "Sua conta já está ligada a uma barbearia." });
 
-    const token = texto((req.body || {}).token, 64);
+    const token = texto(corpoDe(req).token, 64);
     const c = await conviteValido(token);
     if (!c) return res.status(404).json({ message: "Convite inválido ou vencido." });
     if (c.email !== u.email) return res.status(403).json({ message: `Este convite é para ${c.email}. Entre com essa conta.` });
@@ -42,6 +43,6 @@ module.exports = async (req, res) => {
     const b = await barbeariaDe(c.barbearia_id);
     return res.status(201).json({ barbearia: b && b.nome });
   } catch (e) {
-    return res.status(500).json({ message: e.message });
+    return falha(res, e, `${req.method} /api/convite`);
   }
 };

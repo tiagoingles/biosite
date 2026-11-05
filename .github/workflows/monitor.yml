@@ -1,0 +1,23 @@
+# Monitor do site no ar: a cada hora confere saúde da API e do banco, páginas, cabeçalhos de
+# segurança e tempo de resposta. Só leitura: não grava nada. Se falhar, o GitHub manda e-mail.
+name: Monitor do site
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fumaca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Teste de fumaça em produção
+        run: node scripts/fumaca.js https://biosite-dusky.vercel.app

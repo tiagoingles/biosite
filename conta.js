@@ -30,7 +30,7 @@
     if (/Invalid login/i.test(m)) return "E-mail ou senha incorretos.";
     if (/already registered|already been registered/i.test(m)) return "Este e-mail já tem conta. Entre com sua senha.";
     if (/not confirmed/i.test(m)) return "Confirme seu e-mail antes de entrar. Enviamos um link para ele.";
-    if (/at least|weak|Password should/i.test(m)) return "A senha precisa ter pelo menos 6 caracteres.";
+    if (/at least|weak|Password should|pwned|leaked/i.test(m)) return "Senha fraca ou já vazada na internet. Use pelo menos 8 caracteres, com letras e números.";
     if (/rate limit|too many/i.test(m)) return "Muitas tentativas. Espere alguns minutos e tente de novo.";
     return m || "Não foi possível concluir. Tente de novo.";
   }

@@ -14,9 +14,13 @@ module.exports = async (req, res) => {
   try {
     const barb = await rest(`barbearias?slug=eq.${slug}&select=id`);
     if (!barb.length) return res.status(404).json({ message: "Barbearia não encontrada." });
-    const lista = await rest(`profissionais?barbearia_id=eq.${barb[0].id}&ativo=eq.true&select=id,nome,foto_url&order=nome`);
+    const [lista, precos] = await Promise.all([
+      rest(`profissionais?barbearia_id=eq.${barb[0].id}&ativo=eq.true&select=id,nome,foto_url&order=nome`),
+      // Preços do financeiro: o site mostra o mesmo valor que vai para o pedido
+      rest(`servicos_precos?barbearia_id=eq.${barb[0].id}&select=nome,preco`),
+    ]);
     res.setHeader("Cache-Control", "public, max-age=0, s-maxage=60, stale-while-revalidate=300");
-    return res.status(200).json({ profissionais: lista });
+    return res.status(200).json({ profissionais: lista, precos: Object.fromEntries(precos.map((p) => [p.nome, Number(p.preco)])) });
   } catch (e) {
     return falha(res, e, "GET /api/profissionais");
   }

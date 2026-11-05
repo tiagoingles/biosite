@@ -48,11 +48,11 @@ test("scripts das páginas compilam", () => {
     let m, n = 0;
     while ((m = re.exec(html))) new vm.Script(m[1], { filename: `${p}#${++n}` });
   }
-  for (const js of ["conta.js", "avisos.js", "sw.js", "painel-comum.js"].filter((f) => fs.existsSync(path.join(raiz, f)))) new vm.Script(ler(js), { filename: js });
+  for (const js of ["conta.js", "avisos.js", "sw.js", "painel-comum.js", "painel-agenda.js"].filter((f) => fs.existsSync(path.join(raiz, f)))) new vm.Script(ler(js), { filename: js });
 });
 
 test("painéis: conteúdo vindo do banco só entra na página escapado", () => {
-  for (const p of ["painel-dono.html", "painel-barbeiro.html", "app.html", "financeiro.html", "painel-comum.js"].filter((f) => fs.existsSync(path.join(raiz, f)))) {
+  for (const p of ["painel-dono.html", "painel-barbeiro.html", "app.html", "financeiro.html", "painel-comum.js", "painel-agenda.js"].filter((f) => fs.existsSync(path.join(raiz, f)))) {
     const linhas = ler(p).split(/\r?\n/);
     linhas.forEach((l, i) => {
       if (!/\.innerHTML\s*=/.test(l)) return;

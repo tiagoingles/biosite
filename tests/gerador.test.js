@@ -88,3 +88,8 @@ test("todos os sites publicados têm a configuração legível", () => {
     assert.ok(cfg && cfg.nome, s);
   }
 });
+
+test("botão de enviar fica escondido fora da etapa de dados (o CSS não pode vencer o hidden)", () => {
+  const html = G.bioHTML(siteBarbearia(), (u) => u);
+  assert.ok(html.includes(".enviar[hidden]{display:none!important}"));
+});

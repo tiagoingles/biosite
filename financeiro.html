@@ -195,7 +195,7 @@ button.perigo{color:var(--erro)}
   // Cartões dia, semana, mês e trimestre
   function desenharPeriodos(j) {
     var box = $("cardsPeriodos"); box.textContent = "";
-    ["dia", "semana", "mes", "trimestre"].forEach(function (k) {
+    ["dia", "semana", "ultimos30", "mes", "trimestre"].forEach(function (k) {
       var p = j.resumo[k];
       var c = el("div", "card");
       c.appendChild(el("span", "note", p.rotulo + " · " + dataBr(p.de) + (p.de !== p.ate ? " a " + dataBr(p.ate) : "")));

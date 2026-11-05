@@ -163,7 +163,7 @@ button.perigo{color:var(--erro)}
       $("secResumo").hidden = false;
       $("resumoSim").hidden = !j.temSimulacao;
       var box = $("cardsResumo"); box.textContent = "";
-      ["dia", "semana", "mes", "trimestre"].forEach(function (k) {
+      ["dia", "semana", "ultimos30", "mes", "trimestre"].forEach(function (k) {
         var p = j.resumo[k];
         var c = document.createElement("div"); c.className = "card";
         c.innerHTML = "<span class='note'>" + esc(p.rotulo) + "</span>" +

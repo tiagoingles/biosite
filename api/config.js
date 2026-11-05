@@ -4,9 +4,10 @@
 //                                      monitor do GitHub Actions e pelo painel. Não mostra segredos.
 //   GET  /api/config?saude=1&resumo=1  resumo das últimas 24 h (erros, Web Vitals). Só a conta da plataforma.
 //   POST /api/config { tipo: "vital" | "erro", ... }  eventos do navegador (Web Vitals e erros de JavaScript).
+//   POST /api/config { tipo: "lead", nome, barbearia, whatsapp, ... }  contato da página de vendas.
 // Variáveis na Vercel: SUPABASE_URL e SUPABASE_ANON_KEY.
 const { rest } = require("../lib/supabase");
-const { registrar, origemDe, contarTentativas, corpoDe } = require("../lib/seguranca");
+const { registrar, origemDe, contarTentativas, corpoDe, falha } = require("../lib/seguranca");
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 
 const { VERSAO: GERADOR_VERSAO } = require("../lib/gerador");
@@ -62,8 +63,48 @@ async function evento(req, res) {
   return res.status(204).end();
 }
 
+// Interessados da página de vendas (index.html): guarda o contato para a equipe chamar no WhatsApp.
+// Público, então: campos limitados, campo-isca contra robôs e no máximo 5 contatos por origem por hora.
+const BARBEIROS = ["1", "2-3", "4-6", "7+"];
+const PLANOS = ["", "Solo", "Barbearia", "Sob medida"];
+function limpo(v, max) {
+  return String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+}
+async function interessado(req, res, b) {
+  res.setHeader("Cache-Control", "no-store");
+  // Campo-isca preenchido: robô. Responde como se tivesse dado certo e não grava nada.
+  if (b.website) return res.status(201).json({ ok: true });
+  const nome = limpo(b.nome, 80), barbearia = limpo(b.barbearia, 80), cidade = limpo(b.cidade, 80);
+  const whatsapp = String(b.whatsapp || "").replace(/\D/g, "");
+  if (nome.length < 2) return res.status(400).json({ message: "Informe o seu nome." });
+  if (barbearia.length < 2) return res.status(400).json({ message: "Informe o nome da barbearia." });
+  if (whatsapp.length < 10 || whatsapp.length > 13) return res.status(400).json({ message: "Informe o WhatsApp com DDD." });
+  try {
+    const origem = origemDe(req) || "sem-origem";
+    if ((await contarTentativas(`lead:${origem}`, 3600, true)) > 5) {
+      return res.status(429).json({ message: "Recebemos vários contatos deste aparelho. Tente de novo mais tarde." });
+    }
+    await rest("leads", {
+      metodo: "POST",
+      prefer: "return=minimal",
+      corpo: {
+        nome, barbearia, cidade, whatsapp, origem,
+        barbeiros: BARBEIROS.includes(String(b.barbeiros)) ? String(b.barbeiros) : "",
+        plano: PLANOS.includes(String(b.plano || "")) ? String(b.plano || "") : "",
+        pagina: limpo(b.pagina, 120),
+      },
+    });
+    return res.status(201).json({ ok: true });
+  } catch (e) {
+    return falha(res, e, "POST /api/config (interessado)");
+  }
+}
+
 module.exports = async (req, res) => {
-  if (req.method === "POST") return evento(req, res);
+  if (req.method === "POST") {
+    const b = corpoDe(req);
+    return b.tipo === "lead" ? interessado(req, res, b) : evento(req, res);
+  }
   if (req.method !== "GET") return res.status(405).json({ message: "Método não permitido." });
   if (req.query && req.query.saude === "1") return saude(req, res);
 

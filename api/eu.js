@@ -62,14 +62,17 @@ module.exports = async (req, res) => {
       }
       if (!perfil && (await ehAdminDaPlataforma(u.id))) {
         // Administrador da plataforma: vê todos os sites
-        const [barbearias, equipe] = await Promise.all([
+        const [barbearias, equipe, leads] = await Promise.all([
           rest("barbearias?select=id,slug,nome,teste_user_id&order=criado_em.desc"),
           rest("profissionais?ativo=eq.true&select=id,nome,barbearia_id,perfil_user_id&order=criado_em.asc"),
+          // Interessados da página de vendas (se a tabela ainda não existir, a lista vem vazia)
+          rest("leads?select=id,criado_em,nome,barbearia,cidade,whatsapp,barbeiros,plano,pagina,status&order=criado_em.desc&limit=100").catch(() => []),
         ]);
         return res.status(200).json({
           usuario: { id: u.id, email: u.email },
           perfil: null,
           admin: true,
+          leads,
           barbearias: barbearias.map((b) => ({
             id: b.id,
             slug: b.slug,
@@ -149,6 +152,14 @@ module.exports = async (req, res) => {
         }
         if (b.acao === "bloqueio-criar") return res.status(201).json({ bloqueio: await criarBloqueio(meu.id, b) });
         await removerBloqueio(meu.id, b.id);
+        return res.status(200).json({ ok: true });
+      }
+
+      // Conta da plataforma: andamento de um interessado da página de vendas
+      if (b.acao === "lead-status") {
+        if (perfil || !(await ehAdminDaPlataforma(u.id))) return res.status(403).json({ message: "Só a conta da plataforma faz isso." });
+        if (!/^[0-9a-f-]{36}$/i.test(String(b.id || "")) || !["novo", "contatado", "cliente", "descartado"].includes(b.status)) return res.status(400).json({ message: "Pedido inválido." });
+        await rest(`leads?id=eq.${b.id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { status: b.status, atualizado_em: new Date().toISOString() } });
         return res.status(200).json({ ok: true });
       }
 

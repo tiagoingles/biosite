@@ -44,12 +44,17 @@
       <p class="aviso-faixa info" id="avisoConvites" hidden></p>
       <p class="nota p">Entrou com o e-mail errado? Saia e entre com o e-mail que recebeu o convite.</p>
       <button type="button" class="botao" id="trocarConta">Sair e entrar com outro e-mail</button>
+      <p class="nota p">É dono de barbearia e quer o seu site com agenda online? <a href="/#comecar">Conheça o Bio Site</a>.</p>
     </section>
   </section>
 
   <!-- Plataforma: todos os sites -->
   <section class="tela" id="telaAdmin" hidden>
     <div class="ola"><div><h1>Sites da plataforma</h1><p id="resumoAdmin"></p></div></div>
+    <section class="cartao" id="secLeads" hidden>
+      <div class="cartao-topo"><h2>Interessados <span class="contador" id="qtdLeads">0</span></h2><span class="nota p">Página de vendas</span></div>
+      <div class="lista" id="listaLeads"></div>
+    </section>
     <div class="lista" id="listaSites"></div>
   </section>
 </main>
@@ -125,6 +130,38 @@
     var equipe = d.barbearias.reduce(function (t, b) { return t + (b.equipe || []).length; }, 0);
     $("resumoAdmin").textContent = d.barbearias.length + " site(s) · " + equipe + " barbeiro(s) ativo(s)";
     P.trocar($("listaSites"), d.barbearias.length ? d.barbearias.map(cartaoSite) : P.vazio("🌐", "Nenhum site ainda."));
+    mostrarLeads(d.leads || []);
+  }
+
+  // ---------- interessados da página de vendas ----------
+  var SITUACAO = { novo: ["Novo", "alerta"], contatado: ["Contatado", "info"], cliente: ["Virou cliente", "ok"], descartado: ["Descartado", "neutro"] };
+  function mostrarLeads(leads) {
+    $("secLeads").hidden = !leads.length;
+    $("qtdLeads").textContent = leads.filter(function (l) { return l.status === "novo"; }).length;
+    P.trocar($("listaLeads"), leads.map(function (l) {
+      var numero = l.whatsapp.indexOf("55") === 0 && l.whatsapp.length >= 12 ? l.whatsapp : "55" + l.whatsapp;
+      var texto = "Olá, " + P.primeiroNome(l.nome) + "! Aqui é do Bio Site. Vi que você quer o site com agendamento online para a " + l.barbearia + ". Posso te mostrar como funciona?";
+      var situacao = h("select", { "aria-label": "Situação de " + l.nome }, Object.keys(SITUACAO).map(function (k) { var o = h("option", { value: k, texto: SITUACAO[k][0] }); if (k === l.status) o.selected = true; return o; }));
+      situacao.onchange = function () {
+        var novo = situacao.value;
+        P.api("/api/eu", { corpo: { acao: "lead-status", id: l.id, status: novo } }).then(function () { l.status = novo; P.toast("Situação atualizada.", "ok"); mostrarLeads(leads); }).catch(function (e) { situacao.value = l.status; P.toast(e.message, "erro"); });
+      };
+      var detalhes = [l.cidade, l.barbeiros ? (l.barbeiros === "1" ? "só o dono" : l.barbeiros + " barbeiros") : "", l.plano ? "plano " + l.plano : "", new Date(l.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })].filter(Boolean).join(" · ");
+      return h("div", { class: "membro cartao-membro" }, [
+        h("div", { class: "membro-topo" }, [
+          h("span", { class: "avatar", texto: P.iniciais(l.barbearia) }),
+          h("div", { class: "cresce" }, [
+            h("div", { class: "nome", texto: l.barbearia + " · " + l.nome }),
+            h("div", { class: "det", texto: detalhes }),
+            h("span", { class: "selo selo-" + (SITUACAO[l.status] || SITUACAO.novo)[1], texto: (SITUACAO[l.status] || SITUACAO.novo)[0] }),
+          ]),
+        ]),
+        h("div", { class: "linha" }, [
+          h("a", { class: "botao p whats", href: "https://wa.me/" + numero + "?text=" + encodeURIComponent(texto), target: "_blank", rel: "noopener" }, [P.icone("whats"), "Chamar no WhatsApp"]),
+          h("label", { class: "campo", style: "min-width:160px" }, situacao),
+        ]),
+      ]);
+    }));
   }
 
   function botaoLink(rotulo, icone, href, extra) {

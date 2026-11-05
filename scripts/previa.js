@@ -28,6 +28,10 @@ let equipeGestao = [
   { id: "b1", nome: "Bruno", ativo: true, perfil_user_id: "u2", foto_url: null, comissao_pct: 40, atendimentos: { total: 148, ultimos30: 41, servicos: [{ nome: "Corte degradê", quantidade: 77 }, { nome: "Corte social", quantidade: 39 }, { nome: "Barba tradicional", quantidade: 32 }] } },
   { id: "b2", nome: "Rafael", ativo: true, perfil_user_id: null, foto_url: null, comissao_pct: 45, atendimentos: { total: 64, ultimos30: 22, servicos: [{ nome: "Corte + barba", quantidade: 40 }, { nome: "Corte social", quantidade: 24 }] } },
 ];
+let leads = [
+  { id: "00000000-0000-4000-8000-000000000001", criado_em: new Date(Date.now() - 2 * 36e5).toISOString(), nome: "Marcos Lima", barbearia: "Barbearia do Marcos", cidade: "Olinda", whatsapp: "81988887777", barbeiros: "2-3", plano: "Barbearia", pagina: "/?utm_source=instagram", status: "novo" },
+  { id: "00000000-0000-4000-8000-000000000002", criado_em: new Date(Date.now() - 30 * 36e5).toISOString(), nome: "Ana Souza", barbearia: "Studio Navalha", cidade: "Recife", whatsapp: "5581977776666", barbeiros: "1", plano: "Solo", pagina: "/", status: "contatado" },
+];
 let convites = [{ id: "c1", email: "lucas.barbeiro@exemplo.com", expira_em: new Date(Date.now() + 5 * 864e5).toISOString(), link: "http://localhost:4321/entrar.html?convite=tok1" }];
 
 function painel(dia) {
@@ -99,6 +103,11 @@ const servidor = http.createServer(async (req, res) => {
     const metodo = req.method;
     const b = metodo === "GET" ? {} : await corpoDe(req);
     if (u.pathname === "/api/config") {
+      if (metodo === "POST" && b.tipo === "lead") {
+        if (String(b.nome || "").trim().length < 2 || String(b.whatsapp || "").replace(/[^0-9]/g, "").length < 10) return json(res, 400, { message: "Informe o seu nome e o WhatsApp com DDD." });
+        leads.unshift({ id: "00000000-0000-4000-8000-" + String(100000000000 + seq++), criado_em: new Date().toISOString(), nome: b.nome, barbearia: b.barbearia, cidade: b.cidade || "", whatsapp: String(b.whatsapp).replace(/[^0-9]/g, ""), barbeiros: b.barbeiros || "", plano: b.plano || "", pagina: b.pagina || "", status: "novo" });
+        return json(res, 201, { ok: true });
+      }
       if (metodo === "POST") { res.writeHead(204); return res.end(); }
       if (q.saude === "1") return json(res, papel === "dono" && q.resumo === "1" ? 403 : 200, { ok: true, gerador: 3, msBanco: 42 });
       return json(res, 200, { url: "http://localhost:" + PORTA + "/falso", anon: "x", vapidPublic: "" });
@@ -106,7 +115,7 @@ const servidor = http.createServer(async (req, res) => {
     if (u.pathname === "/api/eu") {
       if (metodo === "GET" && (q.semana === "1" || q.agenda === "1")) return json(res, 200, semana(q.de || q.dia || hoje, q.dias));
       if (metodo === "GET" && papel === "admin") {
-        return json(res, 200, { usuario: { id: "u0", email: "tiago@exemplo.com" }, perfil: null, admin: true, barbearias: [
+        return json(res, 200, { usuario: { id: "u0", email: "tiago@exemplo.com" }, perfil: null, admin: true, leads, barbearias: [
           { id: "x", slug: "gw-barbearia", nome: "GW Barbearia", temTeste: true, equipe: [{ id: "b1", nome: "Bruno (teste)", temAcesso: true }, { id: "b2", nome: "Rafael (teste)", temAcesso: false }] },
           { id: "y", slug: "barbearia-do-ze", nome: "Barbearia do Zé", temTeste: false, equipe: [] },
         ] });
@@ -117,6 +126,7 @@ const servidor = http.createServer(async (req, res) => {
           ? { usuario: { id: "u2", email: "bruno@exemplo.com" }, perfil: { papel: "barbeiro", nome: "Bruno", barbearia_id: "x" }, barbearia: { id: "x", slug: "gw-barbearia", nome: "GW Barbearia" }, profissional: { id: "b1", nome: "Bruno Oliveira", foto_url: null, comissao_pct: 40 } }
           : { usuario: { id: "u1", email: "dono@exemplo.com" }, perfil: { papel: "dono", nome: "Gustavo Wanderley", barbearia_id: "x" }, barbearia: { id: "x", slug: "gw-barbearia", nome: "GW Barbearia" }, profissional: null });
       }
+      if (b.acao === "lead-status") { const l = leads.find((x) => x.id === b.id); if (l) l.status = b.status; return json(res, 200, { ok: true }); }
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));
       if (b.acao === "bloqueio-criar") return json(res, 201, { bloqueio: { id: "bl" + seq++ } });
       return json(res, 200, { ok: true });

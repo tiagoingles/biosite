@@ -96,7 +96,8 @@ button.perigo{color:var(--erro)}
     <p class="note">Registre quem chegou sem agendar, para o barbeiro escolhido.</p>
     <form id="formAvulso" style="display:grid;gap:10px">
       <label>Barbeiro<select id="avProf" required style="font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto)"></select></label>
-      <label>Serviço<input id="avServico" required maxlength="80" placeholder="Ex.: Corte social"></label>
+      <label>Serviço<select id="avServico" required style="font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto)"><option value="">Carregando serviços…</option></select></label>
+      <p class="note" id="avSemServicos" hidden>Nenhum serviço cadastrado. Cadastre os serviços e preços no financeiro.</p>
       <label>Nome do cliente<input id="avCliente" required maxlength="80"></label>
       <div class="linha">
         <label style="flex:1">Horário<input type="time" id="avHora" required></label>
@@ -169,7 +170,7 @@ button.perigo{color:var(--erro)}
     $("sub").textContent = d.perfil.papel === "dono_barbeiro" ? "Você administra e também atende" : "Você administra a barbearia";
     if (d.barbearia) { $("verSite").href = "/" + d.barbearia.slug; }
     $("carregando").hidden = true;
-    $("secPendentes").hidden = false; $("secHoje").hidden = false; $("secEquipe").hidden = false; $("secAvulso").hidden = false; carregarEquipeAvulso();
+    $("secPendentes").hidden = false; $("secHoje").hidden = false; $("secEquipe").hidden = false; $("secAvulso").hidden = false; carregarEquipeAvulso(); carregarServicos();
     $("dia").value = dia;
     carregarTudo();
     setInterval(carregarTudo, 30000);
@@ -272,6 +273,18 @@ button.perigo{color:var(--erro)}
   }
 
   // Barbeiros da equipe para escolher no atendimento espontâneo
+  // Atendimento espontâneo: só serviços cadastrados pelo dono
+  function carregarServicos() {
+    api("/api/pedido?servicos=1").then(function (j) {
+      var sel = $("avServico"); sel.textContent = "";
+      var vazio = !j.servicos.length;
+      if (vazio) { var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Sem serviços cadastrados"; sel.appendChild(o0); }
+      j.servicos.forEach(function (s) { var o = document.createElement("option"); o.value = s.nome; o.textContent = s.nome; sel.appendChild(o); });
+      sel.disabled = vazio;
+      $("avSemServicos").hidden = !vazio;
+    }).catch(function (err) { msg("msgAvulso", err.message, "erro"); });
+  }
+
   function carregarEquipeAvulso() {
     api("/api/equipe").then(function (j) {
       var sel = $("avProf"); sel.textContent = "";

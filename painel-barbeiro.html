@@ -99,7 +99,8 @@ button.tab[aria-selected="true"]{background:var(--cor);border-color:var(--cor);c
       <h2>Marcar agenda espontânea</h2>
       <p class="note">Registre quem chegou sem agendar. Ele entra na sua agenda de hoje.</p>
       <form id="formAvulso" style="display:grid;gap:10px">
-        <label>Serviço<input id="avServico" required maxlength="80" placeholder="Ex.: Corte social"></label>
+        <label>Serviço<select id="avServico" required><option value="">Carregando serviços…</option></select></label>
+        <p class="note" id="avSemServicos" hidden>Nenhum serviço cadastrado. O dono cadastra os serviços e preços no financeiro.</p>
         <label>Nome do cliente<input id="avCliente" required maxlength="80"></label>
         <div class="linha">
           <label style="flex:1">Horário<input type="time" id="avHora" required></label>
@@ -202,11 +203,24 @@ button.tab[aria-selected="true"]{background:var(--cor);border-color:var(--cor);c
     mostrarFoto(d.profissional);
     $("agDia").value = hojeBrasilia();
     carregarAgenda();
+    carregarServicos();
     carregarTudo();
     setInterval(carregarTudo, 30000);
   }).catch(function (err) { $("carregando").textContent = err.message; });
 
   function carregarTudo() { carregarPendentes(); carregarEncerrar(); }
+
+  // Atendimento espontâneo: só serviços cadastrados pelo dono
+  function carregarServicos() {
+    api("/api/pedido?servicos=1").then(function (j) {
+      var sel = $("avServico"); sel.textContent = "";
+      var vazio = !j.servicos.length;
+      if (vazio) { var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Sem serviços cadastrados"; sel.appendChild(o0); }
+      j.servicos.forEach(function (s) { var o = document.createElement("option"); o.value = s.nome; o.textContent = s.nome; sel.appendChild(o); });
+      sel.disabled = vazio;
+      $("avSemServicos").hidden = !vazio;
+    }).catch(function (err) { msg("msgAvulso", err.message, "erro"); });
+  }
 
   // ----- Agenda do dia: salvar sem publicar, ou confirmar e publicar -----
   function preencherAgenda(j) {

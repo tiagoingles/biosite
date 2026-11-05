@@ -12,7 +12,10 @@
 <body>
 <header class="topo">
   <div class="topo-id"><span class="avatar" id="avatarTopo">·</span><div><b id="titulo">Minha agenda</b><small id="sub">Carregando…</small></div></div>
-  <div class="topo-acoes"><button type="button" class="icone" id="atualizar" aria-label="Atualizar"></button></div>
+  <div class="topo-acoes">
+    <button type="button" class="icone" id="atualizar" aria-label="Atualizar"></button>
+    <button type="button" class="botao sair-topo" id="sairTopo" aria-label="Sair da conta"></button>
+  </div>
 </header>
 
 <nav class="abas" aria-label="Seções">
@@ -119,6 +122,8 @@
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
+  P.trocar($("sairTopo"), [P.icone("sair"), h("span", { texto: "Sair" })]);
+  $("sairTopo").onclick = P.sair;
   P.trocar($("btnEncaixe"), [P.icone("mais_um"), "Encaixe"]);
   P.trocar($("diaAnt"), P.icone("seta_esq"));
   P.trocar($("diaProx"), P.icone("seta_dir"));

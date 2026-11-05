@@ -68,3 +68,17 @@ test("service worker só abre endereços do próprio site", () => {
   const sw = ler("sw.js");
   assert.match(sw, /startsWith\("\/"\)|new URL/);
 });
+
+test("botão Sair visível no topo dos painéis (fora das abas)", () => {
+  for (const p of ["painel-dono.html", "painel-barbeiro.html"]) {
+    const html = ler(p);
+    const topo = html.slice(html.indexOf('<header class="topo">'), html.indexOf("</header>"));
+    assert.match(topo, /id="sairTopo"/, `${p}: botão Sair no topo`);
+    assert.match(html, /\$\("sairTopo"\)\.onclick = P\.sair;/, `${p}: botão Sair ligado ao logout`);
+  }
+  for (const p of ["app.html", "financeiro.html"]) {
+    const html = ler(p);
+    const topo = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+    assert.match(topo, /id="sair"/, `${p}: botão Sair no topo`);
+  }
+});

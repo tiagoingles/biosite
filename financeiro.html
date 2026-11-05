@@ -57,8 +57,8 @@ button.perigo{color:var(--erro)}
 <header>
   <div><b>Financeiro</b><p class="note" id="sub"></p></div>
   <nav>
-    <a class="botao" href="painel-dono.html">Painel do dono</a>
-    <a class="botao" href="app.html">Administração</a>
+    <a class="botao" href="painel-dono.html" id="linkPainel">Painel do dono</a>
+    <a class="botao" href="app.html" id="linkAdmin" hidden>Plataforma</a>
     <button type="button" id="sair">Sair</button>
   </nav>
 </header>
@@ -159,6 +159,11 @@ button.perigo{color:var(--erro)}
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var q = new URLSearchParams(location.search).get("barbearia") || "";
+  // Conta da plataforma (?barbearia=id): volta para o painel daquele site e para a lista de sites
+  if (q) {
+    $("linkPainel").href = "painel-dono.html?barbearia=" + encodeURIComponent(q);
+    $("linkAdmin").hidden = false;
+  }
   var CATEGORIAS = { aluguel: "Aluguel", contas: "Contas", software: "Software", servicos: "Serviços", impostos: "Impostos", outros: "Outros" };
   var hoje = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
 

@@ -18,11 +18,12 @@
   </div>
 </header>
 
+<!-- Mesma estrutura do painel do dono: Hoje, Agenda (qualquer dia), Horários (o que vai para o site) e Mais -->
 <nav class="abas" aria-label="Seções">
   <a href="#hoje" data-aba="hoje"></a>
   <a href="#agenda" data-aba="agenda"></a>
-  <a href="#historico" data-aba="historico"></a>
-  <a href="#perfil" data-aba="perfil"></a>
+  <a href="#horarios" data-aba="horarios"></a>
+  <a href="#mais" data-aba="mais"></a>
 </nav>
 
 <main>
@@ -35,6 +36,7 @@
       <div id="proximo"></div>
       <section class="cartao">
         <div class="cartao-topo"><h2>Pedidos para confirmar <span class="contador" id="qtdPend">0</span></h2></div>
+        <p class="nota p">Confirme ou recuse. Depois, o painel já abre a mensagem pronta para o cliente no WhatsApp.</p>
         <div class="lista" id="listaPend"><div class="esqueleto"></div></div>
       </section>
       <section class="cartao">
@@ -45,20 +47,45 @@
     <div class="coluna">
       <section class="cartao" id="secEncerrar" hidden>
         <div class="cartao-topo"><h2>Para encerrar <span class="contador" id="qtdEncerrar">0</span></h2></div>
-        <p class="nota p">Marque se foi realizado. O valor entra no financeiro e na sua comissão.</p>
+        <p class="nota p">Atendimentos de dias anteriores que ainda não foram marcados. O valor entra no financeiro e na sua comissão depois de realizado.</p>
         <div class="lista" id="listaEncerrar"></div>
       </section>
-      <section class="cartao" id="secComissao">
-        <div class="cartao-topo"><h2>Seus números</h2></div>
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Seus números</h2><a class="botao p" href="#mais">Ganhos</a></div>
         <div class="kpis" id="numeros" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>
+      </section>
+      <section class="cartao" id="secLinkHoje" hidden>
+        <div class="cartao-topo"><h2>Divulgue seu horário</h2></div>
+        <p class="nota p">Seu link abre o site da barbearia já com você escolhido. Coloque no Instagram e mande no WhatsApp.</p>
+        <div class="linha" id="acoesLinkHoje"></div>
       </section>
     </div>
   </section>
 
-  <!-- ===== Agenda ===== -->
-  <section class="tela duas" data-tela="agenda" hidden>
+  <!-- ===== Agenda (qualquer dia) ===== -->
+  <section class="tela" data-tela="agenda" hidden>
+    <section class="cartao">
+      <div class="navdia">
+        <button type="button" class="icone" id="diaAnt" aria-label="Dia anterior"></button>
+        <label class="rotulo" for="dia" id="rotuloDia"></label>
+        <input type="date" id="dia">
+        <button type="button" class="icone" id="diaProx" aria-label="Próximo dia"></button>
+      </div>
+      <div class="kpis" id="kpisDia" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>
+      <div class="linha">
+        <button type="button" class="botao principal" id="btnEncaixeDia"></button>
+        <button type="button" class="botao" id="btnHoje">Hoje</button>
+        <button type="button" class="botao fantasma" id="btnCsvDia"></button>
+      </div>
+      <div class="lista" id="listaDia"></div>
+    </section>
+  </section>
+
+  <!-- ===== Horários (o que aparece no site) ===== -->
+  <section class="tela duas" data-tela="horarios" hidden>
     <section class="cartao">
       <div class="cartao-topo"><h2>Minha semana</h2></div>
+      <p class="nota p">Só os dias publicados aparecem no site para os clientes agendarem.</p>
       <div id="semana"></div>
     </section>
     <section class="cartao">
@@ -68,42 +95,40 @@
     </section>
   </section>
 
-  <!-- ===== Histórico ===== -->
-  <section class="tela duas" data-tela="historico" hidden>
-    <section class="cartao">
-      <div class="navdia">
-        <button type="button" class="icone" id="diaAnt" aria-label="Dia anterior"></button>
-        <label class="rotulo" for="dia" id="rotuloDia"></label>
-        <input type="date" id="dia">
-        <button type="button" class="icone" id="diaProx" aria-label="Próximo dia"></button>
-      </div>
-      <div class="lista" id="listaDia"></div>
-    </section>
-    <section class="cartao">
-      <div class="cartao-topo"><h2>Encerrados (60 dias)</h2><button type="button" class="botao p" id="btnCsv"></button></div>
-      <div class="kpis" id="resumoHist" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>
-      <div class="lista" id="listaRealizados"></div>
-    </section>
-  </section>
-
-  <!-- ===== Perfil ===== -->
-  <section class="tela duas" data-tela="perfil" hidden>
-    <section class="cartao">
-      <div class="cartao-topo"><h2>Minha foto</h2></div>
-      <p class="nota p">Aparece para os clientes na hora de escolher o barbeiro. Sem foto, aparecem suas iniciais.</p>
-      <div class="linha"><span class="avatar g" id="fotoAtual"></span><button type="button" class="botao principal" id="trocarFoto">Enviar foto</button></div>
-      <input type="file" id="arquivoFoto" accept="image/jpeg,image/png,image/webp" hidden>
-    </section>
-    <section class="cartao" id="secAvisos" hidden>
-      <div class="cartao-topo"><h2>Avisos no celular</h2></div>
-      <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
-      <button type="button" class="botao principal" id="ativarAvisos"></button>
-    </section>
-    <div class="menu">
-      <a id="verSite" href="#" target="_blank" rel="noopener"></a>
-      <button type="button" id="sair"></button>
+  <!-- ===== Mais ===== -->
+  <section class="tela duas" data-tela="mais" hidden>
+    <div class="coluna">
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Meus ganhos</h2><button type="button" class="botao p" id="btnCsv"></button></div>
+        <div class="kpis" id="resumoHist" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="esqueleto"></div><div class="esqueleto"></div></div>
+        <h3>Atendimentos encerrados (60 dias)</h3>
+        <div class="lista" id="listaRealizados"></div>
+        <button type="button" class="botao fantasma" id="verTodos" hidden></button>
+      </section>
     </div>
-    <p class="rodape" id="versao"></p>
+    <div class="coluna">
+      <section class="cartao" id="secLink" hidden>
+        <div class="cartao-topo"><h2>Meu link de agendamento</h2></div>
+        <div class="link-pessoal">
+          <p class="nota p">Abre o site da barbearia já com você escolhido: o cliente só escolhe o serviço e o horário.</p>
+          <p class="copiavel" id="meuLink"></p>
+          <div class="linha" id="acoesLink"></div>
+        </div>
+      </section>
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Minha foto</h2></div>
+        <p class="nota p">Aparece para os clientes na hora de escolher o barbeiro. Sem foto, aparecem suas iniciais.</p>
+        <div class="linha"><span class="avatar g" id="fotoAtual"></span><button type="button" class="botao principal" id="trocarFoto"></button></div>
+        <input type="file" id="arquivoFoto" accept="image/jpeg,image/png,image/webp" hidden>
+      </section>
+      <section class="cartao" id="secAvisos" hidden>
+        <div class="cartao-topo"><h2>Avisos no celular</h2></div>
+        <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
+        <button type="button" class="botao principal" id="ativarAvisos"></button>
+      </section>
+      <div class="menu" id="menu"></div>
+      <p class="rodape" id="versao"></p>
+    </div>
   </section>
 </main>
 
@@ -118,21 +143,22 @@
   P.monitorar();
 
   // Ícones e rótulos fixos
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["historico", "historico", "Histórico"], ["perfil", "perfil", "Perfil"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["horarios", "relogio", "Horários"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
   P.trocar($("sairTopo"), [P.icone("sair"), h("span", { texto: "Sair" })]);
   $("sairTopo").onclick = P.sair;
   P.trocar($("btnEncaixe"), [P.icone("mais_um"), "Encaixe"]);
+  P.trocar($("btnEncaixeDia"), [P.icone("mais_um"), "Encaixe"]);
   P.trocar($("diaAnt"), P.icone("seta_esq"));
   P.trocar($("diaProx"), P.icone("seta_dir"));
+  P.trocar($("btnCsvDia"), [P.icone("baixar"), "Planilha do dia"]);
   P.trocar($("btnCsv"), [P.icone("baixar"), "Planilha"]);
-  P.trocar($("sair"), [P.icone("sair"), h("span", null, ["Sair", h("small", { texto: "Encerrar a sessão neste aparelho" })])]);
-  $("sair").onclick = P.sair;
+  P.trocar($("trocarFoto"), [P.icone("foto"), "Enviar foto"]);
 
-  var eu = null, painel = null, diaHist = P.hoje(), realizados = [];
-  var ctx = { barbearia: "", equipe: [], servicos: [], dono: false, recarregar: function () { carregar(); carregarHistorico(); } };
+  var eu = null, painel = null, dia = P.hoje(), diaDados = null, realizados = [], todos = false;
+  var ctx = { barbearia: "", equipe: [], servicos: [], dono: false, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#mais") carregarGanhos(); } };
 
   // Quem é: só barbeiro usa esta tela; dono e dono-barbeiro vão para o painel do dono
   P.api("/api/eu").then(function (d) {
@@ -147,20 +173,28 @@
     topo.id = "avatarTopo";
     $("avatarTopo").replaceWith(topo);
     mostrarFoto(prof);
-    if (d.barbearia) {
-      $("verSite").href = "/" + d.barbearia.slug;
-      P.trocar($("verSite"), [P.icone("site"), h("span", null, ["Ver o site da barbearia", h("small", { texto: location.host + "/" + d.barbearia.slug })])]);
-    } else $("verSite").hidden = true;
+    montarLink(d);
+    montarMenu(d);
     P.abas(function (aba) {
-      if (aba === "agenda") abrirAgenda();
-      if (aba === "historico") carregarHistorico();
+      if (aba === "agenda") carregarDia();
+      if (aba === "horarios") abrirHorarios();
+      if (aba === "mais") carregarGanhos();
     });
     carregar();
-    P.manterAtualizado(carregar, 30000);
+    P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); }, 30000);
   }).catch(function (e) { $("sub").textContent = e.message; });
 
-  $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); };
+  $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); if (location.hash === "#agenda") carregarDia(); };
   $("btnEncaixe").onclick = function () { P.encaixe(ctx); };
+
+  function kpi(rotulo, valor, detalhe, barra) {
+    return h("div", { class: "kpi" }, [h("span", { texto: rotulo }), h("b", { texto: valor }), detalhe ? h("small", { texto: detalhe }) : null, barra != null ? h("div", { class: "barra" }, h("i", { style: "width:" + Math.max(0, Math.min(100, barra)) + "%" })) : null]);
+  }
+  // Comissão prevista de uma lista de pedidos (usa a do pedido quando já foi encerrado)
+  function minhaParte(lista) {
+    var pct = Number((eu && eu.profissional && eu.profissional.comissao_pct) || 0);
+    return lista.reduce(function (t, p) { return t + (Number(p.valor) || 0) * (p.comissao_pct != null ? Number(p.comissao_pct) : pct) / 100; }, 0);
+  }
 
   // ---------- Hoje ----------
   function carregar() {
@@ -169,7 +203,7 @@
       ctx.servicos = d.servicos;
       desenharHoje(d);
       P.novosPedidos(d.pendentes);
-      P.bolinha("hoje", d.pendentes.length + d.aEncerrar.length);
+      P.bolinha("hoje", d.pendentes.length + d.aEncerrar.filter(function (p) { return p.dia < d.hoje; }).length);
     }).catch(function (e) { P.toast(e.message, "erro"); });
   }
 
@@ -177,26 +211,25 @@
     var prof = (eu && eu.profissional) || {};
     var hora = new Date(Date.now() - 3 * 36e5).getUTCHours();
     var saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
-    P.trocar($("ola"), [P.avatar(prof, "g"), h("div", null, [h("h1", { texto: saud + ", " + P.primeiroNome(prof.nome) + "!" }), h("p", { texto: P.dataLonga(d.hoje) + " · " + (d.kpis.dia.agendados ? d.kpis.dia.agendados + " atendimento(s) na agenda" : "nenhum atendimento ainda") })])]);
+    P.trocar($("ola"), [P.avatar(prof, "g"), h("div", null, [h("h1", { texto: saud + ", " + P.primeiroNome(prof.nome) + "!" }), h("p", { texto: P.dataLonga(d.hoje) + " · " + (d.kpis.dia.agendados ? d.kpis.dia.agendados + " atendimento(s) na agenda" : "nenhum atendimento ainda") + (d.pendentes.length ? " · " + d.pendentes.length + " para confirmar" : "") })])]);
 
     // Agenda de hoje publicada?
     var minha = d.equipe[0];
     var faixa = $("faixaAgenda");
     if (minha && minha.agenda && minha.agenda.publicada) {
-      P.trocar(faixa, h("div", { class: "aviso-faixa ok" }, [h("span", { texto: "Sua agenda de hoje está no site: " + minha.agenda.inicio + " às " + minha.agenda.fim + (minha.agenda.almocoInicio ? " (almoço " + minha.agenda.almocoInicio + "–" + minha.agenda.almocoFim + ")" : "") + "." }), h("a", { href: "#agenda", texto: "Ajustar" })]));
+      P.trocar(faixa, h("div", { class: "aviso-faixa ok" }, [h("span", { texto: "Sua agenda de hoje está no site: " + minha.agenda.inicio + " às " + minha.agenda.fim + (minha.agenda.almocoInicio ? " (almoço " + minha.agenda.almocoInicio + "–" + minha.agenda.almocoFim + ")" : "") + "." }), h("a", { href: "#horarios", texto: "Ajustar" })]));
     } else {
-      P.trocar(faixa, h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: "Sua agenda de hoje ainda não está no site. Os clientes não conseguem agendar com você." }), h("a", { href: "#agenda", class: "botao p principal", texto: "Publicar agenda" })]));
+      P.trocar(faixa, h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: "Sua agenda de hoje ainda não está no site. Os clientes não conseguem agendar com você." }), h("a", { href: "#horarios", class: "botao p principal", texto: "Publicar agenda" })]));
     }
 
     // Indicadores
     var pct = Number(prof.comissao_pct || 0);
     var ativos = d.pedidos.filter(P.ativo);
-    var aReceber = ativos.reduce(function (t, p) { return t + (Number(p.valor) || 0) * (p.comissao_pct != null ? Number(p.comissao_pct) : pct) / 100; }, 0);
     var oc = d.kpis.dia.ocupacao;
     P.trocar($("kpis"), [
       kpi("Atendimentos hoje", String(d.kpis.dia.agendados), d.kpis.dia.realizados + " realizado(s)"),
-      kpi("Pendentes", String(d.pendentes.length), "aguardando você"),
-      kpi("Sua parte hoje", P.brl(aReceber), pct ? "comissão de " + pct + "%" : "previsto"),
+      kpi("Para confirmar", String(d.pendentes.length), "pedidos do site"),
+      kpi("Sua parte hoje", P.brl(minhaParte(ativos)), pct ? "comissão de " + pct + "%" : "previsto"),
       kpi("Agenda ocupada", oc == null ? "—" : oc + "%", oc == null ? "publique a agenda" : "do expediente", oc),
     ]);
     P.trocar($("numeros"), [
@@ -231,50 +264,74 @@
     P.trocar($("listaEncerrar"), antigos.map(function (p) { return P.cartaoPedido(p, ctx, { mostrarDia: true }); }));
   }
 
-  function kpi(rotulo, valor, detalhe, barra) {
-    return h("div", { class: "kpi" }, [h("span", { texto: rotulo }), h("b", { texto: valor }), detalhe ? h("small", { texto: detalhe }) : null, barra != null ? h("div", { class: "barra" }, h("i", { style: "width:" + Math.max(0, Math.min(100, barra)) + "%" })) : null]);
-  }
-
-  // ---------- Agenda ----------
-  var semana = null, bloqueios = null;
-  function abrirAgenda() {
-    if (!semana) {
-      semana = P.editorSemana($("semana"), {
-        carregar: function (de) { return P.api("/api/eu?semana=1&dias=7&de=" + de); },
-        salvar: function (dias, confirmar) { return P.api("/api/eu", { corpo: { acao: "agenda-semana-salvar", dias: dias, confirmar: confirmar } }).then(function (r) { carregar(); if (bloqueios) bloqueios.recarregar(); return r; }); },
-      });
-      bloqueios = P.editorBloqueios($("bloqueios"), {
-        carregar: function () { return P.api("/api/eu?semana=1&dias=14&de=" + P.hoje()); },
-        criar: function (c) { return P.api("/api/eu", { corpo: Object.assign({ acao: "bloqueio-criar" }, c) }); },
-        remover: function (id) { return P.api("/api/eu", { corpo: { acao: "bloqueio-remover", id: id } }); },
-      });
-    }
-  }
-
-  // ---------- Histórico ----------
-  $("dia").value = diaHist;
+  // ---------- Agenda (qualquer dia) ----------
+  $("dia").value = dia;
   $("rotuloDia").onclick = function () { try { $("dia").showPicker(); } catch (e) { $("dia").focus(); } };
-  $("dia").onchange = function () { diaHist = $("dia").value || P.hoje(); carregarDia(); };
-  $("diaAnt").onclick = function () { diaHist = P.somaDias(diaHist, -1); $("dia").value = diaHist; carregarDia(); };
-  $("diaProx").onclick = function () { diaHist = P.somaDias(diaHist, 1); $("dia").value = diaHist; carregarDia(); };
+  $("dia").onchange = function () { dia = $("dia").value || P.hoje(); carregarDia(); };
+  $("diaAnt").onclick = function () { dia = P.somaDias(dia, -1); $("dia").value = dia; carregarDia(); };
+  $("diaProx").onclick = function () { dia = P.somaDias(dia, 1); $("dia").value = dia; carregarDia(); };
+  $("btnHoje").onclick = function () { dia = P.hoje(); $("dia").value = dia; carregarDia(); };
+  $("btnEncaixeDia").onclick = function () { P.encaixe(ctx, { dia: dia }); };
   function carregarDia() {
-    $("rotuloDia").textContent = P.dataLonga(diaHist);
-    return P.api("/api/pedido?dia=" + diaHist).then(function (j) {
-      P.trocar($("listaDia"), j.pedidos.length ? j.pedidos.map(function (p) { return P.cartaoPedido(p, ctx); }) : P.vazio("🗓️", "Nenhum horário neste dia."));
+    $("rotuloDia").textContent = P.dataLonga(dia);
+    return P.api("/api/pedido?painel=1&dia=" + dia).then(function (d) {
+      diaDados = d;
+      ctx.servicos = d.servicos;
+      var ativos = d.pedidos.filter(P.ativo);
+      var fora = d.pedidos.length - ativos.length;
+      var minha = d.equipe[0];
+      var pub = minha && minha.agenda && minha.agenda.publicada;
+      P.trocar($("kpisDia"), [
+        kpi("Na agenda", String(ativos.length), fora ? fora + " recusado/cancelado" : (pub ? minha.agenda.inicio + "–" + minha.agenda.fim : "agenda não publicada")),
+        kpi("Sua parte", P.brl(minhaParte(ativos)), "prevista no dia"),
+      ]);
+      P.trocar($("listaDia"), d.pedidos.length ? d.pedidos.map(function (p) { return P.cartaoPedido(p, ctx); }) : P.vazio("🗓️", pub ? "Nenhum horário marcado neste dia." : "Nenhum horário neste dia. A agenda deste dia não está publicada no site."));
     }).catch(function (e) { P.toast(e.message, "erro"); });
   }
-  function carregarHistorico() {
-    if (location.hash !== "#historico") return;
-    carregarDia();
-    P.api("/api/pedido?realizados=1").then(function (j) {
+  $("btnCsvDia").onclick = function () {
+    if (!diaDados || !diaDados.pedidos.length) { P.toast("Nada para exportar neste dia."); return; }
+    P.baixarCsv("minha-agenda-" + dia + ".csv", [["Horário", "Fim", "Cliente", "Serviço", "Situação", "Valor", "Código", "Observação"]].concat(diaDados.pedidos.map(function (p) {
+      return [P.hm(p.horario), P.hm(p.horario_fim), p.cliente, p.servico, (P.STATUS[p.status] || [p.status])[0], p.valor == null ? "" : Number(p.valor).toFixed(2).replace(".", ","), p.codigo, p.observacao];
+    })));
+  };
+
+  // ---------- Horários ----------
+  var semana = null, bloqueios = null;
+  function abrirHorarios() {
+    if (semana) return;
+    semana = P.editorSemana($("semana"), {
+      carregar: function (de) { return P.api("/api/eu?semana=1&dias=7&de=" + de); },
+      salvar: function (dias, confirmar) { return P.api("/api/eu", { corpo: { acao: "agenda-semana-salvar", dias: dias, confirmar: confirmar } }).then(function (r) { carregar(); if (bloqueios) bloqueios.recarregar(); return r; }); },
+    });
+    bloqueios = P.editorBloqueios($("bloqueios"), {
+      carregar: function () { return P.api("/api/eu?semana=1&dias=14&de=" + P.hoje()); },
+      criar: function (c) { return P.api("/api/eu", { corpo: Object.assign({ acao: "bloqueio-criar" }, c) }); },
+      remover: function (id) { return P.api("/api/eu", { corpo: { acao: "bloqueio-remover", id: id } }); },
+    });
+  }
+
+  // ---------- Mais: ganhos ----------
+  function carregarGanhos() {
+    return P.api("/api/pedido?realizados=1").then(function (j) {
       realizados = j.pedidos;
       var feitos = j.pedidos.filter(function (p) { return p.status === "realizado"; });
       var total = feitos.reduce(function (t, p) { return t + (Number(p.valor) || 0); }, 0);
       var com = feitos.reduce(function (t, p) { return t + (Number(p.valor) || 0) * (Number(p.comissao_pct) || 0) / 100; }, 0);
-      P.trocar($("resumoHist"), [kpi("Realizados", String(feitos.length), "60 dias"), kpi("Sua comissão", P.brl(com), "de " + P.brl(total))]);
-      P.trocar($("listaRealizados"), j.pedidos.length ? j.pedidos.slice(0, 60).map(function (p) { return P.cartaoPedido(p, ctx, { mostrarDia: true }); }) : P.vazio("📋", "Nenhum atendimento encerrado nos últimos 60 dias."));
+      var faltas = j.pedidos.length - feitos.length;
+      P.trocar($("resumoHist"), [
+        kpi("Sua comissão", P.brl(com), "de " + P.brl(total) + " atendidos"),
+        kpi("Realizados", String(feitos.length), faltas ? faltas + " não realizado(s)" : "últimos 60 dias"),
+      ]);
+      desenharRealizados();
     }).catch(function (e) { P.toast(e.message, "erro"); });
   }
+  function desenharRealizados() {
+    var mostrar = todos ? realizados.slice(0, 60) : realizados.slice(0, 6);
+    P.trocar($("listaRealizados"), realizados.length ? mostrar.map(function (p) { return P.cartaoPedido(p, ctx, { mostrarDia: true }); }) : P.vazio("📋", "Nenhum atendimento encerrado nos últimos 60 dias."));
+    $("verTodos").hidden = realizados.length <= 6;
+    $("verTodos").textContent = todos ? "Mostrar menos" : "Ver todos (" + Math.min(realizados.length, 60) + ")";
+  }
+  $("verTodos").onclick = function () { todos = !todos; desenharRealizados(); };
   $("btnCsv").onclick = function () {
     if (!realizados.length) { P.toast("Nada para exportar ainda."); return; }
     P.baixarCsv("meus-atendimentos.csv", [["Dia", "Horário", "Cliente", "Serviço", "Situação", "Valor", "Comissão %", "Comissão R$"]].concat(realizados.map(function (p) {
@@ -283,11 +340,38 @@
     })));
   };
 
-  // ---------- Perfil ----------
+  // ---------- Mais: link pessoal ----------
+  // O site abre já com este barbeiro escolhido (/slug?barbeiro=id)
+  function montarLink(d) {
+    if (!d.barbearia || !d.profissional) return;
+    var url = location.origin + "/" + d.barbearia.slug + "?barbeiro=" + encodeURIComponent(d.profissional.id);
+    var texto = "Agende seu horário comigo na " + d.barbearia.nome + ":";
+    $("meuLink").textContent = url;
+    function botoes() {
+      return [
+        h("button", { type: "button", class: "botao p whats", onclick: function () { P.abrirWhats(texto + " " + url); } }, [P.icone("whats"), "WhatsApp"]),
+        h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(url, "Link copiado. Cole no Instagram ou no WhatsApp."); } }, [P.icone("copiar"), "Copiar"]),
+        P.podeCompartilhar() ? h("button", { type: "button", class: "botao p", onclick: function () { P.compartilhar(d.barbearia.nome, texto, url); } }, [P.icone("compartilhar"), "Compartilhar"]) : null,
+      ];
+    }
+    P.trocar($("acoesLink"), botoes());
+    P.trocar($("acoesLinkHoje"), botoes());
+    $("secLink").hidden = false;
+    $("secLinkHoje").hidden = false;
+  }
+
+  // ---------- Mais: menu, foto e avisos ----------
+  function montarMenu(d) {
+    var itens = [];
+    if (d.barbearia) itens.push(h("a", { href: "/" + d.barbearia.slug, target: "_blank", rel: "noopener" }, [P.icone("site"), h("span", null, ["Ver o site da barbearia", h("small", { texto: location.host + "/" + d.barbearia.slug })])]));
+    itens.push(h("button", { type: "button", onclick: P.sair }, [P.icone("sair"), h("span", null, ["Sair", h("small", { texto: "Encerrar a sessão neste aparelho" })])]));
+    P.trocar($("menu"), itens);
+  }
   function mostrarFoto(p) {
     var a = P.avatar(p, "g");
     a.id = "fotoAtual";
     $("fotoAtual").replaceWith(a);
+    P.trocar($("trocarFoto"), [P.icone("foto"), p && p.foto_url ? "Trocar foto" : "Enviar foto"]);
   }
   $("trocarFoto").onclick = function () { $("arquivoFoto").click(); };
   $("arquivoFoto").onchange = function () {
@@ -301,7 +385,9 @@
       .then(function (url) { return P.api("/api/eu", { corpo: { acao: "foto-propria-salvar", foto: url } }).then(function () { return url; }); })
       .then(function (url) {
         if (eu && eu.profissional) eu.profissional.foto_url = url;
-        mostrarFoto({ nome: eu && eu.profissional ? eu.profissional.nome : "", foto_url: url });
+        var prof = { nome: eu && eu.profissional ? eu.profissional.nome : "", foto_url: url };
+        mostrarFoto(prof);
+        var topo = P.avatar(prof); topo.id = "avatarTopo"; $("avatarTopo").replaceWith(topo);
         P.toast("Foto atualizada. Os clientes já podem vê-la.", "ok");
       })
       .catch(function (e) { P.toast(e.message, "erro"); })

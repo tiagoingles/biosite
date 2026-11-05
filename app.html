@@ -2,443 +2,195 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="theme-color" content="#1c1917">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Painel | Bio Site</title>
-<style>
-:root{--cor:#a16207;--fundo:#f5f5f4;--texto:#1c1917;--linha:#e7e5e4;--suave:#ffffff;--erro:#b91c1c;--ok:#15803d}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#0f0d0c;--texto:#f5f5f4;--linha:#2f2b28;--suave:#1c1917}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.45 system-ui,sans-serif}
-header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;background:var(--suave);border-bottom:1px solid var(--linha);position:sticky;top:0}
-header b{font-size:17px}
-main{max-width:640px;margin:0 auto;padding:16px;display:grid;gap:14px}
-@media (min-width:768px){main{max-width:960px;padding:24px}}
-@media (min-width:1100px){main{max-width:1200px;grid-template-columns:1fr 1fr;align-items:start}#semPerfil,#comPerfil,#modulos,#agenda,#admin,#equipe{grid-column:auto}#semPerfil,#admin,#equipe{grid-column:1 / -1}}
-@media (min-width:768px){header{padding:14px 24px}}
-section{background:var(--suave);border:1px solid var(--linha);border-radius:16px;padding:16px;display:grid;gap:10px;animation:sobe .5s cubic-bezier(.2,.7,.2,1) both}
-@keyframes sobe{from{opacity:0;transform:translateY(12px)}}
-h2{font-size:17px;margin:0}
-h3{font-size:14px;margin:6px 0 0;opacity:.8}
-label{display:grid;gap:4px;font-size:13px;font-weight:600}
-input{font:inherit;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--fundo);color:var(--texto);width:100%}
-button{font:inherit;font-weight:600;padding:9px 12px;border-radius:10px;border:1px solid var(--linha);background:var(--suave);color:var(--texto);cursor:pointer;transition:transform .2s}
-button:hover{transform:translateY(-1px)}
-button.main{background:var(--cor);border-color:var(--cor);color:#fff}
-button.perigo{color:var(--erro)}
-.linha{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.item{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha)}
-.item:last-child{border-bottom:0}
-.note{margin:0;font-size:13px;opacity:.75}
-.msg{margin:0;font-size:14px;min-height:18px}
-.erro{color:var(--erro)}.ok{color:var(--ok)}
-.link{word-break:break-all;font-size:13px;background:var(--fundo);padding:8px 10px;border-radius:10px}
-.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.em-breve{opacity:.6;border:1px dashed var(--linha);border-radius:12px;padding:12px;font-size:14px}
-[hidden]{display:none!important}
-.foto-barbeiro{width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--cor,#1f4e79);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;flex:none}
-.foto-barbeiro img{width:100%;height:100%;object-fit:cover;display:block}
-</style>
+<meta name="theme-color" content="#1c1917">
+<title>Bio Site</title>
+<link rel="stylesheet" href="/painel.css">
 <script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
-<body>
-<header>
-  <b id="titulo">Painel</b>
-  <div class="linha">
-    <button type="button" id="voltarPainel" hidden>← Voltar ao painel</button>
-    <button type="button" id="sair">Sair</button>
+<body class="sem-abas">
+<!-- Porta de entrada depois do login: cada conta vai direto para o seu painel.
+     Fica aqui só o que não tem painel próprio: aceitar convite, conta sem barbearia e a visão da plataforma. -->
+<header class="topo">
+  <div class="topo-id"><span class="avatar" id="logo">B</span><div><b id="titulo">Bio Site</b><small id="sub">Abrindo sua conta…</small></div></div>
+  <div class="topo-acoes">
+    <button type="button" class="botao sair-topo" id="sair" aria-label="Sair da conta"></button>
   </div>
 </header>
+
 <main>
-  <p class="note" id="carregando">Carregando sua conta…</p>
-
-  <!-- Usuário sem barbearia: aceitar convite ou criar a própria -->
-  <section id="semPerfil" hidden>
-    <div id="secConvite" hidden>
-      <h2>Convite para trabalhar em uma barbearia</h2>
-      <p class="note" id="textoConvite"></p>
-      <div class="linha"><button type="button" class="main" id="aceitarConvite">Aceitar convite</button></div>
-      <p class="msg" id="msgConvite" role="status"></p>
-    </div>
-    <p class="note">Sua conta ainda não está ligada a uma barbearia. Use o link de convite que você recebeu.</p>
+  <!-- Carregando (some assim que a conta abre o painel) -->
+  <section class="tela estreito" id="telaCarregando">
+    <div class="esqueleto"></div>
+    <div class="esqueleto"></div>
   </section>
 
-  <!-- Administrador da plataforma: vê e gerencia todos os sites -->
-  <section id="admin" hidden>
-    <h2>Sites</h2>
-    <div id="listaSites"></div>
-    <p class="msg" id="msgSites" role="status"></p>
-    <p class="note" id="agendaDe"></p>
+  <!-- Convite para trabalhar numa barbearia -->
+  <section class="tela estreito" id="telaConvite" hidden>
+    <section class="cartao">
+      <div class="cartao-topo"><h2>Convite para a equipe</h2></div>
+      <p id="textoConvite">Conferindo o convite…</p>
+      <p class="nota p">Ao aceitar, você entra na agenda da barbearia e passa a receber os pedidos dos clientes.</p>
+      <button type="button" class="botao principal g" id="aceitarConvite" disabled>Aceitar convite</button>
+    </section>
   </section>
 
-  <!-- Usuário com barbearia -->
-  <section id="comPerfil" hidden>
-    <h2 id="nomeBarbearia"></h2>
-    <p class="note" id="infoPapel"></p>
-    <p class="note">Seu site: <a id="linkSite" href="#" target="_blank" rel="noopener"></a></p>
-    <div class="linha"><button type="button" class="main" id="irPainel">Abrir painel</button></div>
-    <div class="linha" id="acoesBarbeiro" hidden>
-      <button type="button" id="virarBarbeiro">Também atendo clientes</button>
-    </div>
-    <p class="msg" id="msgPerfil" role="status"></p>
+  <!-- Conta sem barbearia -->
+  <section class="tela estreito" id="telaSemPerfil" hidden>
+    <section class="cartao">
+      <div class="cartao-topo"><h2>Sua conta ainda não está ligada a uma barbearia</h2></div>
+      <p class="nota" id="textoSemPerfil">Se você é barbeiro, peça ao dono da barbearia o link de convite e abra o link neste aparelho.</p>
+      <p class="aviso-faixa info" id="avisoConvites" hidden></p>
+      <p class="nota p">Entrou com o e-mail errado? Saia e entre com o e-mail que recebeu o convite.</p>
+      <button type="button" class="botao" id="trocarConta">Sair e entrar com outro e-mail</button>
+    </section>
   </section>
 
-  <section id="modulos" hidden>
-    <h2>Módulos</h2>
-    <div class="grade">
-      <div class="em-breve">Serviços e fotos<br><small>Fase 3</small></div>
-      <div class="em-breve">Financeiro<br><small>Fase 4</small></div>
-    </div>
-  </section>
-
-  <!-- Agenda do dia: dono vê todos os pedidos; barbeiro vê os dele -->
-  <section id="agenda" hidden>
-    <h2>Agenda</h2>
-    <div class="linha">
-      <label style="flex:1">Dia<input type="date" id="agDia"></label>
-      <button type="button" id="agHoje">Hoje</button>
-    </div>
-    <p class="note">Atualiza sozinha a cada 30 segundos.</p>
-    <p class="msg" id="msgAgenda" role="status"></p>
-    <div id="listaAgenda"></div>
-  </section>
-
-  <!-- Equipe: só para dono e dono-barbeiro -->
-  <section id="equipe" hidden>
-    <h2>Equipe</h2>
-    <form id="formConvite" style="display:grid;gap:8px">
-      <label>E-mail do barbeiro<input type="email" id="cEmail" required placeholder="barbeiro@email.com"></label>
-      <div class="linha"><button type="submit" class="main">Gerar convite</button></div>
-    </form>
-    <div id="linkNovo" hidden>
-      <p class="note">Envie este link para o barbeiro pelo WhatsApp. Ele vale por 7 dias e só funciona com o e-mail convidado.</p>
-      <div class="link" id="linkTexto"></div>
-      <div class="linha"><button type="button" id="copiarNovo">Copiar link</button><button type="button" class="main" id="whatsNovo">Enviar pelo WhatsApp</button></div>
-    </div>
-    <p class="msg" id="msgEquipe" role="status"></p>
-    <h3>Pessoas na equipe</h3>
-    <div id="listaEquipe"></div>
-    <h3>Convites pendentes</h3>
-    <div id="listaConvites"></div>
+  <!-- Plataforma: todos os sites -->
+  <section class="tela" id="telaAdmin" hidden>
+    <div class="ola"><div><h1>Sites da plataforma</h1><p id="resumoAdmin"></p></div></div>
+    <div class="lista" id="listaSites"></div>
   </section>
 </main>
+
 <script src="/conta.js"></script>
+<script src="/painel-comum.js"></script>
 <script>
 (function () {
-  var $ = function (id) { return document.getElementById(id); };
+  var P = window.Painel, h = P.h, $ = P.$;
   var convite = new URLSearchParams(location.search).get("convite") || "";
-  // Administrador da plataforma com ?barbearia=id: as chamadas levam esse id
-  var CTX = new URLSearchParams(location.search).get("barbearia") || "";
-  var contaApi = Conta.api;
-  function api(p, o) {
-    if (CTX) p += (p.indexOf("?") > -1 ? "&" : "?") + "barbearia=" + encodeURIComponent(CTX);
-    return contaApi(p, o);
-  }
-  var PAPEIS = { dono: "Dono", barbeiro: "Barbeiro", dono_barbeiro: "Dono e barbeiro" };
-  var estado = null;
+  if (!window.Conta || !Conta.ler()) { location.replace("entrar.html" + (convite ? "?convite=" + encodeURIComponent(convite) : "")); return; }
+  P.monitorar();
 
-  function msg(id, t, tipo) { $(id).textContent = t; $(id).className = "msg " + (tipo || ""); }
-  function el(tag, txt, cls) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; }
-  // Mensagem pronta para o WhatsApp: abre o app com o texto do convite (o dono escolhe o contato)
-  function linkWhatsapp(link, email) {
-    var nome = (estado && estado.barbearia && estado.barbearia.nome) || "a barbearia";
-    var texto = "Olá! Você foi convidado para trabalhar na " + nome + " pelo Bio Site. Abra este link para aceitar o convite: " + link +
-      "\n\nO convite vale por 7 dias e só funciona com o e-mail " + email + ".";
-    return "https://wa.me/?text=" + encodeURIComponent(texto);
-  }
-  function copiar(texto, botao) {
-    navigator.clipboard.writeText(texto).then(function () { botao.textContent = "Copiado!"; setTimeout(function () { botao.textContent = "Copiar link"; }, 1800); });
+  P.trocar($("sair"), [P.icone("sair"), h("span", { texto: "Sair" })]);
+  $("sair").onclick = P.sair;
+  $("trocarConta").onclick = P.sair;
+
+  function tela(id) {
+    ["telaCarregando", "telaConvite", "telaSemPerfil", "telaAdmin"].forEach(function (t) { $(t).hidden = t !== id; });
   }
 
-  if (!Conta.ler()) { location.replace("entrar.html" + (convite ? "?convite=" + encodeURIComponent(convite) : "")); return; }
-
-  $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
+  // Cada perfil tem o seu painel; a conta da plataforma com ?barbearia=id abre o painel daquele site
+  function destino(d) {
+    var pagina = d.perfil.papel === "barbeiro" ? "painel-barbeiro.html" : "painel-dono.html";
+    return P.link(pagina) + (location.hash || "");
+  }
 
   function carregar() {
-    return api("/api/eu").then(function (dados) {
-      estado = dados;
-      $("carregando").hidden = true;
-      if (dados.admin) { mostrarAdmin(dados); return; }
-      if (!dados.perfil) { mostrarSemPerfil(dados); return; }
-      mostrarComPerfil(dados);
-    }).catch(function (err) {
-      $("carregando").textContent = err.message;
-      if (/Entre|expirou/.test(err.message)) setTimeout(function () { location.href = "entrar.html"; }, 1500);
+    return P.api("/api/eu").then(function (d) {
+      if (d.admin) { mostrarAdmin(d); return; }
+      if (d.perfil) { location.replace(destino(d)); return; }
+      if (convite) { mostrarConvite(); return; }
+      mostrarSemPerfil(d);
+    }).catch(function (e) {
+      $("sub").textContent = e.message;
+      if (/Entre|expirou/.test(e.message)) setTimeout(P.sair, 1500);
     });
   }
 
-  function mostrarSemPerfil(dados) {
-    $("semPerfil").hidden = false;
-    if (convite) {
-      $("secConvite").hidden = false;
-      fetch("/api/convite?token=" + encodeURIComponent(convite)).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
-        $("textoConvite").textContent = j ? "Você foi convidado para trabalhar em " + j.barbearia + "." : "Este convite não é válido ou já venceu.";
-        $("aceitarConvite").disabled = !j;
-      });
+  // ---------- convite ----------
+  function mostrarConvite() {
+    tela("telaConvite");
+    $("sub").textContent = "Convite para a equipe";
+    fetch("/api/convite?token=" + encodeURIComponent(convite)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (j) {
+      $("textoConvite").textContent = j ? "Você foi convidado para trabalhar na " + j.barbearia + "." : "Este convite não é válido ou já venceu. Peça um novo link ao dono da barbearia.";
+      $("aceitarConvite").disabled = !j;
+    });
+  }
+  $("aceitarConvite").onclick = function () {
+    P.acao($("aceitarConvite"), P.api("/api/convite", { corpo: { token: convite } }).then(function () {
+      P.toast("Convite aceito. Abrindo seu painel…", "ok");
+      convite = "";
+      history.replaceState(null, "", "app.html");
+      return carregar();
+    }).catch(function (e) { P.toast(e.message, "erro"); }));
+  };
+
+  // ---------- conta sem barbearia ----------
+  function mostrarSemPerfil(d) {
+    tela("telaSemPerfil");
+    $("sub").textContent = d.usuario ? d.usuario.email : "";
+    if (d.convites) {
+      $("avisoConvites").textContent = (d.convites === 1 ? "Existe um convite" : "Existem " + d.convites + " convites") + " para o e-mail " + d.usuario.email + ". Abra o link que o dono te enviou para aceitar.";
+      $("avisoConvites").hidden = false;
     }
   }
 
-  $("aceitarConvite").onclick = function () {
-    $("aceitarConvite").disabled = true;
-    api("/api/convite", { corpo: { token: convite } }).then(function () {
-      msg("msgConvite", "Convite aceito. Carregando sua conta…", "ok");
-      history.replaceState(null, "", "app.html");
-      carregar();
-    }).catch(function (err) { msg("msgConvite", err.message, "erro"); $("aceitarConvite").disabled = false; });
-  };
-
-  function mostrarComPerfil(dados) {
-    var b = dados.barbearia || {};
-    $("comPerfil").hidden = false;
-    $("modulos").hidden = false;
-    $("titulo").textContent = b.nome || "Painel";
-    $("nomeBarbearia").textContent = b.nome || "";
-    $("infoPapel").textContent = "Você entrou como: " + (PAPEIS[dados.perfil.papel] || dados.perfil.papel);
-    var barbeiroSo = dados.perfil.papel === "barbeiro";
-    // Visão de administrador da plataforma: o painel abre no mesmo site
-    var destino = (barbeiroSo ? "painel-barbeiro.html" : "painel-dono.html") + (dados.visaoAdmin ? "?barbearia=" + encodeURIComponent(dados.perfil.barbearia_id) : "");
-    $("irPainel").textContent = barbeiroSo ? "Minha agenda" : "Painel do dono";
-    $("irPainel").onclick = function () { location.href = destino; };
-    $("voltarPainel").textContent = barbeiroSo ? "← Minha agenda" : "← Voltar ao painel";
-    $("voltarPainel").onclick = function () { location.href = destino; };
-    $("voltarPainel").hidden = false;
-    $("linkSite").textContent = location.origin + "/" + (b.slug || "");
-    $("linkSite").href = "/" + (b.slug || "");
-    var admin = dados.perfil.papel === "dono" || dados.perfil.papel === "dono_barbeiro";
-    $("acoesBarbeiro").hidden = dados.perfil.papel !== "dono";
-    $("equipe").hidden = !admin;
-    if (admin) carregarEquipe();
+  // ---------- plataforma ----------
+  function mostrarAdmin(d) {
+    tela("telaAdmin");
+    $("titulo").textContent = "Bio Site";
+    $("sub").textContent = "Administração da plataforma";
+    var equipe = d.barbearias.reduce(function (t, b) { return t + (b.equipe || []).length; }, 0);
+    $("resumoAdmin").textContent = d.barbearias.length + " site(s) · " + equipe + " barbeiro(s) ativo(s)";
+    P.trocar($("listaSites"), d.barbearias.length ? d.barbearias.map(cartaoSite) : P.vazio("🌐", "Nenhum site ainda."));
   }
 
-  $("virarBarbeiro").onclick = function () {
-    if (!confirm("Você passa a aparecer também como barbeiro na agenda. Continuar?")) return;
-    api("/api/eu", { corpo: { acao: "virar-barbeiro" } })
-      .then(function () { msg("msgPerfil", "Pronto. Agora você atende também.", "ok"); return carregar(); })
-      .catch(function (err) { msg("msgPerfil", err.message, "erro"); });
-  };
-
-  // Foto do barbeiro (ou iniciais) e troca de foto pelo dono
-  function fotoDoBarbeiro(p) {
-    var f = el("span", null, "foto-barbeiro");
-    if (p.foto_url) { var img = document.createElement("img"); img.src = p.foto_url; img.alt = p.nome; f.appendChild(img); }
-    else f.textContent = p.nome.trim().split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0); }).join("").toUpperCase();
-    return f;
-  }
-  function botaoFoto(p) {
-    var inp = document.createElement("input");
-    inp.type = "file"; inp.accept = "image/jpeg,image/png,image/webp"; inp.hidden = true;
-    inp.onchange = function () { trocarFoto(p, inp.files[0]); };
-    var b = el("button", p.foto_url ? "Trocar foto" : "Adicionar foto");
-    b.onclick = function () { inp.click(); };
-    var g = document.createDocumentFragment();
-    g.appendChild(b); g.appendChild(inp);
-    return g;
-  }
-  // A foto vai direto ao Storage por um link assinado; depois o servidor grava o endereço no barbeiro
-  function trocarFoto(p, arquivo) {
-    if (!arquivo) return;
-    msg("msgEquipe", "Enviando foto…", "");
-    api("/api/equipe", { corpo: { acao: "foto-link", profissionalId: p.id, tipo: arquivo.type, tamanho: arquivo.size } })
-      .then(function (l) {
-        return fetch(l.uploadUrl, { method: "PUT", headers: { "Content-Type": arquivo.type }, body: arquivo })
-          .then(function (r) { if (!r.ok) throw new Error("Não consegui enviar a foto. Tente de novo."); return l.publicUrl; });
-      })
-      .then(function (url) { return api("/api/equipe", { corpo: { acao: "foto-salvar", profissionalId: p.id, foto: url } }); })
-      .then(function () { msg("msgEquipe", "Foto de " + p.nome + " atualizada.", "ok"); carregarEquipe(); })
-      .catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+  function botaoLink(rotulo, icone, href, extra) {
+    return h("a", Object.assign({ class: "botao p", href: href }, extra || {}), [P.icone(icone), rotulo]);
   }
 
-  // Atendimentos realizados do barbeiro: total, últimos 30 dias e quantidade por serviço
-  function atendimentosDo(p) {
-    var a = p.atendimentos || { total: 0, ultimos30: 0, servicos: [] };
-    var box = el("div", null, "atend");
-    box.style.cssText = "flex-basis:100%;display:grid;gap:4px;font-size:13px";
-    box.appendChild(el("span", a.total + " atendimento(s) realizado(s) · " + a.ultimos30 + " nos últimos 30 dias"));
-    if (!a.servicos.length) box.appendChild(el("span", "Nenhum atendimento realizado ainda.", "note"));
-    a.servicos.forEach(function (s) { box.appendChild(el("span", s.nome + ": " + s.quantidade)); });
-    return box;
+  function cartaoSite(b) {
+    var q = "?barbearia=" + encodeURIComponent(b.id);
+    var acoes = [
+      botaoLink("Painel do dono", "grafico", "painel-dono.html" + q),
+      botaoLink("Painel do barbeiro", "tesoura", "painel-barbeiro.html" + q),
+      botaoLink("Financeiro", "dinheiro", "financeiro.html" + q),
+      botaoLink("Ver site", "site", "/" + b.slug, { target: "_blank", rel: "noopener" }),
+    ];
+    if (b.temTeste) acoes.push(h("button", { type: "button", class: "botao p", onclick: function () { novaSenhaTeste(b); } }, [P.icone("trava"), "Nova senha do teste"]));
+    var equipe = (b.equipe || []).map(function (p) {
+      var botao = h("button", { type: "button", class: "botao p" }, [P.icone(p.temAcesso ? "trava" : "mais_um"), p.temAcesso ? "Nova senha" : "Criar acesso de teste"]);
+      botao.onclick = function () { acessoBarbeiro(b, p, botao); };
+      return h("div", { class: "membro", style: "flex-wrap:wrap" }, [
+        P.avatar(p),
+        h("div", { class: "cresce" }, [h("div", { class: "nome", texto: p.nome }), h("div", { class: "det", texto: p.temAcesso ? "Tem login" : "Sem login" })]),
+        botao,
+      ]);
+    });
+    return h("section", { class: "cartao site-admin" }, [
+      h("div", { class: "perfil-topo" }, [h("span", { class: "avatar", texto: P.iniciais(b.nome) }), h("div", { class: "cresce" }, [h("div", { class: "nome", texto: b.nome }), h("div", { class: "nota p", texto: location.host + "/" + b.slug })])]),
+      h("div", { class: "acoes-site" }, acoes),
+      equipe.length ? h("div", { class: "equipe" }, equipe) : h("p", { class: "nota p", texto: "Nenhum barbeiro ativo." }),
+    ]);
   }
 
-  function carregarEquipe() {
-    api("/api/equipe").then(function (j) {
-      var lista = $("listaEquipe");
-      lista.textContent = "";
-      j.profissionais.forEach(function (p) {
-        var linha = el("div", null, "item");
-        linha.style.cssText = "display:flex;align-items:center;gap:10px;flex-wrap:wrap";
-        linha.appendChild(fotoDoBarbeiro(p));
-        linha.appendChild(el("span", p.nome + (p.perfil_user_id === estado.usuario.id ? " (você)" : "")));
-        linha.appendChild(botaoFoto(p));
-        linha.appendChild(atendimentosDo(p));
-        if (p.perfil_user_id !== estado.usuario.id) {
-          var b = el("button", "Remover", "perigo");
-          b.onclick = function () {
-            if (!confirm("Remover " + p.nome + " da equipe?")) return;
-            api("/api/equipe", { corpo: { acao: "remover", profissionalId: p.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
-          };
-          linha.appendChild(b);
-        }
-        lista.appendChild(linha);
-      });
-      if (!j.profissionais.length) lista.appendChild(el("p", "Ninguém na equipe ainda.", "note"));
-
-      var conv = $("listaConvites");
-      conv.textContent = "";
-      j.convites.forEach(function (c) {
-        var linha = el("div", null, "item");
-        linha.appendChild(el("span", c.email));
-        var grupo = el("div", null, "linha");
-        var copia = el("button", "Copiar link");
-        copia.onclick = function () { copiar(c.link, copia); };
-        var zap = el("button", "Enviar pelo WhatsApp");
-        zap.onclick = function () { window.open(linkWhatsapp(c.link, c.email), "_blank", "noopener"); };
-        var cancela = el("button", "Cancelar", "perigo");
-        cancela.onclick = function () {
-          api("/api/equipe", { corpo: { acao: "cancelar-convite", id: c.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
-        };
-        grupo.appendChild(copia); grupo.appendChild(zap); grupo.appendChild(cancela);
-        linha.appendChild(grupo);
-        conv.appendChild(linha);
-      });
-      if (!j.convites.length) conv.appendChild(el("p", "Nenhum convite pendente.", "note"));
-    }).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
-  }
-
-  $("formConvite").addEventListener("submit", function (e) {
-    e.preventDefault();
-    msg("msgEquipe", "");
-    var emailConvite = $("cEmail").value.trim();
-    api("/api/equipe", { corpo: { acao: "convidar", email: emailConvite } }).then(function (j) {
-      $("linkTexto").textContent = j.link;
-      $("linkNovo").hidden = false;
-      $("copiarNovo").onclick = function () { copiar(j.link, $("copiarNovo")); };
-      $("whatsNovo").onclick = function () { window.open(linkWhatsapp(j.link, emailConvite), "_blank", "noopener"); };
-      $("cEmail").value = "";
-      carregarEquipe();
-    }).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
-  });
-
-  // ---------- Agenda do dia ----------
-  var STATUS = { pendente: "Pendente", confirmado: "Confirmado", recusado: "Recusado", cancelado: "Cancelado", avulso: "Avulso" };
-  var timerAgenda = null;
-
-  function hojeBrasilia() { return new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); }
-
-  function carregarAgenda() {
-    var dia = $("agDia").value || hojeBrasilia();
-    api("/api/pedido?dia=" + dia + (barbeariaAdmin ? "&barbearia=" + barbeariaAdmin : "")).then(function (j) {
-      msg("msgAgenda", "");
-      var lista = $("listaAgenda");
-      lista.textContent = "";
-      j.pedidos.forEach(function (p) {
-        var linha = el("div", null, "item");
-        var texto = el("div");
-        texto.appendChild(el("b", p.horario + "  " + p.servico));
-        texto.appendChild(el("div", p.cliente + " · " + p.profissional + " · código " + p.codigo, "note"));
-        texto.appendChild(el("div", STATUS[p.status] || p.status, "note"));
-        linha.appendChild(texto);
-        if (p.status === "pendente") {
-          var grupo = el("div", null, "linha");
-          var ok = el("button", "Confirmar", "main");
-          ok.onclick = function () { decidir(p.id, "confirmado"); };
-          var no = el("button", "Recusar", "perigo");
-          no.onclick = function () { decidir(p.id, "recusado"); };
-          grupo.appendChild(ok); grupo.appendChild(no);
-          linha.appendChild(grupo);
-        }
-        lista.appendChild(linha);
-      });
-      if (!j.pedidos.length) lista.appendChild(el("p", "Nenhum pedido neste dia.", "note"));
-    }).catch(function (err) { msg("msgAgenda", err.message, "erro"); });
-  }
-
-  function decidir(id, status) {
-    api("/api/pedido" + (barbeariaAdmin ? "?barbearia=" + barbeariaAdmin : ""), { metodo: "PATCH", corpo: { id: id, status: status } })
-      .then(carregarAgenda)
-      .catch(function (err) { msg("msgAgenda", err.message, "erro"); carregarAgenda(); });
-  }
-
-  function mostrarAgenda() {
-    $("agenda").hidden = false;
-    if (!$("agDia").value) $("agDia").value = hojeBrasilia();
-    carregarAgenda();
-    if (!timerAgenda) timerAgenda = setInterval(carregarAgenda, 30000);
-  }
-
-  // ---------- Administrador da plataforma: lista os sites ----------
-  var barbeariaAdmin = "";
-
-  function mostrarAdmin(dados) {
-    $("admin").hidden = false;
-    var lista = $("listaSites");
-    lista.textContent = "";
-    if (!dados.barbearias.length) lista.appendChild(el("p", "Nenhum site ainda.", "note"));
-    dados.barbearias.forEach(function (b) {
-      var linha = el("div", null, "item");
-      var texto = el("div");
-      texto.appendChild(el("b", b.nome));
-      texto.appendChild(el("div", "/" + b.slug, "note"));
-      linha.appendChild(texto);
-      var grupo = el("div", null, "linha");
-      var ver = el("button", "Ver agenda");
-      ver.onclick = function () { abrirAgendaDe(b); };
-      grupo.appendChild(ver);
-      var fin = el("button", "Financeiro e simulação");
-      fin.onclick = function () { location.href = "financeiro.html?barbearia=" + encodeURIComponent(b.id); };
-      grupo.appendChild(fin);
-      var painelDono = el("button", "Painel do dono");
-      painelDono.onclick = function () { location.href = "painel-dono.html?barbearia=" + encodeURIComponent(b.id); };
-      grupo.appendChild(painelDono);
-      var painelBarb = el("button", "Painel do barbeiro");
-      painelBarb.onclick = function () { location.href = "painel-barbeiro.html?barbearia=" + encodeURIComponent(b.id); };
-      grupo.appendChild(painelBarb);
-      if (b.temTeste) {
-        var senha = el("button", "Nova senha do teste");
-        senha.onclick = function () { novaSenhaTeste(b); };
-        grupo.appendChild(senha);
-      }
-      linha.appendChild(grupo);
-      (b.equipe || []).forEach(function (p) {
-        var item = el("div", null, "item");
-        item.appendChild(el("span", p.nome + (p.temAcesso ? "" : " · sem acesso")));
-        var botao = el("button", p.temAcesso ? "Nova senha do barbeiro" : "Criar acesso de teste");
-        botao.onclick = function () { acessoBarbeiro(b, p); };
-        item.appendChild(botao);
-        linha.appendChild(item);
-      });
-      lista.appendChild(linha);
+  // Senha nova aparece uma vez só, numa janela com botão de copiar
+  function mostrarSenha(titulo, email, senha) {
+    var texto = (email ? "E-mail: " + email + "\n" : "") + "Senha: " + senha;
+    P.janela({
+      titulo: titulo,
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "copiavel", style: "white-space:pre-line", texto: texto }),
+        h("p", { class: "nota p", texto: "Copie agora: a senha não aparece de novo." }),
+        h("button", { type: "button", class: "botao", onclick: function () { P.copiar(texto, "Acesso copiado."); } }, [P.icone("copiar"), "Copiar acesso"]),
+      ]),
+      acoes: [{ texto: "Pronto", classe: "principal", valor: "ok" }],
     });
   }
 
-  function acessoBarbeiro(b, p) {
+  function acessoBarbeiro(b, p, botao) {
     var nova = p.temAcesso;
-    if (nova && !confirm("Gerar nova senha para " + p.nome + "? A senha atual deixa de funcionar.")) return;
-    api("/api/barbearia", { corpo: { acao: nova ? "redefinir-teste-barbeiro" : "teste-barbeiro", slug: b.slug, profissionalId: p.id } }).then(function (j) {
-      p.temAcesso = true;
-      var login = j.email ? "E-mail " + j.email + ", " : "";
-      msg("msgSites", (nova ? "Nova senha de " : "Acesso de teste de ") + p.nome + ": " + login + "senha " + j.senha + ". Copie agora: ela não aparece de novo.", "ok");
-    }).catch(function (err) { msg("msgSites", err.message, "erro"); });
-  }
-
-  function abrirAgendaDe(b) {
-    barbeariaAdmin = b.id;
-    $("agendaDe").textContent = "Agenda de " + b.nome + ".";
-    mostrarAgenda();
+    var pergunta = nova ? P.confirmar("Nova senha de " + p.nome, "A senha atual deixa de funcionar.", "Gerar nova senha", true) : Promise.resolve(true);
+    pergunta.then(function (ok) {
+      if (!ok) return;
+      P.acao(botao, P.api("/api/barbearia", { corpo: { acao: nova ? "redefinir-teste-barbeiro" : "teste-barbeiro", slug: b.slug, profissionalId: p.id } }).then(function (j) {
+        p.temAcesso = true;
+        mostrarSenha((nova ? "Nova senha de " : "Acesso de ") + p.nome, j.email, j.senha);
+        carregar();
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
   }
 
   function novaSenhaTeste(b) {
-    if (!confirm("Gerar nova senha para o usuário de teste de " + b.nome + "? A senha atual deixa de funcionar.")) return;
-    api("/api/barbearia", { corpo: { acao: "redefinir-teste", slug: b.slug } }).then(function (j) {
-      msg("msgSites", "Nova senha de " + b.nome + ": " + j.senha + " (e-mail " + j.email + "). Copie agora: ela não aparece de novo.", "ok");
-    }).catch(function (err) { msg("msgSites", err.message, "erro"); });
+    P.confirmar("Nova senha do teste", "Gerar nova senha para o usuário de teste de " + b.nome + "? A senha atual deixa de funcionar.", "Gerar nova senha", true).then(function (ok) {
+      if (!ok) return;
+      P.api("/api/barbearia", { corpo: { acao: "redefinir-teste", slug: b.slug } }).then(function (j) {
+        mostrarSenha("Teste de " + b.nome, j.email, j.senha);
+      }).catch(function (e) { P.toast(e.message, "erro"); });
+    });
   }
-
-  $("agDia").addEventListener("change", carregarAgenda);
-  $("agHoje").onclick = function () { $("agDia").value = hojeBrasilia(); carregarAgenda(); };
-
-  var mostrarComPerfilBase = mostrarComPerfil;
-  mostrarComPerfil = function (dados) { mostrarComPerfilBase(dados); mostrarAgenda(); };
 
   carregar();
 })();

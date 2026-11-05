@@ -81,12 +81,33 @@
   </section>
 
   <!-- ===== Equipe ===== -->
-  <section class="tela" data-tela="equipe" hidden>
-    <section class="cartao">
-      <div class="cartao-topo"><h2>Agenda da equipe</h2><a class="botao p" id="linkConvites" href="app.html">Convites e acessos</a></div>
-      <p class="nota p">Só os dias publicados aparecem no site. Barbeiros com login publicam a própria agenda; para quem não tem login, publique por aqui.</p>
-      <div class="equipe" id="listaEquipe"><div class="esqueleto"></div></div>
-    </section>
+  <section class="tela duas" data-tela="equipe" hidden>
+    <div class="coluna">
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Equipe <span class="contador" id="qtdEquipe">0</span></h2></div>
+        <p class="nota p">Só os dias publicados aparecem no site. Barbeiros com login publicam a própria agenda; para quem não tem login, publique por aqui.</p>
+        <div class="equipe" id="listaEquipe"><div class="esqueleto"></div></div>
+      </section>
+      <section class="cartao" id="secVirar" hidden>
+        <div class="cartao-topo"><h2>Você também corta?</h2></div>
+        <p class="nota p">Entre na agenda como barbeiro: os clientes poderão escolher você no site e você recebe os seus pedidos.</p>
+        <button type="button" class="botao" id="virarBarbeiro"></button>
+      </section>
+    </div>
+    <div class="coluna">
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Convidar barbeiro</h2></div>
+        <p class="nota p">O barbeiro recebe um link, entra com o e-mail convidado e já aparece na agenda. O convite vale 7 dias.</p>
+        <form id="formConvite" class="grade" novalidate>
+          <label class="campo">E-mail do barbeiro<input type="email" id="cEmail" required maxlength="120" placeholder="barbeiro@email.com" autocomplete="off" inputmode="email"></label>
+          <button type="submit" class="botao principal" id="btnConvidar"></button>
+        </form>
+      </section>
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Convites pendentes <span class="contador" id="qtdConvites">0</span></h2></div>
+        <div class="lista" id="listaConvites"><div class="esqueleto"></div></div>
+      </section>
+    </div>
   </section>
 
   <!-- ===== Mais ===== -->
@@ -130,7 +151,8 @@
   P.trocar($("btnEncaixe"), [P.icone("mais_um"), "Encaixe"]);
   P.trocar($("btnCsvDia"), [P.icone("baixar"), "Planilha do dia"]);
   $("linkFin").href = P.link("financeiro.html");
-  $("linkConvites").href = P.link("app.html");
+  P.trocar($("btnConvidar"), [P.icone("email"), "Gerar convite"]);
+  P.trocar($("virarBarbeiro"), [P.icone("tesoura"), "Também atendo clientes"]);
 
   var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null;
   var ctx = { barbearia: "", equipe: [], servicos: [], dono: true, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#equipe") carregarEquipe(); } };
@@ -166,7 +188,7 @@
       ctx.servicos = d.servicos;
       ctx.equipe = d.equipe.map(function (e) { return { id: e.id, nome: e.nome }; });
       desenharHoje(d);
-      if (location.hash === "#equipe") carregarEquipe();
+      if (location.hash === "#equipe") desenharEquipe();
       P.novosPedidos(d.pendentes);
       P.bolinha("hoje", d.pendentes.length);
     }).catch(function (e) { P.toast(e.message, "erro"); });
@@ -258,23 +280,178 @@
     })));
   };
 
-  // ---------- Equipe: agenda de cada barbeiro ----------
+  // ---------- Equipe: agenda, fotos, convites e acessos ----------
+  // O painel do dia traz a agenda de hoje; /api/equipe traz fotos, logins, atendimentos e convites.
+  var gestao = null;
   function carregarEquipe() {
-    var lista = painel ? painel.equipe : [];
-    if (!lista.length) { P.trocar($("listaEquipe"), P.vazio("👥", "Nenhum barbeiro ativo ainda.")); return; }
-    P.trocar($("listaEquipe"), lista.map(function (e) {
+    desenharEquipe();
+    return P.api("/api/equipe").then(function (j) {
+      gestao = j;
+      desenharEquipe();
+      desenharConvites();
+    }).catch(function (e) { P.toast(e.message, "erro"); });
+  }
+  function membros() {
+    var hoje = {};
+    (painel ? painel.equipe : []).forEach(function (e) { hoje[e.id] = e; });
+    if (!gestao) return (painel ? painel.equipe : []).map(function (e) { return { id: e.id, nome: e.nome, foto_url: e.foto_url, temLogin: e.temLogin, hoje: e }; });
+    return gestao.profissionais.filter(function (p) { return p.ativo !== false; }).map(function (p) {
+      return { id: p.id, nome: p.nome, foto_url: p.foto_url, temLogin: !!p.perfil_user_id, souEu: !!(eu && p.perfil_user_id === eu.usuario.id), comissao: p.comissao_pct, atendimentos: p.atendimentos, hoje: hoje[p.id] || null };
+    });
+  }
+  function desenharEquipe() {
+    var lista = membros();
+    $("qtdEquipe").textContent = lista.length;
+    $("secVirar").hidden = !(eu && eu.perfil.papel === "dono" && !eu.visaoAdmin);
+    if (!lista.length) { P.trocar($("listaEquipe"), (painel || gestao) ? P.vazio("👥", "Nenhum barbeiro na equipe ainda. Convide pelo e-mail ao lado.") : h("div", { class: "esqueleto" })); return; }
+    P.trocar($("listaEquipe"), lista.map(function (m) {
       var bSemana = h("button", { type: "button", class: "botao p principal" }, [P.icone("agenda"), "Agenda da semana"]);
       var bBloq = h("button", { type: "button", class: "botao p" }, [P.icone("trava"), "Bloqueios"]);
-      bSemana.onclick = function () { abrirSemana(e); };
-      bBloq.onclick = function () { abrirBloqueios(e); };
-      var pub = e.agenda && e.agenda.publicada;
-      return h("div", { class: "membro", style: "flex-wrap:wrap" }, [
-        P.avatar(e),
-        h("div", { class: "cresce" }, [h("div", { class: "nome", texto: e.nome }), h("div", { class: "det", texto: (e.temLogin ? "Tem login" : "Sem login: o dono publica a agenda") + " · hoje " + (pub ? "no site" : "fora do site") })]),
-        h("div", { class: "linha" }, [bSemana, bBloq]),
+      var bGerir = h("button", { type: "button", class: "botao p" }, [P.icone("perfil"), "Perfil"]);
+      bSemana.onclick = function () { abrirSemana(m); };
+      bBloq.onclick = function () { abrirBloqueios(m); };
+      bGerir.onclick = function () { gerenciar(m); };
+      var pub = m.hoje && m.hoje.agenda && m.hoje.agenda.publicada;
+      var det = [m.temLogin ? "Tem login" : "Sem login: o dono publica a agenda"];
+      if (m.atendimentos) det.push(m.atendimentos.ultimos30 + " atend. em 30 dias");
+      return h("div", { class: "membro cartao-membro" }, [
+        h("div", { class: "membro-topo" }, [
+          P.avatar(m),
+          h("div", { class: "cresce" }, [
+            h("div", { class: "nome", texto: m.nome + (m.souEu ? " (você)" : "") }),
+            h("div", { class: "det", texto: det.join(" · ") }),
+            h("span", { class: "selo " + (pub ? "selo-ok" : "selo-alerta"), texto: pub ? "No site hoje" : "Fora do site hoje" }),
+          ]),
+        ]),
+        h("div", { class: "acoes-membro" }, [bSemana, bBloq, bGerir]),
       ]);
     }));
   }
+
+  // Link que abre o site já com o barbeiro escolhido
+  function linkDoBarbeiro(m) { return eu && eu.barbearia ? location.origin + "/" + eu.barbearia.slug + "?barbeiro=" + encodeURIComponent(m.id) : ""; }
+
+  function gerenciar(m) {
+    var foto = P.avatar(m, "g");
+    var arquivo = h("input", { type: "file", accept: "image/jpeg,image/png,image/webp", hidden: true });
+    var bFoto = h("button", { type: "button", class: "botao" }, [P.icone("foto"), m.foto_url ? "Trocar foto" : "Adicionar foto"]);
+    var bTirar = m.foto_url ? h("button", { type: "button", class: "botao fantasma" }, [P.icone("lixo"), "Tirar foto"]) : null;
+    bFoto.onclick = function () { arquivo.click(); };
+    arquivo.onchange = function () { enviarFoto(m, arquivo.files[0], bFoto).then(function (url) { if (!url) return; var novo = P.avatar({ nome: m.nome, foto_url: url }, "g"); foto.replaceWith(novo); foto = novo; }); };
+    if (bTirar) bTirar.onclick = function () {
+      P.acao(bTirar, P.api("/api/equipe", { corpo: { acao: "foto-remover", profissionalId: m.id } }).then(function () {
+        var novo = P.avatar({ nome: m.nome }, "g"); foto.replaceWith(novo); foto = novo; bTirar.remove();
+        P.toast("Foto removida.", "ok"); carregarEquipe(); carregar();
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    };
+    var a = m.atendimentos || { total: 0, ultimos30: 0, servicos: [] };
+    var link = linkDoBarbeiro(m);
+    var conteudo = h("div", { class: "grade" }, [
+      h("div", { class: "perfil-topo" }, [foto, h("div", { class: "cresce" }, [h("div", { class: "nome", texto: m.nome + (m.souEu ? " (você)" : "") }), h("p", { class: "nota p", texto: (m.temLogin ? "Tem login no painel" : "Sem login: você publica a agenda dele") + (m.comissao != null ? " · comissão " + m.comissao + "%" : "") })])]),
+      h("div", { class: "linha" }, [bFoto, bTirar, arquivo]),
+      h("div", { class: "kpis", style: "grid-template-columns:repeat(2,minmax(0,1fr))" }, [
+        h("div", { class: "kpi" }, [h("span", { texto: "Atendimentos" }), h("b", { texto: String(a.total) }), h("small", { texto: "realizados no total" })]),
+        h("div", { class: "kpi" }, [h("span", { texto: "30 dias" }), h("b", { texto: String(a.ultimos30) }), h("small", { texto: "realizados" })]),
+      ]),
+      a.servicos.length ? h("ul", { class: "mini-lista" }, a.servicos.slice(0, 6).map(function (s) { return h("li", null, [h("span", { texto: s.nome }), h("b", { texto: String(s.quantidade) })]); })) : null,
+      link ? h("div", { class: "link-pessoal" }, [
+        h("h3", { texto: "Link direto de agendamento" }),
+        h("p", { class: "nota p", texto: "Abre o site já com " + P.primeiroNome(m.nome) + " escolhido. Bom para o Instagram dele." }),
+        h("p", { class: "copiavel", texto: link }),
+        h("div", { class: "linha" }, [h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(link, "Link copiado."); } }, [P.icone("copiar"), "Copiar link"])]),
+      ]) : null,
+      m.souEu ? null : h("div", { class: "zona-perigo" }, [
+        h("button", { type: "button", class: "botao perigo", onclick: function (ev) { remover(m, ev.currentTarget); } }, [P.icone("lixo"), "Remover da equipe"]),
+        h("p", { class: "nota p", texto: "Os atendimentos já registrados continuam no financeiro." }),
+      ]),
+    ]);
+    P.janela({ titulo: "Perfil de " + P.primeiroNome(m.nome), conteudo: conteudo, acoes: [{ texto: "Fechar", valor: "cancelar" }] });
+  }
+
+  // A foto vai direto ao Storage por um link assinado; depois o servidor grava o endereço
+  function enviarFoto(m, arq, botao) {
+    if (!arq) return Promise.resolve(null);
+    if (arq.size > 5 * 1024 * 1024) { P.toast("A foto deve ter no máximo 5 MB.", "erro"); return Promise.resolve(null); }
+    var url = null;
+    return P.acao(botao, P.api("/api/equipe", { corpo: { acao: "foto-link", profissionalId: m.id, tipo: arq.type, tamanho: arq.size } })
+      .then(function (l) {
+        return fetch(l.uploadUrl, { method: "PUT", headers: { "Content-Type": arq.type }, body: arq }).then(function (r) { if (!r.ok) throw new Error("Não consegui enviar a foto. Tente de novo."); return l.publicUrl; });
+      })
+      .then(function (u) { url = u; return P.api("/api/equipe", { corpo: { acao: "foto-salvar", profissionalId: m.id, foto: u } }); })
+      .then(function () { P.toast("Foto de " + P.primeiroNome(m.nome) + " atualizada.", "ok"); carregarEquipe(); carregar(); })
+      .catch(function (e) { url = null; P.toast(e.message, "erro"); })).then(function () { return url; });
+  }
+
+  function remover(m, botao) {
+    P.confirmar("Remover " + m.nome + "?", "Ele sai da equipe e do site. Os atendimentos já registrados continuam no financeiro.", "Remover", true).then(function (ok) {
+      if (!ok) return;
+      P.acao(botao, P.api("/api/equipe", { corpo: { acao: "remover", profissionalId: m.id } }).then(function () {
+        document.querySelectorAll("dialog.dlg").forEach(function (d) { d.close(""); });
+        P.toast(m.nome + " saiu da equipe.", "ok");
+        carregarEquipe(); carregar();
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
+  }
+
+  // ---------- convites ----------
+  function textoConvite(link, email) {
+    return "Olá! Você foi convidado para trabalhar na " + (ctx.barbearia || "barbearia") + " pelo Bio Site. Abra este link para aceitar o convite: " + link +
+      "\n\nO convite vale por 7 dias e só funciona com o e-mail " + email + ".";
+  }
+  function desenharConvites() {
+    var lista = gestao ? gestao.convites : [];
+    $("qtdConvites").textContent = lista.length;
+    P.trocar($("listaConvites"), lista.length ? lista.map(function (c) {
+      var bCancelar = h("button", { type: "button", class: "botao mini perigo" }, [P.icone("x"), "Cancelar"]);
+      bCancelar.onclick = function () {
+        P.confirmar("Cancelar convite?", "O link enviado para " + c.email + " deixa de funcionar.", "Cancelar convite", true).then(function (ok) {
+          if (!ok) return;
+          P.acao(bCancelar, P.api("/api/equipe", { corpo: { acao: "cancelar-convite", id: c.id } }).then(function () { P.toast("Convite cancelado.", "ok"); carregarEquipe(); }).catch(function (e) { P.toast(e.message, "erro"); }));
+        });
+      };
+      return h("div", { class: "membro", style: "flex-wrap:wrap" }, [
+        h("span", { class: "avatar p" }, P.icone("email")),
+        h("div", { class: "cresce" }, [h("div", { class: "nome", style: "word-break:break-all", texto: c.email }), h("div", { class: "det", texto: "Vale até " + new Date(c.expira_em).toLocaleDateString("pt-BR") })]),
+        h("div", { class: "linha", style: "flex-basis:100%" }, [
+          h("button", { type: "button", class: "botao p whats", onclick: function () { P.abrirWhats(textoConvite(c.link, c.email)); } }, [P.icone("whats"), "WhatsApp"]),
+          h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(c.link, "Link do convite copiado."); } }, [P.icone("copiar"), "Copiar link"]),
+          bCancelar,
+        ]),
+      ]);
+    }) : P.vazio("✉️", "Nenhum convite esperando resposta."));
+  }
+  $("formConvite").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var email = $("cEmail").value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { P.toast("Informe um e-mail válido.", "erro"); $("cEmail").focus(); return; }
+    P.acao($("btnConvidar"), P.api("/api/equipe", { corpo: { acao: "convidar", email: email } }).then(function (j) {
+      $("cEmail").value = "";
+      carregarEquipe();
+      P.janela({
+        titulo: "Convite criado",
+        conteudo: h("div", { class: "grade" }, [
+          h("p", { class: "nota", texto: "Envie este link para " + email + ". Ele vale por 7 dias e só funciona com esse e-mail." }),
+          h("p", { class: "copiavel", texto: j.link }),
+          h("div", { class: "linha" }, [
+            h("button", { type: "button", class: "botao whats", onclick: function () { P.abrirWhats(textoConvite(j.link, email)); } }, [P.icone("whats"), "Enviar pelo WhatsApp"]),
+            h("button", { type: "button", class: "botao", onclick: function () { P.copiar(j.link, "Link do convite copiado."); } }, [P.icone("copiar"), "Copiar link"]),
+          ]),
+        ]),
+        acoes: [{ texto: "Pronto", classe: "principal", valor: "ok" }],
+      });
+    }).catch(function (e) { P.toast(e.message, "erro"); }));
+  });
+
+  // O dono passa a atender também (vira dono-barbeiro)
+  $("virarBarbeiro").onclick = function () {
+    P.confirmar("Também atendo clientes", "Você passa a aparecer como barbeiro no site e na agenda. Depois, publique seus horários aqui na Equipe.", "Continuar").then(function (ok) {
+      if (!ok) return;
+      P.acao($("virarBarbeiro"), P.api("/api/eu", { corpo: { acao: "virar-barbeiro" } }).then(function () {
+        P.toast("Pronto. Agora você atende também.", "ok");
+        setTimeout(function () { location.reload(); }, 900);
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
+  };
   function abrirSemana(e) {
     var caixa = h("div", { class: "grade" });
     P.janela({ titulo: "Agenda de " + e.nome, conteudo: caixa, acoes: [{ texto: "Fechar", valor: "cancelar" }] }).then(function () { carregar(); });
@@ -302,7 +479,7 @@
     var linkSite = slug ? location.origin + "/" + slug : "";
     var itens = [
       itemMenu("grafico", "Financeiro", "Faturamento, comissões, gastos e insumos", { href: P.link("financeiro.html") }),
-      itemMenu("equipe", "Convites e acessos", "Convidar barbeiros, fotos e acessos", { href: P.link("app.html") }),
+      itemMenu("equipe", "Equipe e convites", "Convidar barbeiros, fotos e links de cada um", { href: "#equipe" }),
       slug ? itemMenu("site", "Ver o site", linkSite.replace(/^https?:\/\//, ""), { href: "/" + slug, target: "_blank", rel: "noopener" }) : null,
       slug ? itemMenu("link", "Copiar link de agendamento", "Para colocar no Instagram e no WhatsApp", { onclick: function () {
         (navigator.clipboard ? navigator.clipboard.writeText(linkSite) : Promise.reject()).then(function () { P.toast("Link copiado: " + linkSite, "ok"); }).catch(function () { P.janela({ titulo: "Link de agendamento", conteudo: h("p", { class: "obs", texto: linkSite }), acoes: [{ texto: "OK", classe: "principal", valor: "ok" }] }); });

@@ -445,7 +445,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
 
 <script src="/conta.js"></script>
 <script>
-const GERADOR_VERSAO = 3;
+const GERADOR_VERSAO = 4;
 const FONTS = {
   "Poppins":"Poppins:wght@400;600;700",
   "Montserrat":"Montserrat:wght@400;600;800",
@@ -885,7 +885,9 @@ function agendaRuntime(){
   document.addEventListener("click",function(e){var c=e.target.closest("[data-barb]");if(c)abrirBarbeiro(c.getAttribute("data-barb"))});
   document.addEventListener("click",function(e){var c=e.target.closest("[data-agendar]");if(c)abrirServico(c.getAttribute("data-agendar"))});
   document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
-  carregarEquipe(function(){desenharBarbeiros();if(dlg.open)render()});
+  // Link pessoal do barbeiro (/slug?barbeiro=id): o site já abre o agendamento com ele escolhido
+  function abrirDoLink(){var id="";try{id=new URLSearchParams(location.search).get("barbeiro")||""}catch(e){}if(id&&porId(equipe||[],id))abrirBarbeiro(id)}
+  carregarEquipe(function(){desenharBarbeiros();if(dlg.open)render();else abrirDoLink()});
   dlg.querySelector("[data-close]").addEventListener("click",fechar);
   function cliqueWhats(){abrirLink(linkWhats("Olá! Quero agendar um horário"+(sel.servico?" para "+sel.servico.nome:"")+"."))}
   $("agSteps").addEventListener("click",function(e){

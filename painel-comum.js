@@ -56,6 +56,11 @@
     link: "M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1",
     sino: "M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0",
     sair: "M14 4.5h4.5A1.5 1.5 0 0 1 20 6v12a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10",
+    copiar: "M9 9h10.5v10.5H9zM15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9",
+    compartilhar: "M12 15V3.5M7.5 8L12 3.5 16.5 8M5 12.5v6A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-6",
+    foto: "M4 7.5A1.5 1.5 0 0 1 5.5 6h2.2l1.5-2h5.6l1.5 2h2.2A1.5 1.5 0 0 1 20 7.5v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z",
+    email: "M3.5 6.5h17v11h-17zM4 7l8 6 8-6",
+    lixo: "M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5",
     baixar: "M12 4v11M7.5 10.5L12 15l4.5-4.5M4.5 19.5h15",
     mais_um: "M12 5v14M5 12h14",
     whats: "M4 20l1.3-4A8 8 0 1 1 8 18.7zM9 9.5c.3 2.5 2.5 4.7 5 5l1.3-1.3 1.7.8v1.5c-4.2.4-8.6-4-8.2-8.2H10.3l.8 1.7z",
@@ -107,7 +112,8 @@
     var hh = Math.floor(min / 60), mm = min % 60;
     return "em " + hh + "h" + (mm ? String(mm).padStart(2, "0") : "");
   };
-  P.iniciais = function (nome) { return String(nome || "?").trim().split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0); }).join("").toUpperCase() || "?"; };
+  // Iniciais só de palavras que começam com letra ou número ("Bruno (teste)" vira "B")
+  P.iniciais = function (nome) { return String(nome || "?").trim().split(/\s+/).filter(function (x) { return /^[\p{L}\p{N}]/u.test(x); }).slice(0, 2).map(function (x) { return x.charAt(0); }).join("").toUpperCase() || "?"; };
   P.primeiroNome = function (nome) { return String(nome || "").trim().split(/\s+/)[0] || ""; };
   P.avatar = function (pessoa, tamanho) {
     var a = h("span", { class: "avatar" + (tamanho ? " " + tamanho : "") });
@@ -213,6 +219,21 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
+  };
+
+  // Copia um texto; se o navegador não deixar, mostra o texto para copiar à mão
+  P.copiar = function (texto, aviso) {
+    var copia = navigator.clipboard && window.isSecureContext ? navigator.clipboard.writeText(texto) : Promise.reject(new Error("sem área de transferência"));
+    return copia.then(function () { P.toast(aviso || "Copiado.", "ok"); }).catch(function () {
+      P.janela({ titulo: "Copie o texto", conteudo: h("p", { class: "copiavel", texto: texto }), acoes: [{ texto: "OK", classe: "principal", valor: "ok" }] });
+    });
+  };
+  // Compartilhar pelo menu do celular (Instagram, WhatsApp...); sem esse menu, abre o WhatsApp
+  P.podeCompartilhar = function () { return !!navigator.share; };
+  P.compartilhar = function (titulo, texto, url) {
+    if (navigator.share) return navigator.share({ title: titulo, text: texto, url: url }).catch(function () {});
+    P.abrirWhats(texto + " " + url);
+    return Promise.resolve();
   };
 
   // ---------- abas pelo endereço (#hoje, #agenda...) ----------

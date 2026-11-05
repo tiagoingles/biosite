@@ -76,7 +76,8 @@ test("Criador está igual ao gerador do servidor (evita publicar versão antiga)
 test("site da GW Barbearia gerado com a versão atual do gerador", () => {
   const html = ler("gw-barbearia.html");
   const cfg = extrairConfig(html);
-  assert.equal(G.bioHTML(cfg, (u) => u), html, "regenerar com lib/gerador.js");
+  // O código do agendamento vem do próprio lib/gerador.js: no Windows ele pode estar com CRLF
+  assert.equal(G.bioHTML(cfg, (u) => u).replace(/\r\n/g, "\n"), html, "regenerar com lib/gerador.js");
   assert.ok(html.includes("tem-pref"), "tem a escolha de preferência de barbeiro");
 });
 

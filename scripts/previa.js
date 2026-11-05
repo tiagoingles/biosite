@@ -138,6 +138,8 @@ const servidor = http.createServer(async (req, res) => {
     }
     if (u.pathname === "/api/barbearia") return json(res, 200, { email: "bruno.teste@exemplo.com", senha: "Previa-1234" });
     // Site público (agendamento): equipe e horários fictícios
+    // Site sem cadastro no sistema (como a JM): a API não conhece a barbearia
+    if (u.pathname === "/api/profissionais" && q.slug !== "gw-barbearia") return json(res, 404, { message: "Barbearia não encontrada." });
     if (u.pathname === "/api/profissionais") return json(res, 200, { profissionais: equipeGestao.map((p) => ({ id: p.id, nome: p.nome, foto_url: p.foto_url })), precos: {} });
     if (u.pathname === "/api/horarios") {
       if (q.dias === "1") return json(res, 200, { dias: [hoje, somaDias(hoje, 1), somaDias(hoje, 2)] });

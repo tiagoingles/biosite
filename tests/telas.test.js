@@ -57,6 +57,15 @@ test("site gerado abre o agendamento com o barbeiro do link (?barbeiro=)", () =>
   assert.match(html, /if\(id&&porId\(equipe\|\|\[\],id\)\)abrirBarbeiro\(id\)/, "só abre se o barbeiro existir na equipe");
 });
 
+test("site sem cadastro no sistema (só o site) manda o pedido direto pelo WhatsApp", () => {
+  for (const arq of ["gw-barbearia.html", "jm-barbearia.html"]) {
+    const html = ler(arq);
+    assert.match(html, /if\(r\.status===404\)semCadastro=true/, `${arq}: percebe barbearia sem cadastro`);
+    assert.match(html, /if\(semCadastro\)\{concluir\(nome,obs,\{\}\);return\}/, `${arq}: não tenta registrar nem mostra erro`);
+    assert.match(html, /Seu pedido não foi registrado/, `${arq}: com cadastro, falha continua avisando`);
+  }
+});
+
 // ---------- API da equipe ----------
 function rotasEquipe(gravados) {
   return [

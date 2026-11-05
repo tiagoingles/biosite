@@ -5,6 +5,7 @@ const A = require("./ajuda");
 const criadorGh = require("../api/criador-gh");
 const midia = require("../api/midia");
 const S = require("../lib/seguranca");
+const G = require("../lib/gerador");
 
 function rotasGithub(tentativas = 0) {
   return [
@@ -45,11 +46,54 @@ test("Criador: atualização forçada da branch é recusada", async () => {
   A.instalarFetch(rotasGithub(0));
   const r = await A.chamar(criadorGh, {
     metodo: "POST",
-    corpo: { senha: process.env.CRIADOR_SENHA, caminho: "/git/refs/heads/main", metodo: "PATCH", corpo: JSON.stringify({ sha: "a".repeat(40), force: true }) },
+    corpo: { senha: process.env.CRIADOR_SENHA, versao: G.VERSAO, caminho: "/git/refs/heads/main", metodo: "PATCH", corpo: JSON.stringify({ sha: "a".repeat(40), force: true }) },
     headers: { "x-real-ip": "198.51.100.4" },
   });
   assert.equal(r.statusCode, 400);
   assert.match(r.body.message, /forçada/);
+});
+
+// Aba antiga do Criador (aconteceu em 05/11: publicou o site da JM com o gerador velho
+// e regravou api/precos.js sem a proteção contra força bruta)
+test("Criador: aba desatualizada não grava nada no GitHub", async () => {
+  const chamadas = A.instalarFetch(rotasGithub(0));
+  for (const versao of [undefined, G.VERSAO - 1, "x"]) {
+    const r = await A.chamar(criadorGh, {
+      metodo: "POST",
+      corpo: { senha: process.env.CRIADOR_SENHA, versao, caminho: "/git/trees", metodo: "POST", corpo: JSON.stringify({ tree: [] }) },
+      headers: { "x-real-ip": "198.51.100.6" },
+    });
+    assert.equal(r.statusCode, 426, `versão ${versao}`);
+    assert.match(r.body.message, /Recarregue/);
+  }
+  assert.ok(!chamadas.some((c) => c.url.includes("api.github.com")), "nada chega ao GitHub");
+  // leitura continua liberada (o Criador antigo ainda abre e mostra a mensagem ao publicar)
+  const ler = await A.chamar(criadorGh, { metodo: "POST", corpo: { senha: process.env.CRIADOR_SENHA, caminho: "", metodo: "GET" }, headers: { "x-real-ip": "198.51.100.6" } });
+  assert.equal(ler.statusCode, 200);
+});
+
+test("Criador: só publica arquivos do site; arquivos da plataforma ficam como estão", async () => {
+  const chamadas = A.instalarFetch(rotasGithub(0));
+  const arvore = (paths) => ({
+    metodo: "POST",
+    corpo: { senha: process.env.CRIADOR_SENHA, versao: G.VERSAO, caminho: "/git/trees", metodo: "POST", corpo: JSON.stringify({ base_tree: "b".repeat(40), tree: paths.map((path) => ({ path, mode: "100644", type: "blob", content: "x" })) }) },
+    headers: { "x-real-ip": "198.51.100.7" },
+  });
+  // Publicação normal: página, atalho de avaliação, foto e acesso do painel; api/precos.js e painel.html são ignorados
+  let r = await A.chamar(criadorGh, arvore(["jm-barbearia.html", "jm-barbearia-avaliar.html", "img/jm-barbearia/capa-1.jpg", "admin/jm-barbearia.json", "api/precos.js", "painel.html"]));
+  assert.equal(r.statusCode, 200);
+  const enviado = chamadas.filter((c) => c.url.endsWith("/git/trees")).pop().corpo;
+  assert.deepEqual(enviado.tree.map((e) => e.path), ["jm-barbearia.html", "jm-barbearia-avaliar.html", "img/jm-barbearia/capa-1.jpg", "admin/jm-barbearia.json"]);
+  // Páginas da plataforma, código e endereços reservados: recusado
+  for (const p of ["app.html", "entrar.html", "painel-dono.html", "painel-qualquer.html", "criador.html", "index.html", "vendas.html", "lib/gerador.js", "api/pedido.js", "vercel.json", "sw.js", "img/../app.html", "admin/app.json", "-x.html"]) {
+    r = await A.chamar(criadorGh, arvore([p]));
+    assert.equal(r.statusCode, 400, p);
+  }
+  // Gravação direta de arquivo: mesma regra
+  const put = (arq) => A.chamar(criadorGh, { metodo: "POST", corpo: { senha: process.env.CRIADOR_SENHA, versao: G.VERSAO, caminho: "/contents/" + arq, metodo: "PUT", corpo: JSON.stringify({ message: "x", content: "eA==" }) }, headers: { "x-real-ip": "198.51.100.7" } });
+  assert.equal((await put("app.html")).statusCode, 400);
+  assert.equal((await put("api%2Fprecos.js")).statusCode, 400);
+  assert.equal((await put("jm-barbearia.html")).statusCode, 200);
 });
 
 test("mídia: senha, tipo e tamanho conferidos", async () => {

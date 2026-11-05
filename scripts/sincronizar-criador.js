@@ -1,7 +1,7 @@
 // Mantém o Criador (criador.html) igual aos arquivos do servidor:
 // - funções do gerador do site (lib/gerador.js): bioRuntime, agendaRuntime e o corpo de bioHTML;
-// - versão do gerador (GERADOR_VERSAO), que impede um Criador antigo de publicar;
-// - cópias embutidas de api/precos.js e painel.html (o Criador grava esses arquivos a cada publicação).
+// - versão do gerador (GERADOR_VERSAO), que impede um Criador antigo de publicar
+//   (o Criador manda a versão em cada gravação e o servidor recusa versão diferente).
 // Uso: node scripts/sincronizar-criador.js        (grava)
 //      node scripts/sincronizar-criador.js --checar (só confere; sai com erro se estiver diferente)
 const fs = require("fs");
@@ -23,11 +23,6 @@ function faixaDaFuncao(src, nome) {
     }
   }
   throw new Error("Função sem fim: " + nome);
-}
-
-// Texto como string JS dentro de <script> (sem fechar a tag por engano)
-function comoString(texto) {
-  return JSON.stringify(texto).replace(/<\//g, "<\\/");
 }
 
 function sincronizado(criador) {
@@ -53,9 +48,8 @@ function sincronizado(criador) {
   if (/const GERADOR_VERSAO = \d+;/.test(c)) c = c.replace(/const GERADOR_VERSAO = \d+;/, `const GERADOR_VERSAO = ${versao};`);
   else c = c.replace("const FONTS = {", `const GERADOR_VERSAO = ${versao};\nconst FONTS = {`);
 
-  // Arquivos embutidos
-  c = c.replace(/(const ARQ_API = \/\*__API__\*\/)"(?:[^"\\]|\\.)*"/, (m, a) => a + comoString(ler("api/precos.js")).replace(/\$/g, "$$$$"));
-  c = c.replace(/(const ARQ_PAINEL = \/\*__PAINEL__\*\/)"(?:[^"\\]|\\.)*"/, (m, a) => a + comoString(ler("painel.html")).replace(/\$/g, "$$$$"));
+  // api/precos.js e painel.html não vão mais embutidos: o Criador só publica arquivos do site
+  // (o servidor também recusa qualquer outro arquivo; ver api/criador-gh.js)
   return c;
 }
 

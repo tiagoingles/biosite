@@ -242,8 +242,10 @@ a.ag-op{text-decoration:none}
   // Etapas: servico -> pref (tem preferência de barbeiro?) -> prof (só se sim) -> dia -> dados -> ok
   var etapa="servico",pilha=[],sel={},dias=[],enviando=false,ultimo=null;
   var equipe=null,cacheHoras={},cacheDias={};
+  // Barbearia sem cadastro no sistema (só o site): o pedido vai direto pelo WhatsApp, sem registro
+  var semCadastro=false;
   function carregarEquipe(cb){
-    fetch("/api/profissionais?slug="+encodeURIComponent(C.slug)).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
+    fetch("/api/profissionais?slug="+encodeURIComponent(C.slug)).then(function(r){if(r.status===404)semCadastro=true;return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
       var lista=j&&j.profissionais?j.profissionais:[];
       // Preço cadastrado no financeiro vale no site (é o que vai para o pedido)
       var precos=j&&j.precos||{};
@@ -415,6 +417,7 @@ a.ag-op{text-decoration:none}
     if(enviando)return;
     var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
     if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
+    if(semCadastro){concluir(nome,obs,{});return}
     var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
     var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
     enviando=true;botao.disabled=true;if(rotulo)rotulo.textContent="Enviando…";
@@ -427,16 +430,19 @@ a.ag-op{text-decoration:none}
         $("agErro").innerHTML=esc(m)+" Seu pedido não foi registrado."+(whats()?'<br><button type="button" class="ag-op" data-ag="whats"><b>Falar com a barbearia no WhatsApp</b></button>':"");
         return;
       }
-      var j=res.j||{};
-      var cod=j.codigo||"";
-      var quem=sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
-      var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
-      if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
-      ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),link:linkWhats(txt)};
-      pilha=[];etapa="ok";render();
-      abrirLink(ultimo.link);
+      concluir(nome,obs,res.j||{});
     });
   });
+  // Pedido feito: mostra o resumo (com o código, quando registrado) e abre o WhatsApp com a mensagem pronta
+  function concluir(nome,obs,j){
+    var cod=j.codigo||"";
+    var quem=sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
+    var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
+    if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
+    ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),link:linkWhats(txt)};
+    pilha=[];etapa="ok";render();
+    abrirLink(ultimo.link);
+  }
 })()</script>
 <script>(function(){var n=0;function e(t,d){if(n++>3||!navigator.sendBeacon)return;try{navigator.sendBeacon("/api/config",new Blob([JSON.stringify({tipo:"erro",nome:String(t),detalhe:String(d).slice(0,500),rota:location.pathname})],{type:"application/json"}))}catch(x){}}addEventListener("error",function(v){e((v.error&&v.error.name)||"Error",v.message+" @"+v.lineno)});addEventListener("unhandledrejection",function(v){e("Promise",(v.reason&&v.reason.message)||v.reason)})})()</script>
 </body></html>

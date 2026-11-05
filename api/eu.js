@@ -6,7 +6,34 @@ const { rest, linkDeEnvio, cfg } = require("../lib/supabase");
 // Foto do próprio barbeiro: JPG, PNG ou WebP até 5 MB, no bucket público "midia"
 const FOTOS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const FOTO_MAX = 5 * 1024 * 1024;
-const { usuarioDaRequisicao, perfilDe, barbeariaDe, ehAdminDaPlataforma } = require("../lib/conta");
+const { usuarioDaRequisicao, perfilDe, perfilDoContexto, barbeariaDe, ehAdminDaPlataforma } = require("../lib/conta");
+const { diaDaSemana } = require("../lib/horarios");
+const { hojeEmBrasilia } = require("../lib/disponibilidade");
+
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+const HORA = /^\d{2}:\d{2}$/;
+const min = (h) => { const [a, b] = h.split(":").map(Number); return a * 60 + b; };
+const cortaHora = (t) => (t ? String(t).slice(0, 5) : null);
+
+// Agenda do dia do barbeiro ligado a esta conta: o que está salvo e o padrão da semana
+async function agendaDoDia(profissionalId, dia) {
+  const [linha] = await rest(`agenda_dia?profissional_id=eq.${profissionalId}&dia=eq.${dia}&select=inicio,fim,almoco_inicio,almoco_fim,confirmada_em`);
+  const dow = diaDaSemana(dia);
+  const [jornada] = await rest(`disponibilidade?profissional_id=eq.${profissionalId}&dia_semana=eq.${dow}&select=inicio,fim`);
+  const [almoco] = await rest(`bloqueios?profissional_id=eq.${profissionalId}&tipo=eq.recorrente&dia_semana=eq.${dow}&select=inicio,fim&order=inicio.asc`);
+  return {
+    dia,
+    agenda: linha
+      ? { inicio: cortaHora(linha.inicio), fim: cortaHora(linha.fim), almocoInicio: cortaHora(linha.almoco_inicio), almocoFim: cortaHora(linha.almoco_fim), confirmadaEm: linha.confirmada_em }
+      : null,
+    padrao: {
+      inicio: jornada ? cortaHora(jornada.inicio) : "09:00",
+      fim: jornada ? cortaHora(jornada.fim) : "18:00",
+      almocoInicio: almoco ? cortaHora(almoco.inicio) : "",
+      almocoFim: almoco ? cortaHora(almoco.fim) : "",
+    },
+  };
+}
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -16,7 +43,21 @@ module.exports = async (req, res) => {
 
     const perfil = await perfilDe(u.id);
 
+    if (req.method === "GET" && req.query.agenda === "1") {
+      const meu = (await rest(`profissionais?perfil_user_id=eq.${u.id}&select=id`))[0];
+      if (!meu) return res.status(403).json({ message: "Sua conta não tem agenda de atendimento." });
+      const dia = String(req.query.dia || hojeEmBrasilia());
+      if (!DIA.test(dia)) return res.status(400).json({ message: "Data inválida." });
+      return res.status(200).json(await agendaDoDia(meu.id, dia));
+    }
+
     if (req.method === "GET") {
+      // Administrador da plataforma abrindo um site (?barbearia=id): vê a página como o dono dele
+      const contexto = await perfilDoContexto(u, req);
+      if (contexto && contexto.visaoAdmin) {
+        const barbearia = await barbeariaDe(contexto.barbearia_id);
+        return res.status(200).json({ usuario: { id: u.id, email: u.email }, perfil: contexto, barbearia, profissional: null, admin: false, visaoAdmin: true });
+      }
       if (!perfil && (await ehAdminDaPlataforma(u.id))) {
         // Administrador da plataforma: vê todos os sites
         const barbearias = await rest("barbearias?select=id,slug,nome,teste_user_id&order=criado_em.desc");
@@ -90,6 +131,39 @@ module.exports = async (req, res) => {
         if (!foto.startsWith(prefixo) || foto.includes("..") || foto.length > 500) return res.status(400).json({ message: "Foto inválida." });
         await rest(`profissionais?id=eq.${meu.id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { foto_url: foto } });
         return res.status(200).json({ ok: true });
+      }
+
+      // Agenda do dia: salvar mantém fora do site até o barbeiro confirmar; confirmar publica o dia
+      if (b.acao === "agenda-dia-salvar") {
+        const meu = (await rest(`profissionais?perfil_user_id=eq.${u.id}&select=id,barbearia_id`))[0];
+        if (!meu) return res.status(403).json({ message: "Sua conta não tem agenda de atendimento." });
+        const dia = String(b.dia || "");
+        const inicio = String(b.inicio || "");
+        const fim = String(b.fim || "");
+        const almocoInicio = String(b.almocoInicio || "");
+        const almocoFim = String(b.almocoFim || "");
+        if (!DIA.test(dia)) return res.status(400).json({ message: "Data inválida." });
+        if (dia < hojeEmBrasilia()) return res.status(400).json({ message: "Não dá para mudar a agenda de um dia que já passou." });
+        if (!HORA.test(inicio) || !HORA.test(fim) || min(fim) <= min(inicio)) return res.status(400).json({ message: "Informe o horário de início e de fim do expediente." });
+        const temAlmoco = almocoInicio !== "" || almocoFim !== "";
+        if (temAlmoco && (!HORA.test(almocoInicio) || !HORA.test(almocoFim) || min(almocoFim) <= min(almocoInicio) || min(almocoInicio) < min(inicio) || min(almocoFim) > min(fim))) {
+          return res.status(400).json({ message: "O horário de almoço precisa estar dentro do expediente." });
+        }
+        await rest("agenda_dia?on_conflict=profissional_id,dia", {
+          metodo: "POST",
+          prefer: "resolution=merge-duplicates,return=minimal",
+          corpo: {
+            profissional_id: meu.id,
+            dia,
+            inicio,
+            fim,
+            almoco_inicio: temAlmoco ? almocoInicio : null,
+            almoco_fim: temAlmoco ? almocoFim : null,
+            confirmada_em: b.confirmar === true ? new Date().toISOString() : null,
+            atualizada_em: new Date().toISOString(),
+          },
+        });
+        return res.status(200).json(await agendaDoDia(meu.id, dia));
       }
 
       if (b.acao !== "virar-barbeiro") return res.status(400).json({ message: "Ação desconhecida." });

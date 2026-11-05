@@ -40,6 +40,11 @@ button.perigo{color:var(--erro)}
 .equipe{display:grid;gap:6px}
 .equipe div{display:flex;justify-content:space-between;gap:8px}
 [hidden]{display:none!important}
+/* Ordem das seções: o que pede ação aparece primeiro */
+#secPendentes{order:1}#secHoje{order:2}#secEquipe{order:3}#secAvulso{order:4}#secResumo{order:5}#secAvisos{order:6}
+.ancoras{display:flex;gap:8px;flex-wrap:wrap;order:0;grid-column:1 / -1;align-items:center}
+.ancoras a{font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid var(--linha);background:var(--suave);color:var(--texto);text-decoration:none}
+.ancoras a:hover{border-color:var(--cor)}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (min-width:900px){.cards{grid-template-columns:repeat(4,1fr)}}
 .card{border:1px solid var(--linha);border-radius:12px;padding:12px;display:grid;gap:4px;background:var(--fundo)}
@@ -58,6 +63,13 @@ button.perigo{color:var(--erro)}
 </header>
 <main>
   <p class="note" id="carregando">Carregando…</p>
+  <nav class="ancoras" aria-label="Seções">
+    <a href="#secPendentes">Pedidos</a>
+    <a href="#secHoje">Agenda do dia</a>
+    <a href="#secEquipe">Equipe</a>
+    <a href="#secAvulso">Atendimento avulso</a>
+    <a href="#secResumo">Faturamento</a>
+  </nav>
 
   <section id="secAvisos" hidden>
     <h2>Avisos de pedido</h2>
@@ -121,8 +133,18 @@ button.perigo{color:var(--erro)}
 
   function hojeBrasilia() { return new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10); }
   function esc(t) { return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function el(tag, txt, cls) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; }
   function msg(id, t, tipo) { $(id).textContent = t; $(id).className = "msg " + (tipo || ""); }
   function dataBr(iso) { var p = iso.split("-"); return p[2] + "/" + p[1]; }
+
+  // Administrador da plataforma abre o site com ?barbearia=id: as chamadas levam esse id
+  var CTX = new URLSearchParams(location.search).get("barbearia") || "";
+  var contaApi = Conta.api;
+  function api(p, o) {
+    if (CTX) p += (p.indexOf("?") > -1 ? "&" : "?") + "barbearia=" + encodeURIComponent(CTX);
+    return contaApi(p, o);
+  }
+  if (CTX) document.querySelectorAll("a.botao[href$='.html']").forEach(function (a) { a.href = a.getAttribute("href") + "?barbearia=" + encodeURIComponent(CTX); });
 
   if (!Conta.ler()) { location.replace("entrar.html"); return; }
   $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
@@ -140,7 +162,7 @@ button.perigo{color:var(--erro)}
   $("dia").addEventListener("change", function () { dia = $("dia").value || hojeBrasilia(); carregarDia(); });
 
   // Só o dono e o dono-barbeiro usam esta tela; barbeiro vai para a própria
-  Conta.api("/api/eu").then(function (d) {
+  api("/api/eu").then(function (d) {
     if (d.admin || !d.perfil) { location.replace("app.html"); return; }
     if (d.perfil.papel === "barbeiro") { location.replace("painel-barbeiro.html"); return; }
     $("titulo").textContent = d.barbearia ? d.barbearia.nome : "Painel do dono";
@@ -159,7 +181,7 @@ button.perigo{color:var(--erro)}
 
   // Cartões de faturamento: dia, semana, mês e trimestre
   function carregarResumo() {
-    Conta.api("/api/equipe?area=financeiro").then(function (j) {
+    api("/api/equipe?area=financeiro").then(function (j) {
       $("secResumo").hidden = false;
       $("resumoSim").hidden = !j.temSimulacao;
       var box = $("cardsResumo"); box.textContent = "";
@@ -188,7 +210,7 @@ button.perigo{color:var(--erro)}
     var atual = p.valor == null ? "" : String(p.valor).replace(".", ",");
     var novo = prompt("Novo valor do atendimento em R$ (ex.: 40,00). Deixe vazio para tirar o valor.", atual);
     if (novo === null) return;
-    Conta.api("/api/pedido", { metodo: "PATCH", corpo: { id: p.id, valor: novo.trim() } })
+    api("/api/pedido", { metodo: "PATCH", corpo: { id: p.id, valor: novo.trim() } })
       .then(function () { carregarTudo(); })
       .catch(function (err) { alert(err.message); });
   }
@@ -239,7 +261,7 @@ button.perigo{color:var(--erro)}
     return box;
   }
   function encerrar(id, corpo) {
-    Conta.api("/api/pedido", { metodo: "PATCH", corpo: Object.assign({ id: id }, corpo) })
+    api("/api/pedido", { metodo: "PATCH", corpo: Object.assign({ id: id }, corpo) })
       .then(function () { msg("msgDia", "Atendimento registrado.", "ok"); carregarTudo(); })
       .catch(function (err) { msg("msgDia", err.message, "erro"); carregarTudo(); });
   }
@@ -251,7 +273,7 @@ button.perigo{color:var(--erro)}
 
   // Barbeiros da equipe para escolher no atendimento espontâneo
   function carregarEquipeAvulso() {
-    Conta.api("/api/equipe").then(function (j) {
+    api("/api/equipe").then(function (j) {
       var sel = $("avProf"); sel.textContent = "";
       j.profissionais.filter(function (p) { return p.ativo; }).forEach(function (p) {
         var o = document.createElement("option"); o.value = p.id; o.textContent = p.nome; sel.appendChild(o);
@@ -260,13 +282,13 @@ button.perigo{color:var(--erro)}
   }
   $("formAvulso").addEventListener("submit", function (e) {
     e.preventDefault();
-    Conta.api("/api/pedido", { corpo: { acao: "avulso", profissionalId: $("avProf").value, servico: $("avServico").value.trim(), cliente: $("avCliente").value.trim(), dia: dia, horario: $("avHora").value, duracao: +$("avDuracao").value } })
+    api("/api/pedido", { corpo: { acao: "avulso", profissionalId: $("avProf").value, servico: $("avServico").value.trim(), cliente: $("avCliente").value.trim(), dia: dia, horario: $("avHora").value, duracao: +$("avDuracao").value } })
       .then(function () { msg("msgAvulso", "Atendimento registrado.", "ok"); $("formAvulso").reset(); carregarEquipeAvulso(); carregarTudo(); })
       .catch(function (err) { msg("msgAvulso", err.message, "erro"); });
   });
 
   function carregarPendentes() {
-    Conta.api("/api/pedido?pendentes=1").then(function (j) {
+    api("/api/pedido?pendentes=1").then(function (j) {
       var lista = $("listaPend"); lista.textContent = "";
       $("qtdPend").textContent = j.pedidos.length;
       if (!j.pedidos.length) { lista.innerHTML = "<p class='vazio'>Nenhum pedido esperando confirmação.</p>"; return; }
@@ -275,7 +297,7 @@ button.perigo{color:var(--erro)}
   }
 
   function carregarDia() {
-    Conta.api("/api/pedido?dia=" + dia).then(function (j) {
+    api("/api/pedido?dia=" + dia).then(function (j) {
       var lista = $("listaDia"); lista.textContent = "";
       if (!j.pedidos.length) lista.innerHTML = "<p class='vazio'>Nenhum pedido neste dia.</p>";
       j.pedidos.forEach(function (p) { lista.appendChild(linhaPedido(p, true)); });
@@ -302,7 +324,7 @@ button.perigo{color:var(--erro)}
   }
 
   function decidir(id, status, onde) {
-    Conta.api("/api/pedido", { metodo: "PATCH", corpo: { id: id, status: status } })
+    api("/api/pedido", { metodo: "PATCH", corpo: { id: id, status: status } })
       .then(function () { msg(onde, status === "confirmado" ? "Confirmado." : "Recusado.", "ok"); carregarTudo(); })
       .catch(function (err) { msg(onde, err.message, "erro"); carregarTudo(); });
   }

@@ -4,7 +4,7 @@
 // POST acao "cancelar-convite" e "remover": desfazem convite ou remove um barbeiro.
 const crypto = require("crypto");
 const { rest, linkDeEnvio, cfg } = require("../lib/supabase");
-const { usuarioDaRequisicao, perfilDe, ehAdmin } = require("../lib/conta");
+const { usuarioDaRequisicao, perfilDoContexto, ehAdmin } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -12,6 +12,16 @@ const DIAS_CONVITE = 7;
 // Foto do barbeiro: JPG, PNG ou WebP até 5 MB, no bucket público "midia"
 const FOTOS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const FOTO_MAX = 5 * 1024 * 1024;
+
+// Lê todas as linhas de uma consulta, em páginas (o banco devolve no máximo 1000 por vez)
+async function todosDoBanco(caminho) {
+  let saida = [];
+  for (let inicio = 0; ; inicio += 1000) {
+    const lote = await rest(`${caminho}&limit=1000&offset=${inicio}`);
+    saida = saida.concat(lote);
+    if (lote.length < 1000) return saida;
+  }
+}
 
 function enderecoDoSite(req) {
   const proto = req.headers["x-forwarded-proto"] || "https";
@@ -27,7 +37,7 @@ module.exports = async (req, res) => {
   try {
     const u = await usuarioDaRequisicao(req);
     if (!u) return res.status(401).json({ message: "Entre na sua conta para continuar." });
-    const perfil = await perfilDe(u.id);
+    const perfil = await perfilDoContexto(u, req);
     if (!ehAdmin(perfil)) return res.status(403).json({ message: "Só o dono administra a equipe." });
 
     if (req.method === "GET") {
@@ -35,8 +45,31 @@ module.exports = async (req, res) => {
       const convites = await rest(
         `convites?barbearia_id=eq.${perfil.barbearia_id}&aceito_em=is.null&expira_em=gt.${new Date().toISOString()}&select=id,email,token,expira_em&order=criado_em.desc`
       );
+      // Atendimentos realizados por barbeiro e por serviço: total e últimos 30 dias
+      const hojeBr = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
+      const desde30 = new Date(Date.now() - 3 * 36e5 - 29 * 864e5).toISOString().slice(0, 10);
+      const feitos = await todosDoBanco(`pedidos?barbearia_id=eq.${perfil.barbearia_id}&status=eq.realizado&select=profissional_id,servico,dia&order=id`);
+      const porProf = {};
+      for (const f of feitos) {
+        if (!f.profissional_id || f.dia > hojeBr) continue;
+        const r = porProf[f.profissional_id] || (porProf[f.profissional_id] = { total: 0, ultimos30: 0, servicos: {} });
+        r.total++;
+        if (f.dia >= desde30) r.ultimos30++;
+        r.servicos[f.servico] = (r.servicos[f.servico] || 0) + 1;
+      }
+      const comAtendimentos = profissionais.map((p) => {
+        const r = porProf[p.id] || { total: 0, ultimos30: 0, servicos: {} };
+        return {
+          ...p,
+          atendimentos: {
+            total: r.total,
+            ultimos30: r.ultimos30,
+            servicos: Object.entries(r.servicos).map(([nome, quantidade]) => ({ nome, quantidade })).sort((a, b) => b.quantidade - a.quantidade),
+          },
+        };
+      });
       return res.status(200).json({
-        profissionais,
+        profissionais: comAtendimentos,
         convites: convites.map((c) => ({ id: c.id, email: c.email, expira_em: c.expira_em, link: `${enderecoDoSite(req)}/entrar.html?convite=${c.token}` })),
       });
     }

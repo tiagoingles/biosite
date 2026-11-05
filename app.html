@@ -43,7 +43,10 @@ button.perigo{color:var(--erro)}
 <body>
 <header>
   <b id="titulo">Painel</b>
-  <button type="button" id="sair">Sair</button>
+  <div class="linha">
+    <button type="button" id="voltarPainel" hidden>← Voltar ao painel</button>
+    <button type="button" id="sair">Sair</button>
+  </div>
 </header>
 <main>
   <p class="note" id="carregando">Carregando sua conta…</p>
@@ -109,7 +112,7 @@ button.perigo{color:var(--erro)}
     <div id="linkNovo" hidden>
       <p class="note">Envie este link para o barbeiro pelo WhatsApp. Ele vale por 7 dias e só funciona com o e-mail convidado.</p>
       <div class="link" id="linkTexto"></div>
-      <div class="linha"><button type="button" id="copiarNovo">Copiar link</button></div>
+      <div class="linha"><button type="button" id="copiarNovo">Copiar link</button><button type="button" class="main" id="whatsNovo">Enviar pelo WhatsApp</button></div>
     </div>
     <p class="msg" id="msgEquipe" role="status"></p>
     <h3>Pessoas na equipe</h3>
@@ -123,11 +126,25 @@ button.perigo{color:var(--erro)}
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var convite = new URLSearchParams(location.search).get("convite") || "";
+  // Administrador da plataforma com ?barbearia=id: as chamadas levam esse id
+  var CTX = new URLSearchParams(location.search).get("barbearia") || "";
+  var contaApi = Conta.api;
+  function api(p, o) {
+    if (CTX) p += (p.indexOf("?") > -1 ? "&" : "?") + "barbearia=" + encodeURIComponent(CTX);
+    return contaApi(p, o);
+  }
   var PAPEIS = { dono: "Dono", barbeiro: "Barbeiro", dono_barbeiro: "Dono e barbeiro" };
   var estado = null;
 
   function msg(id, t, tipo) { $(id).textContent = t; $(id).className = "msg " + (tipo || ""); }
   function el(tag, txt, cls) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; }
+  // Mensagem pronta para o WhatsApp: abre o app com o texto do convite (o dono escolhe o contato)
+  function linkWhatsapp(link, email) {
+    var nome = (estado && estado.barbearia && estado.barbearia.nome) || "a barbearia";
+    var texto = "Olá! Você foi convidado para trabalhar na " + nome + " pelo Bio Site. Abra este link para aceitar o convite: " + link +
+      "\n\nO convite vale por 7 dias e só funciona com o e-mail " + email + ".";
+    return "https://wa.me/?text=" + encodeURIComponent(texto);
+  }
   function copiar(texto, botao) {
     navigator.clipboard.writeText(texto).then(function () { botao.textContent = "Copiado!"; setTimeout(function () { botao.textContent = "Copiar link"; }, 1800); });
   }
@@ -137,7 +154,7 @@ button.perigo{color:var(--erro)}
   $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
 
   function carregar() {
-    return Conta.api("/api/eu").then(function (dados) {
+    return api("/api/eu").then(function (dados) {
       estado = dados;
       $("carregando").hidden = true;
       if (dados.admin) { mostrarAdmin(dados); return; }
@@ -162,7 +179,7 @@ button.perigo{color:var(--erro)}
 
   $("aceitarConvite").onclick = function () {
     $("aceitarConvite").disabled = true;
-    Conta.api("/api/convite", { corpo: { token: convite } }).then(function () {
+    api("/api/convite", { corpo: { token: convite } }).then(function () {
       msg("msgConvite", "Convite aceito. Carregando sua conta…", "ok");
       history.replaceState(null, "", "app.html");
       carregar();
@@ -177,8 +194,13 @@ button.perigo{color:var(--erro)}
     $("nomeBarbearia").textContent = b.nome || "";
     $("infoPapel").textContent = "Você entrou como: " + (PAPEIS[dados.perfil.papel] || dados.perfil.papel);
     var barbeiroSo = dados.perfil.papel === "barbeiro";
+    // Visão de administrador da plataforma: o painel abre no mesmo site
+    var destino = (barbeiroSo ? "painel-barbeiro.html" : "painel-dono.html") + (dados.visaoAdmin ? "?barbearia=" + encodeURIComponent(dados.perfil.barbearia_id) : "");
     $("irPainel").textContent = barbeiroSo ? "Minha agenda" : "Painel do dono";
-    $("irPainel").onclick = function () { location.href = barbeiroSo ? "painel-barbeiro.html" : "painel-dono.html"; };
+    $("irPainel").onclick = function () { location.href = destino; };
+    $("voltarPainel").textContent = barbeiroSo ? "← Minha agenda" : "← Voltar ao painel";
+    $("voltarPainel").onclick = function () { location.href = destino; };
+    $("voltarPainel").hidden = false;
     $("linkSite").textContent = location.origin + "/" + (b.slug || "");
     $("linkSite").href = "/" + (b.slug || "");
     var admin = dados.perfil.papel === "dono" || dados.perfil.papel === "dono_barbeiro";
@@ -189,7 +211,7 @@ button.perigo{color:var(--erro)}
 
   $("virarBarbeiro").onclick = function () {
     if (!confirm("Você passa a aparecer também como barbeiro na agenda. Continuar?")) return;
-    Conta.api("/api/eu", { corpo: { acao: "virar-barbeiro" } })
+    api("/api/eu", { corpo: { acao: "virar-barbeiro" } })
       .then(function () { msg("msgPerfil", "Pronto. Agora você atende também.", "ok"); return carregar(); })
       .catch(function (err) { msg("msgPerfil", err.message, "erro"); });
   };
@@ -215,18 +237,29 @@ button.perigo{color:var(--erro)}
   function trocarFoto(p, arquivo) {
     if (!arquivo) return;
     msg("msgEquipe", "Enviando foto…", "");
-    Conta.api("/api/equipe", { corpo: { acao: "foto-link", profissionalId: p.id, tipo: arquivo.type, tamanho: arquivo.size } })
+    api("/api/equipe", { corpo: { acao: "foto-link", profissionalId: p.id, tipo: arquivo.type, tamanho: arquivo.size } })
       .then(function (l) {
         return fetch(l.uploadUrl, { method: "PUT", headers: { "Content-Type": arquivo.type }, body: arquivo })
           .then(function (r) { if (!r.ok) throw new Error("Não consegui enviar a foto. Tente de novo."); return l.publicUrl; });
       })
-      .then(function (url) { return Conta.api("/api/equipe", { corpo: { acao: "foto-salvar", profissionalId: p.id, foto: url } }); })
+      .then(function (url) { return api("/api/equipe", { corpo: { acao: "foto-salvar", profissionalId: p.id, foto: url } }); })
       .then(function () { msg("msgEquipe", "Foto de " + p.nome + " atualizada.", "ok"); carregarEquipe(); })
       .catch(function (err) { msg("msgEquipe", err.message, "erro"); });
   }
 
+  // Atendimentos realizados do barbeiro: total, últimos 30 dias e quantidade por serviço
+  function atendimentosDo(p) {
+    var a = p.atendimentos || { total: 0, ultimos30: 0, servicos: [] };
+    var box = el("div", null, "atend");
+    box.style.cssText = "flex-basis:100%;display:grid;gap:4px;font-size:13px";
+    box.appendChild(el("span", a.total + " atendimento(s) realizado(s) · " + a.ultimos30 + " nos últimos 30 dias"));
+    if (!a.servicos.length) box.appendChild(el("span", "Nenhum atendimento realizado ainda.", "note"));
+    a.servicos.forEach(function (s) { box.appendChild(el("span", s.nome + ": " + s.quantidade)); });
+    return box;
+  }
+
   function carregarEquipe() {
-    Conta.api("/api/equipe").then(function (j) {
+    api("/api/equipe").then(function (j) {
       var lista = $("listaEquipe");
       lista.textContent = "";
       j.profissionais.forEach(function (p) {
@@ -235,11 +268,12 @@ button.perigo{color:var(--erro)}
         linha.appendChild(fotoDoBarbeiro(p));
         linha.appendChild(el("span", p.nome + (p.perfil_user_id === estado.usuario.id ? " (você)" : "")));
         linha.appendChild(botaoFoto(p));
+        linha.appendChild(atendimentosDo(p));
         if (p.perfil_user_id !== estado.usuario.id) {
           var b = el("button", "Remover", "perigo");
           b.onclick = function () {
             if (!confirm("Remover " + p.nome + " da equipe?")) return;
-            Conta.api("/api/equipe", { corpo: { acao: "remover", profissionalId: p.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+            api("/api/equipe", { corpo: { acao: "remover", profissionalId: p.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
           };
           linha.appendChild(b);
         }
@@ -255,11 +289,13 @@ button.perigo{color:var(--erro)}
         var grupo = el("div", null, "linha");
         var copia = el("button", "Copiar link");
         copia.onclick = function () { copiar(c.link, copia); };
+        var zap = el("button", "Enviar pelo WhatsApp");
+        zap.onclick = function () { window.open(linkWhatsapp(c.link, c.email), "_blank", "noopener"); };
         var cancela = el("button", "Cancelar", "perigo");
         cancela.onclick = function () {
-          Conta.api("/api/equipe", { corpo: { acao: "cancelar-convite", id: c.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
+          api("/api/equipe", { corpo: { acao: "cancelar-convite", id: c.id } }).then(carregarEquipe).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
         };
-        grupo.appendChild(copia); grupo.appendChild(cancela);
+        grupo.appendChild(copia); grupo.appendChild(zap); grupo.appendChild(cancela);
         linha.appendChild(grupo);
         conv.appendChild(linha);
       });
@@ -270,10 +306,12 @@ button.perigo{color:var(--erro)}
   $("formConvite").addEventListener("submit", function (e) {
     e.preventDefault();
     msg("msgEquipe", "");
-    Conta.api("/api/equipe", { corpo: { acao: "convidar", email: $("cEmail").value.trim() } }).then(function (j) {
+    var emailConvite = $("cEmail").value.trim();
+    api("/api/equipe", { corpo: { acao: "convidar", email: emailConvite } }).then(function (j) {
       $("linkTexto").textContent = j.link;
       $("linkNovo").hidden = false;
       $("copiarNovo").onclick = function () { copiar(j.link, $("copiarNovo")); };
+      $("whatsNovo").onclick = function () { window.open(linkWhatsapp(j.link, emailConvite), "_blank", "noopener"); };
       $("cEmail").value = "";
       carregarEquipe();
     }).catch(function (err) { msg("msgEquipe", err.message, "erro"); });
@@ -287,7 +325,7 @@ button.perigo{color:var(--erro)}
 
   function carregarAgenda() {
     var dia = $("agDia").value || hojeBrasilia();
-    Conta.api("/api/pedido?dia=" + dia + (barbeariaAdmin ? "&barbearia=" + barbeariaAdmin : "")).then(function (j) {
+    api("/api/pedido?dia=" + dia + (barbeariaAdmin ? "&barbearia=" + barbeariaAdmin : "")).then(function (j) {
       msg("msgAgenda", "");
       var lista = $("listaAgenda");
       lista.textContent = "";
@@ -314,7 +352,7 @@ button.perigo{color:var(--erro)}
   }
 
   function decidir(id, status) {
-    Conta.api("/api/pedido" + (barbeariaAdmin ? "?barbearia=" + barbeariaAdmin : ""), { metodo: "PATCH", corpo: { id: id, status: status } })
+    api("/api/pedido" + (barbeariaAdmin ? "?barbearia=" + barbeariaAdmin : ""), { metodo: "PATCH", corpo: { id: id, status: status } })
       .then(carregarAgenda)
       .catch(function (err) { msg("msgAgenda", err.message, "erro"); carregarAgenda(); });
   }
@@ -347,6 +385,12 @@ button.perigo{color:var(--erro)}
       var fin = el("button", "Financeiro e simulação");
       fin.onclick = function () { location.href = "financeiro.html?barbearia=" + encodeURIComponent(b.id); };
       grupo.appendChild(fin);
+      var painelDono = el("button", "Painel do dono");
+      painelDono.onclick = function () { location.href = "painel-dono.html?barbearia=" + encodeURIComponent(b.id); };
+      grupo.appendChild(painelDono);
+      var painelBarb = el("button", "Painel do barbeiro");
+      painelBarb.onclick = function () { location.href = "painel-barbeiro.html?barbearia=" + encodeURIComponent(b.id); };
+      grupo.appendChild(painelBarb);
       if (b.temTeste) {
         var senha = el("button", "Nova senha do teste");
         senha.onclick = function () { novaSenhaTeste(b); };
@@ -368,7 +412,7 @@ button.perigo{color:var(--erro)}
   function acessoBarbeiro(b, p) {
     var nova = p.temAcesso;
     if (nova && !confirm("Gerar nova senha para " + p.nome + "? A senha atual deixa de funcionar.")) return;
-    Conta.api("/api/barbearia", { corpo: { acao: nova ? "redefinir-teste-barbeiro" : "teste-barbeiro", slug: b.slug, profissionalId: p.id } }).then(function (j) {
+    api("/api/barbearia", { corpo: { acao: nova ? "redefinir-teste-barbeiro" : "teste-barbeiro", slug: b.slug, profissionalId: p.id } }).then(function (j) {
       p.temAcesso = true;
       var login = j.email ? "E-mail " + j.email + ", " : "";
       msg("msgSites", (nova ? "Nova senha de " : "Acesso de teste de ") + p.nome + ": " + login + "senha " + j.senha + ". Copie agora: ela não aparece de novo.", "ok");
@@ -383,7 +427,7 @@ button.perigo{color:var(--erro)}
 
   function novaSenhaTeste(b) {
     if (!confirm("Gerar nova senha para o usuário de teste de " + b.nome + "? A senha atual deixa de funcionar.")) return;
-    Conta.api("/api/barbearia", { corpo: { acao: "redefinir-teste", slug: b.slug } }).then(function (j) {
+    api("/api/barbearia", { corpo: { acao: "redefinir-teste", slug: b.slug } }).then(function (j) {
       msg("msgSites", "Nova senha de " + b.nome + ": " + j.senha + " (e-mail " + j.email + "). Copie agora: ela não aparece de novo.", "ok");
     }).catch(function (err) { msg("msgSites", err.message, "erro"); });
   }

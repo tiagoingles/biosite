@@ -168,6 +168,14 @@
     return h("a", Object.assign({ class: "botao p", href: href }, extra || {}), [P.icone(icone), rotulo]);
   }
 
+  // Situação da assinatura do Bio Site (Stripe) de cada barbearia
+  var ASSINATURA = { em_teste: ["Período grátis", "info"], ativa: ["Pagando", "ok"], atrasada: ["Atrasada", "erro"], pausada: ["Pausada", "alerta"], cancelada: ["Cancelada", "neutro"], incompleta: ["Pagamento pendente", "alerta"] };
+  function seloAssinatura(a) {
+    var s = a ? (ASSINATURA[a.status] || [a.status, "neutro"]) : ["Sem assinatura", "neutro"];
+    var titulo = a && a.valor_mensal != null ? P.brl(a.valor_mensal) + "/mês" + (a.plano === "lancamento" ? " (lançamento)" : "") : "";
+    return h("span", { class: "selo selo-" + s[1], title: titulo || null, texto: s[0] });
+  }
+
   function cartaoSite(b) {
     var q = "?barbearia=" + encodeURIComponent(b.id);
     var acoes = [
@@ -187,7 +195,7 @@
       ]);
     });
     return h("section", { class: "cartao site-admin" }, [
-      h("div", { class: "perfil-topo" }, [h("span", { class: "avatar", texto: P.iniciais(b.nome) }), h("div", { class: "cresce" }, [h("div", { class: "nome", texto: b.nome }), h("div", { class: "nota p", texto: location.host + "/" + b.slug })])]),
+      h("div", { class: "perfil-topo" }, [h("span", { class: "avatar", texto: P.iniciais(b.nome) }), h("div", { class: "cresce" }, [h("div", { class: "nome", texto: b.nome }), h("div", { class: "nota p", texto: location.host + "/" + b.slug })]), seloAssinatura(b.assinatura)]),
       h("div", { class: "acoes-site" }, acoes),
       equipe.length ? h("div", { class: "equipe" }, equipe) : h("p", { class: "nota p", texto: "Nenhum barbeiro ativo." }),
     ]);

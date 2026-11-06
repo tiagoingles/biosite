@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bio Site | Site e agendamento online para barbearias</title>
+<meta name="description" content="Site próprio com agendamento online para a sua barbearia. O cliente marca sozinho em 30 segundos, o pedido chega no seu WhatsApp e você controla agenda, equipe e comissões no celular.">
+<meta name="theme-color" content="#1c1917">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bio Site | Site e agendamento online para barbearias">
+<meta property="og:description" content="O cliente marca sozinho, o pedido chega no seu WhatsApp e você controla agenda, equipe e comissões no celular.">
+<meta property="og:locale" content="pt_BR">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231c1917'/%3E%3Ctext x='32' y='43' font-family='Arial' font-weight='800' font-size='32' text-anchor='middle' fill='%23eab308'%3EB%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap">
+<script defer src="/_vercel/speed-insights/script.js"></script>
+<style>
+:root{
+  --tinta:#1c1917;--tinta-2:#292524;--tinta-3:#44403c;
+  --papel:#fafaf9;--papel-2:#f5f5f4;--branco:#fff;--linha:#e7e5e4;
+  --texto:#1c1917;--suave:#57534e;--fraco:#78716c;
+  --ouro:#eab308;--ouro-forte:#ca8a04;--ouro-escuro:#a16207;--ouro-claro:#fef3c7;
+  --verde:#15803d;--verde-claro:#dcfce7;--whats:#25d366;--erro:#b91c1c;
+  --raio:20px;--sombra:0 1px 2px rgba(28,25,23,.06),0 18px 40px -22px rgba(28,25,23,.35);
+  --fonte:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--papel);color:var(--texto);font:17px/1.6 var(--fonte)}
+img,svg{display:block;max-width:100%}
+a{color:inherit}
+h1,h2,h3{margin:0;line-height:1.12;letter-spacing:-.025em}
+p{margin:0}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--ouro);outline-offset:3px;border-radius:8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.miolo{width:min(1140px,100% - 32px);margin-inline:auto}
+section{scroll-margin-top:72px}
+
+/* ---------- topo ---------- */
+.topo{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--tinta) 92%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06)}
+.topo .miolo{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px}
+.marca{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800;font-size:19px;letter-spacing:-.02em}
+.marca i{width:34px;height:34px;border-radius:10px;background:var(--ouro);color:var(--tinta);display:grid;place-items:center;font-style:normal;font-size:18px}
+.menu{display:flex;align-items:center;gap:6px}
+.menu a{color:#e7e5e4;text-decoration:none;font-size:15px;font-weight:500;padding:8px 12px;border-radius:10px}
+.menu a:hover{color:#fff;background:rgba(255,255,255,.06)}
+.menu .so-largo{display:none}
+@media (min-width:860px){.menu .so-largo{display:inline-block}}
+
+/* ---------- botões ---------- */
+.botao{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:12px 22px;border-radius:14px;font:700 16px/1.2 var(--fonte);text-decoration:none;border:1px solid transparent;cursor:pointer;transition:transform .15s ease,background .2s ease,box-shadow .2s ease}
+.botao:active{transform:scale(.98)}
+.botao.ouro{background:var(--ouro);color:var(--tinta);box-shadow:0 10px 30px -12px rgba(234,179,8,.7)}
+.botao.ouro:hover{background:#facc15}
+.botao.vazado{border-color:rgba(255,255,255,.25);color:#fff}
+.botao.vazado:hover{background:rgba(255,255,255,.08)}
+.botao.escuro{background:var(--tinta);color:#fff}
+.botao.escuro:hover{background:var(--tinta-2)}
+.botao.claro{background:var(--branco);color:var(--tinta);border-color:var(--linha)}
+.botao.whats{background:var(--whats);color:#072e17}
+.botao.p{min-height:40px;padding:8px 14px;font-size:14px;border-radius:12px}
+.botao:disabled{opacity:.6;cursor:default}
+
+/* ---------- abertura ---------- */
+.abertura{background:radial-gradient(900px 500px at 85% 10%,rgba(234,179,8,.22),transparent 60%),radial-gradient(700px 500px at 0% 100%,rgba(161,98,7,.25),transparent 60%),var(--tinta);color:#fff;overflow:hidden}
+.abertura .miolo{display:grid;gap:48px;padding:56px 0 72px;align-items:center}
+@media (min-width:960px){.abertura .miolo{grid-template-columns:1.1fr .9fr;padding:88px 0 104px}}
+.selo-topo{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(234,179,8,.14);color:#fde68a;font-size:14px;font-weight:700}
+.abertura h1{font-size:clamp(38px,6.4vw,64px);font-weight:800;margin:18px 0 18px}
+.abertura h1 em{font-style:normal;color:var(--ouro)}
+.abertura .lead{font-size:clamp(17px,2.1vw,20px);color:#d6d3d1;max-width:36ch}
+.acoes{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.garantias{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;color:#a8a29e;font-size:14px;font-weight:500}
+.garantias span{display:inline-flex;align-items:center;gap:6px}
+.garantias svg{width:16px;height:16px;color:var(--ouro)}
+
+/* celular de demonstração */
+.vitrine{position:relative;justify-self:center;width:min(330px,100%);padding:0 18px}
+.celular{position:relative;border-radius:42px;background:#0c0a09;padding:12px;box-shadow:0 40px 80px -30px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.08) inset}
+.tela{border-radius:32px;background:#fafaf9;color:var(--texto);overflow:hidden;min-height:540px;display:flex;flex-direction:column}
+.tela .capa{height:112px;background:linear-gradient(135deg,#44403c,#1c1917);position:relative}
+.tela .capa::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 10px,transparent 10px 20px)}
+.tela .logo{width:62px;height:62px;border-radius:50%;background:var(--ouro);border:4px solid #fafaf9;display:grid;place-items:center;font-weight:800;color:var(--tinta);margin:-31px auto 0;position:relative;z-index:1}
+.tela .nome{text-align:center;font-weight:800;margin-top:6px}
+.tela .cidade{text-align:center;font-size:12px;color:var(--fraco)}
+.tela .passo{margin:14px 14px 0;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--linha);display:grid;gap:10px}
+.tela .passo b{font-size:14px}
+.tela .resumo{font-size:12px;color:var(--suave);background:var(--papel-2);border-radius:10px;padding:8px 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:12px;font-weight:700;padding:7px 10px;border-radius:10px;background:var(--papel-2);border:1px solid var(--linha)}
+.chips span.on{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.tela .enviar{margin:12px 14px 16px;background:var(--whats);color:#072e17;font-weight:800;font-size:13px;border-radius:14px;padding:12px;text-align:center}
+.flutua{position:absolute;display:flex;gap:10px;align-items:center;background:#fff;color:var(--texto);border-radius:16px;padding:10px 12px;box-shadow:0 20px 40px -18px rgba(0,0,0,.6);font-size:13px;line-height:1.35;max-width:230px;animation:flutua 6s ease-in-out infinite}
+.flutua i{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-style:normal;font-size:17px}
+.flutua small{display:block;color:var(--fraco);font-size:12px}
+.flutua.a{top:96px;left:-34px}
+.flutua.a i{background:var(--ouro-claro)}
+.flutua.b{bottom:84px;right:-30px;animation-delay:-3s}
+.flutua.b i{background:var(--verde-claro)}
+@media (max-width:520px){.flutua.a{left:-6px;top:70px}.flutua.b{right:-6px}}
+@keyframes flutua{50%{transform:translateY(-8px)}}
+
+/* ---------- blocos ---------- */
+.bloco{padding:84px 0}
+.bloco.claro{background:var(--branco)}
+.titulo-bloco{max-width:720px;margin-bottom:40px}
+.titulo-bloco .sobre{color:var(--ouro-escuro);font-weight:800;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+.titulo-bloco h2{font-size:clamp(30px,4.4vw,44px);font-weight:800;margin-top:10px}
+.titulo-bloco p{color:var(--suave);font-size:18px;margin-top:14px}
+.centro{text-align:center;margin-inline:auto}
+
+/* dores */
+.dores{display:grid;gap:16px}
+@media (min-width:820px){.dores{grid-template-columns:repeat(3,1fr)}}
+.dor{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio);padding:24px;display:grid;gap:14px;box-shadow:var(--sombra)}
+.dor .antes{font-weight:800;font-size:19px}
+.dor .antes span{display:block;font-size:14px;font-weight:500;color:var(--fraco);margin-top:4px}
+.dor .depois{display:flex;gap:10px;align-items:flex-start;padding-top:14px;border-top:1px dashed var(--linha);color:var(--verde);font-weight:700}
+.dor .depois svg{width:20px;height:20px;flex:none;margin-top:3px}
+
+/* passos */
+.passos{display:grid;gap:18px;counter-reset:passo}
+@media (min-width:820px){.passos{grid-template-columns:repeat(3,1fr)}}
+.passo-item{position:relative;padding:28px 24px 24px;border-radius:var(--raio);background:var(--papel);border:1px solid var(--linha)}
+.passo-item::before{counter-increment:passo;content:counter(passo);position:absolute;top:-18px;left:24px;width:40px;height:40px;border-radius:12px;background:var(--tinta);color:var(--ouro);display:grid;place-items:center;font-weight:800;font-size:18px}
+.passo-item h3{font-size:20px;margin:8px 0 8px}
+.passo-item p{color:var(--suave)}
+
+/* recursos */
+.recursos{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.recurso{background:var(--branco);border:1px solid var(--linha);border-radius:18px;padding:22px;display:grid;gap:8px;align-content:start}
+.recurso .ic{width:44px;height:44px;border-radius:12px;background:var(--ouro-claro);color:var(--ouro-escuro);display:grid;place-items:center}
+.recurso .ic svg{width:22px;height:22px}
+.recurso h3{font-size:17px;margin-top:6px}
+.recurso p{color:var(--suave);font-size:15px}
+
+/* para quem */
+.publicos{display:grid;gap:16px}
+@media (min-width:820px){.publicos{grid-template-columns:1fr 1fr}}
+.publico{border-radius:var(--raio);padding:28px;background:var(--tinta);color:#fff;display:grid;gap:12px}
+.publico.ouro{background:linear-gradient(135deg,#a16207,#854d0e)}
+.publico h3{font-size:22px}
+.publico p{color:#e7e5e4}
+.publico ul{margin:4px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.publico li{display:flex;gap:10px;align-items:flex-start}
+.publico li svg{width:18px;height:18px;flex:none;margin-top:4px;color:var(--ouro)}
+.publico.ouro li svg{color:#fde68a}
+
+/* planos */
+.oferta{display:grid;gap:18px;max-width:980px;margin:0 auto}
+@media (min-width:900px){.oferta{grid-template-columns:1.1fr .9fr;align-items:stretch}}
+.plano .de{color:var(--fraco);font-size:16px;font-weight:600;margin-bottom:-10px}
+.plano .de s{text-decoration-thickness:2px;text-decoration-color:var(--erro)}
+.como-paga{background:var(--tinta);color:#fff;border-radius:24px;padding:28px;display:grid;gap:16px;align-content:start}
+.como-paga h3{font-size:22px}
+.linha-tempo{list-style:none;margin:6px 0 0;padding:0;display:grid}
+.linha-tempo li{position:relative;display:grid;gap:2px;padding:0 0 22px 32px}
+.linha-tempo li::before{content:"";position:absolute;left:4px;top:6px;width:14px;height:14px;border-radius:50%;background:var(--ouro);box-shadow:0 0 0 4px rgba(234,179,8,.18)}
+.linha-tempo li::after{content:"";position:absolute;left:10px;top:24px;bottom:0;width:2px;background:rgba(234,179,8,.35)}
+.linha-tempo li:last-child{padding-bottom:4px}
+.linha-tempo li:last-child::after{display:none}
+.linha-tempo b{color:var(--ouro);font-size:15px}
+.linha-tempo span{color:#e7e5e4}
+.nota-paga{color:#a8a29e;font-size:15px}
+.nota-paga a{color:#fde68a}
+.promo{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-radius:999px;background:rgba(234,179,8,.16);border:1px solid rgba(234,179,8,.4);color:#fde68a;font-size:14px;font-weight:700;text-decoration:none}
+.promo span{color:#fff;text-decoration:underline;text-underline-offset:3px}
+.promo:hover{background:rgba(234,179,8,.24)}
+.plano{position:relative;background:var(--branco);border:1px solid var(--linha);border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--sombra)}
+.plano.destaque{border:2px solid var(--ouro);box-shadow:0 30px 60px -30px rgba(161,98,7,.55)}
+.plano .fita{position:absolute;top:-14px;left:28px;background:var(--ouro);color:var(--tinta);font-weight:800;font-size:13px;padding:5px 12px;border-radius:999px}
+.plano h3{font-size:22px}
+.plano .para{color:var(--suave);font-size:15px;margin-top:-6px}
+.preco{display:flex;align-items:baseline;gap:4px}
+.preco .rs{font-weight:700;font-size:18px}
+.preco b{font-size:48px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.preco .mes{color:var(--suave);font-weight:500}
+.cobranca{font-size:14px;color:var(--fraco);min-height:22px;margin-top:-8px}
+.plano ul{list-style:none;margin:4px 0 8px;padding:0;display:grid;gap:10px;flex:1}
+.plano li{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.plano li svg{width:18px;height:18px;flex:none;margin-top:3px;color:var(--verde)}
+.plano .botao{width:100%}
+
+/* dúvidas */
+.duvidas{max-width:820px;margin:0 auto;display:grid;gap:10px}
+.duvidas details{background:var(--branco);border:1px solid var(--linha);border-radius:16px;padding:0 20px}
+.duvidas summary{cursor:pointer;list-style:none;font-weight:700;font-size:17px;padding:18px 32px 18px 0;position:relative}
+.duvidas summary::-webkit-details-marker{display:none}
+.duvidas summary::after{content:"+";position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:24px;color:var(--ouro-escuro);transition:transform .2s}
+.duvidas details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+.duvidas details p{color:var(--suave);padding:0 0 18px}
+
+/* começar */
+.comecar{background:var(--tinta);color:#fff}
+.comecar .miolo{display:grid;gap:40px;padding:84px 0}
+@media (min-width:960px){.comecar .miolo{grid-template-columns:1fr 1fr;align-items:start}}
+.comecar h2{font-size:clamp(30px,4.4vw,44px);font-weight:800}
+.comecar .lead{color:#d6d3d1;font-size:18px;margin-top:14px}
+.comecar ol{margin:26px 0 0;padding:0;list-style:none;display:grid;gap:14px;counter-reset:c}
+.comecar ol li{display:flex;gap:12px;align-items:flex-start;color:#e7e5e4}
+.comecar ol li::before{counter-increment:c;content:counter(c);flex:none;width:28px;height:28px;border-radius:9px;background:rgba(234,179,8,.18);color:var(--ouro);display:grid;place-items:center;font-weight:800;font-size:14px}
+.formulario{background:var(--branco);color:var(--texto);border-radius:24px;padding:26px;display:grid;gap:14px;box-shadow:0 40px 80px -40px rgba(0,0,0,.8)}
+.formulario h3{font-size:22px}
+.campo{display:grid;gap:6px;font-size:14px;font-weight:700;color:var(--suave)}
+.campo input,.campo select{width:100%;min-height:50px;padding:12px 14px;border-radius:12px;border:1px solid var(--linha);background:var(--papel);color:var(--texto);font:500 16px var(--fonte)}
+.campo input:focus,.campo select:focus{outline:none;border-color:var(--ouro-forte);box-shadow:0 0 0 3px rgba(234,179,8,.25)}
+.dupla{display:grid;gap:14px}
+@media (min-width:520px){.dupla{grid-template-columns:1fr 1fr}}
+.isca{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.aviso-form{font-size:13px;color:var(--fraco)}
+.aviso-form a{color:var(--ouro-escuro)}
+.msg-form{font-size:15px;font-weight:600;min-height:0}
+.msg-form.erro{color:var(--erro)}
+.enviado{text-align:center;display:grid;gap:12px;justify-items:center;padding:20px 6px}
+.enviado .ok{width:64px;height:64px;border-radius:50%;background:var(--verde-claro);color:var(--verde);display:grid;place-items:center}
+.enviado .ok svg{width:32px;height:32px}
+.enviado h3{font-size:24px}
+.enviado p{color:var(--suave)}
+
+/* privacidade e rodapé */
+.privacidade{max-width:820px;margin:0 auto;color:var(--suave);font-size:15px;display:grid;gap:10px}
+.privacidade h2{font-size:24px;color:var(--texto)}
+.rodape{background:#0c0a09;color:#a8a29e;font-size:14px}
+.rodape .miolo{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:center;padding:28px 0}
+.rodape nav{display:flex;flex-wrap:wrap;gap:6px 18px}
+.rodape a{color:#d6d3d1;text-decoration:none}
+.rodape a:hover{color:#fff}
+.whats-flutuante{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:56px;height:56px;border-radius:50%;background:var(--whats);color:#072e17;display:grid;place-items:center;box-shadow:0 14px 30px -10px rgba(0,0,0,.5)}
+.whats-flutuante svg{width:28px;height:28px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<!-- Ícones usados na página (traço simples) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-site" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3.5 12h17M12 3a13.5 13.5 0 0 1 0 18M12 3a13.5 13.5 0 0 0 0 18"/></symbol>
+  <symbol id="i-agenda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3M16 2v3M3.5 9h17M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v13a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6A1.5 1.5 0 0 1 5 4.5zM8 13h3v3H8z"/></symbol>
+  <symbol id="i-whats" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7zM9 9.5c.3 2.5 2.5 4.7 5 5l1.3-1.3 1.7.8v1.5c-4.2.4-8.6-4-8.2-8.2H10.3l.8 1.7z"/></symbol>
+  <symbol id="i-painel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M21.5 20H2.5"/></symbol>
+  <symbol id="i-tesoura" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.1 7.9L20 19M8.1 16.1L20 5"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/></symbol>
+  <symbol id="i-dinheiro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7h17v10h-17zM12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM6.5 10v4M17.5 10v4"/></symbol>
+  <symbol id="i-sino" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-trava" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3M5.5 11h13v9.5h-13zM12 15v2"/></symbol>
+  <symbol id="i-relogio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2"/></symbol>
+  <symbol id="i-baixar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M4.5 19.5h15"/></symbol>
+</svg>
+
+<header class="topo">
+  <div class="miolo">
+    <a class="marca" href="#inicio" aria-label="Bio Site, início"><i aria-hidden="true">B</i>Bio Site</a>
+    <nav class="menu" aria-label="Seções da página">
+      <a class="so-largo" href="#como-funciona">Como funciona</a>
+      <a class="so-largo" href="#recursos">Recursos</a>
+      <a class="so-largo" href="#precos">Preços</a>
+      <a class="so-largo" href="#duvidas">Dúvidas</a>
+      <a href="/entrar">Entrar</a>
+      <a class="botao ouro p" href="#comecar" data-plano="Lançamento">Garantir vaga</a>
+    </nav>
+  </div>
+</header>
+
+<main id="inicio">
+  <!-- ===== Abertura ===== -->
+  <section class="abertura" aria-labelledby="t-abertura">
+    <div class="miolo">
+      <div>
+        <a class="promo" href="#precos">Lançamento: R$ 39,90/mês para as 10 primeiras barbearias <span>Ver condições</span></a>
+        <h1 id="t-abertura">Sua barbearia com <em>site próprio</em> e agenda online.</h1>
+        <p class="lead">O cliente escolhe o serviço, o barbeiro e o horário em 30 segundos, sem baixar aplicativo. O pedido chega no seu WhatsApp e no painel, e você confirma com um toque.</p>
+        <div class="acoes">
+          <a class="botao ouro" href="#comecar" data-plano="Lançamento">Quero garantir minha vaga</a>
+          <a class="botao vazado" href="#como-funciona">Ver como funciona</a>
+        </div>
+        <div class="garantias">
+          <span><svg><use href="#i-check"/></svg>1º mês grátis</span>
+          <span><svg><use href="#i-check"/></svg>Sem fidelidade</span>
+          <span><svg><use href="#i-check"/></svg>A gente monta o seu site</span>
+        </div>
+      </div>
+
+      <div class="vitrine" aria-hidden="true">
+        <div class="celular">
+          <div class="tela">
+            <div class="capa"></div>
+            <div class="logo">BX</div>
+            <div class="nome">Barbearia Exemplo</div>
+            <div class="cidade">Agendamento online</div>
+            <div class="passo">
+              <b>Escolha o dia e o horário</b>
+              <div class="resumo">Corte degradê · com Bruno · 40 min</div>
+              <div class="chips"><span>Seg 10/11</span><span class="on">Ter 11/11</span><span>Qua 12/11</span></div>
+              <div class="chips"><span>09:00</span><span>09:40</span><span class="on">10:20</span><span>11:00</span><span>14:00</span><span>15:20</span></div>
+            </div>
+            <div class="enviar">Enviar pedido pelo WhatsApp</div>
+          </div>
+        </div>
+        <div class="flutua a"><i>🔔</i><div><b>Novo pedido</b><small>Corte degradê · Ter 10:20</small></div></div>
+        <div class="flutua b"><i>✅</i><div><b>Horário confirmado</b><small>Mensagem pronta para o cliente</small></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Dores ===== -->
+  <section class="bloco" aria-labelledby="t-dores">
+    <div class="miolo">
+      <div class="titulo-bloco">
+        <span class="sobre">O dia a dia sem sistema</span>
+        <h2 id="t-dores">Você corta cabelo. Não deveria passar o dia respondendo WhatsApp.</h2>
+      </div>
+      <div class="dores">
+        <article class="dor">
+          <p class="antes">“Tem horário hoje?”<span>A mesma pergunta o dia inteiro, no meio do corte.</span></p>
+          <p class="depois"><svg><use href="#i-check"/></svg>Seu site mostra só os horários livres, 24 horas por dia.</p>
+        </article>
+        <article class="dor">
+          <p class="antes">Dois clientes no mesmo horário<span>Marcação no caderno, no direct e no WhatsApp ao mesmo tempo.</span></p>
+          <p class="depois"><svg><use href="#i-check"/></svg>O sistema trava o horário na hora: nunca marca dois clientes juntos.</p>
+        </article>
+        <article class="dor">
+          <p class="antes">Comissão na ponta do lápis<span>No fim do mês, ninguém sabe quanto cada barbeiro fez.</span></p>
+          <p class="depois"><svg><use href="#i-check"/></svg>Faturamento e comissão de cada barbeiro calculados sozinhos.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Como funciona ===== -->
+  <section class="bloco claro" id="como-funciona" aria-labelledby="t-como">
+    <div class="miolo">
+      <div class="titulo-bloco">
+        <span class="sobre">Como funciona</span>
+        <h2 id="t-como">Pronto em até 48 horas. Você não precisa configurar nada sozinho.</h2>
+      </div>
+      <div class="passos">
+        <article class="passo-item">
+          <h3>A gente monta o seu site</h3>
+          <p>Você manda logo, fotos, serviços, preços e a equipe. Nós montamos o site com a cara da sua barbearia e o endereço para colocar no Instagram.</p>
+        </article>
+        <article class="passo-item">
+          <h3>O cliente marca sozinho</h3>
+          <p>Escolhe o serviço, o barbeiro (ou “qualquer um”) e um horário livre. Não precisa baixar app nem criar conta.</p>
+        </article>
+        <article class="passo-item">
+          <h3>Você confirma com um toque</h3>
+          <p>O pedido chega no seu WhatsApp e no painel. Confirmou, o painel já abre a mensagem pronta para o cliente.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Recursos ===== -->
+  <section class="bloco" id="recursos" aria-labelledby="t-recursos">
+    <div class="miolo">
+      <div class="titulo-bloco">
+        <span class="sobre">Recursos</span>
+        <h2 id="t-recursos">Tudo o que a barbearia precisa, no celular.</h2>
+        <p>Sem instalar nada: funciona no navegador e dá para colocar na tela inicial como um aplicativo.</p>
+      </div>
+      <div class="recursos">
+        <article class="recurso"><span class="ic"><svg><use href="#i-site"/></svg></span><h3>Site profissional</h3><p>Sua marca, fotos, serviços com preço, equipe, Instagram, WhatsApp e avaliação no Google.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-agenda"/></svg></span><h3>Agenda sem conflito</h3><p>Cada barbeiro publica os horários da semana. O site só oferece o que está livre de verdade.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-whats"/></svg></span><h3>Pedido no WhatsApp</h3><p>O cliente envia a mensagem com o código do pedido para o número da barbearia.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-painel"/></svg></span><h3>Painel do dono</h3><p>Pedidos para confirmar, agenda do dia, faturamento, ocupação e faltas, em tempo real.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-tesoura"/></svg></span><h3>Painel do barbeiro</h3><p>Cada barbeiro vê a agenda dele, publica os horários e acompanha a própria comissão.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-link"/></svg></span><h3>Link de cada barbeiro</h3><p>Um link que já abre o agendamento com o barbeiro escolhido, para o Instagram de cada um.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-dinheiro"/></svg></span><h3>Financeiro</h3><p>Comissões, gastos fixos e insumos. Você sabe quanto a barbearia lucra no mês.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-sino"/></svg></span><h3>Aviso de pedido novo</h3><p>O celular avisa quando chega pedido, mesmo com o painel fechado.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-relogio"/></svg></span><h3>Lembrete para o cliente</h3><p>Depois de marcar, o cliente salva o horário na agenda do celular, com aviso 1 hora antes.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-baixar"/></svg></span><h3>Planilhas</h3><p>Atendimentos e comissões em planilha que abre no Excel, para você ou para o contador.</p></article>
+        <article class="recurso"><span class="ic"><svg><use href="#i-trava"/></svg></span><h3>Dados protegidos</h3><p>Cada pessoa da equipe entra com a própria senha, com bloqueio automático contra quem tenta adivinhar senhas.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Para quem ===== -->
+  <section class="bloco claro" aria-labelledby="t-quem">
+    <div class="miolo">
+      <div class="titulo-bloco">
+        <span class="sobre">Para quem é</span>
+        <h2 id="t-quem">Do barbeiro que atende sozinho à barbearia com equipe.</h2>
+      </div>
+      <div class="publicos">
+        <article class="publico">
+          <h3>Você atende sozinho</h3>
+          <p>Pare de parar o corte para responder mensagem.</p>
+          <ul>
+            <li><svg><use href="#i-check"/></svg>Seu link de agendamento no Instagram</li>
+            <li><svg><use href="#i-check"/></svg>Agenda da semana publicada em 1 minuto</li>
+            <li><svg><use href="#i-check"/></svg>Bloqueie horários para compromissos</li>
+          </ul>
+        </article>
+        <article class="publico ouro">
+          <h3>Você tem equipe</h3>
+          <p>Cada barbeiro com a própria agenda, e você vendo tudo.</p>
+          <ul>
+            <li><svg><use href="#i-check"/></svg>Convide os barbeiros pelo WhatsApp</li>
+            <li><svg><use href="#i-check"/></svg>Publique a agenda de quem não usa o celular</li>
+            <li><svg><use href="#i-check"/></svg>Comissão de cada um calculada no fim do mês</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Preços ===== -->
+  <section class="bloco" id="precos" aria-labelledby="t-precos">
+    <div class="miolo">
+      <div class="titulo-bloco centro">
+        <span class="sobre">Preço de lançamento</span>
+        <h2 id="t-precos">Só para as 10 primeiras barbearias.</h2>
+        <p>Pelo preço de um corte por mês. Se evitar uma falta, o sistema já se pagou.</p>
+      </div>
+      <div class="oferta">
+        <article class="plano destaque">
+          <span class="fita">Lançamento · só 10 vagas</span>
+          <h3>Bio Site completo</h3>
+          <p class="para">Site, agenda online, painéis e financeiro</p>
+          <p class="de">De <s>R$ 89,90/mês</s></p>
+          <p class="preco"><span class="rs">R$</span><b>39,90</b><span class="mes">/mês</span></p>
+          <p class="cobranca">Para as 10 primeiras barbearias. Depois das 10 vagas, R$ 89,90/mês.</p>
+          <ul>
+            <li><svg><use href="#i-check"/></svg>Site profissional com agendamento online</li>
+            <li><svg><use href="#i-check"/></svg>Painel do dono e painel de cada barbeiro</li>
+            <li><svg><use href="#i-check"/></svg>Comissões e financeiro</li>
+            <li><svg><use href="#i-check"/></svg>Link de agendamento de cada barbeiro</li>
+            <li><svg><use href="#i-check"/></svg>Aviso de pedido novo no celular</li>
+            <li><svg><use href="#i-check"/></svg>Suporte pelo WhatsApp</li>
+          </ul>
+          <a class="botao ouro" href="#comecar" data-plano="Lançamento">Garantir minha vaga</a>
+        </article>
+        <aside class="como-paga" aria-labelledby="t-paga">
+          <h3 id="t-paga">Como você paga</h3>
+          <ol class="linha-tempo">
+            <li><b>Na implantação</b><span>R$&nbsp;120, uma vez só. A gente monta o seu site.</span></li>
+            <li><b>1º mês</b><span>Grátis. Use à vontade com os seus clientes.</span></li>
+            <li><b>60 dias depois da implantação</b><span>Primeira mensalidade: R$&nbsp;39,90.</span></li>
+          </ol>
+          <p class="nota-paga">Sem fidelidade: cancele quando quiser.</p>
+          <p class="nota-paga">Rede ou mais de uma unidade? <a href="#comecar" data-plano="Sob medida">Fale com a gente</a>.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Dúvidas ===== -->
+  <section class="bloco claro" id="duvidas" aria-labelledby="t-duvidas">
+    <div class="miolo">
+      <div class="titulo-bloco centro">
+        <span class="sobre">Dúvidas</span>
+        <h2 id="t-duvidas">Perguntas frequentes</h2>
+      </div>
+      <div class="duvidas">
+        <details><summary>O cliente precisa baixar algum aplicativo?</summary><p>Não. O cliente abre o link da barbearia no navegador do celular, escolhe o serviço e o horário e envia. Também não precisa criar conta nem senha.</p></details>
+        <details><summary>Funciona com o meu WhatsApp de sempre?</summary><p>Sim. O pedido chega no número de WhatsApp da barbearia que você já usa, com o código do pedido. Você continua conversando com o cliente normalmente.</p></details>
+        <details><summary>E se o barbeiro não usar o painel?</summary><p>O dono publica a agenda dele pelo painel. Quem quiser pode ter login próprio e cuidar da própria agenda e comissão.</p></details>
+        <details><summary>Quanto tempo leva para ficar pronto?</summary><p>Até 48 horas úteis depois de recebermos o logo, as fotos, os serviços com preços e os horários da equipe.</p></details>
+        <details><summary>Como funciona o preço de lançamento?</summary><p>As 10 primeiras barbearias que contratarem pagam R$ 39,90 por mês, em vez de R$ 89,90. Quando as 10 vagas acabarem, novas barbearias pagam o preço normal de R$ 89,90 por mês.</p></details>
+        <details><summary>Quanto pago e quando?</summary><p>Na implantação você paga R$ 120, uma vez só. O primeiro mês é grátis e a primeira mensalidade só vence 60 dias depois da implantação.</p></details>
+        <details><summary>Tem fidelidade ou multa para cancelar?</summary><p>Não. Você pode cancelar quando quiser, sem multa.</p></details>
+        <details><summary>Posso mudar preços e serviços depois?</summary><p>Sim. Os preços cadastrados no financeiro aparecem no site, e o que você não conseguir mudar sozinho a gente muda para você.</p></details>
+        <details><summary>Os dados dos meus clientes ficam seguros?</summary><p>Cada pessoa da equipe entra com a própria senha, o acesso é protegido e os dados são guardados em servidores no Brasil. Os dados dos seus clientes são seus: não vendemos nem usamos para outra finalidade.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Começar ===== -->
+  <section class="comecar" id="comecar" aria-labelledby="t-comecar">
+    <div class="miolo">
+      <div>
+        <h2 id="t-comecar">Garanta o preço de lançamento.</h2>
+        <p class="lead">Deixe seu contato e a gente chama você no WhatsApp para montar o seu site. São só 10 vagas a R$ 39,90 por mês.</p>
+        <ol>
+          <li>Você manda logo, fotos, serviços e horários pelo WhatsApp.</li>
+          <li>Em até 48 horas o seu site está no ar. A implantação custa R$ 120, uma vez só.</li>
+          <li>O primeiro mês é grátis: a primeira mensalidade só vence 60 dias depois.</li>
+        </ol>
+      </div>
+      <form class="formulario" id="formLead" novalidate>
+        <div id="campos" style="display:grid;gap:14px">
+          <h3>Quero a minha vaga</h3>
+          <label class="campo">Seu nome<input id="lNome" name="nome" autocomplete="name" maxlength="80" required></label>
+          <label class="campo">Nome da barbearia<input id="lBarbearia" name="barbearia" autocomplete="organization" maxlength="80" required></label>
+          <div class="dupla">
+            <label class="campo">WhatsApp com DDD<input id="lWhats" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(81) 99999-9999" maxlength="20" required></label>
+            <label class="campo">Cidade<input id="lCidade" name="cidade" autocomplete="address-level2" maxlength="80"></label>
+          </div>
+          <label class="campo">Quantos barbeiros atendem?
+            <select id="lBarbeiros" name="barbeiros">
+              <option value="1">Só eu</option>
+              <option value="2-3" selected>2 ou 3</option>
+              <option value="4-6">4 a 6</option>
+              <option value="7+">7 ou mais</option>
+            </select>
+          </label>
+          <label class="isca" aria-hidden="true">Não preencha<input id="lSite" name="website" tabindex="-1" autocomplete="off"></label>
+          <button type="submit" class="botao ouro" id="lEnviar">Quero garantir minha vaga</button>
+          <p class="msg-form" id="lMsg" role="status"></p>
+          <p class="aviso-form">Usamos seu contato só para falar com você sobre o Bio Site. Veja o <a href="#privacidade">aviso de privacidade</a>.</p>
+          <a class="botao whats" id="lWhatsVendas" hidden target="_blank" rel="noopener"><svg width="20" height="20"><use href="#i-whats"/></svg>Prefiro chamar no WhatsApp</a>
+        </div>
+        <div class="enviado" id="lPronto" hidden>
+          <span class="ok"><svg><use href="#i-check"/></svg></span>
+          <h3>Recebemos seu contato!</h3>
+          <p>Vamos chamar você no WhatsApp em até 1 dia útil para montar o site da <b id="lNomeBarbearia"></b>.</p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== Privacidade ===== -->
+  <section class="bloco" id="privacidade" aria-labelledby="t-privacidade">
+    <div class="privacidade">
+      <h2 id="t-privacidade">Aviso de privacidade</h2>
+      <p>Quando você preenche o formulário acima, guardamos seu nome, o nome da barbearia, a cidade, o WhatsApp e o tamanho da equipe para entrar em contato sobre o Bio Site. Não vendemos nem compartilhamos esses dados.</p>
+      <p>Nas barbearias que usam o Bio Site, os dados dos clientes (como nome e horário marcado) pertencem à barbearia, que é quem decide como usá-los. O Bio Site guarda esses dados só para fazer a agenda funcionar.</p>
+      <p>Para pedir a correção ou a exclusão dos seus dados, fale com a gente pelo mesmo WhatsApp em que fizemos contato.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="rodape">
+  <div class="miolo">
+    <span>© <span id="ano">2026</span> Bio Site · Site e agendamento online para barbearias</span>
+    <nav aria-label="Rodapé">
+      <a href="#precos">Preços</a>
+      <a href="#duvidas">Dúvidas</a>
+      <a href="#privacidade">Privacidade</a>
+      <a id="whatsRodape" hidden target="_blank" rel="noopener">Suporte: (81) 9918-6042</a>
+      <a href="/entrar">Entrar</a>
+    </nav>
+  </div>
+</footer>
+<a class="whats-flutuante" id="whatsFlutuante" hidden target="_blank" rel="noopener" aria-label="Falar com o Bio Site no WhatsApp"><svg><use href="#i-whats"/></svg></a>
+
+<script>
+(function () {
+  "use strict";
+  // WhatsApp de vendas e suporte (só dígitos, com 55 e DDD). Vazio: os botões de WhatsApp ficam escondidos.
+  var WHATS_VENDAS = "558199186042";
+  var $ = function (id) { return document.getElementById(id); };
+  $("ano").textContent = new Date().getFullYear();
+
+  // Plano escolhido vai junto com o contato
+  var plano = "";
+  document.querySelectorAll("[data-plano]").forEach(function (a) {
+    a.addEventListener("click", function () { plano = a.getAttribute("data-plano"); });
+  });
+
+  // WhatsApp de vendas (quando configurado)
+  if (WHATS_VENDAS) {
+    var link = "https://wa.me/" + WHATS_VENDAS + "?text=" + encodeURIComponent("Olá! Quero garantir uma vaga no preço de lançamento do Bio Site para a minha barbearia.");
+    [$("lWhatsVendas"), $("whatsFlutuante"), $("whatsRodape")].forEach(function (a) { a.href = link; a.hidden = false; });
+  }
+
+  // Contato: grava o interessado para a equipe chamar no WhatsApp
+  var enviando = false;
+  $("formLead").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (enviando) return;
+    var msg = $("lMsg");
+    msg.className = "msg-form";
+    msg.textContent = "";
+    var nome = $("lNome").value.trim(), barbearia = $("lBarbearia").value.trim(), whats = $("lWhats").value.replace(/\D/g, "");
+    var erro = nome.length < 2 ? ["lNome", "Informe o seu nome."] : barbearia.length < 2 ? ["lBarbearia", "Informe o nome da barbearia."] : (whats.length < 10 || whats.length > 13) ? ["lWhats", "Informe o WhatsApp com DDD."] : null;
+    if (erro) { msg.className = "msg-form erro"; msg.textContent = erro[1]; $(erro[0]).focus(); return; }
+    enviando = true;
+    var botao = $("lEnviar"), rotulo = botao.textContent;
+    botao.disabled = true; botao.textContent = "Enviando…";
+    fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo: "lead", nome: nome, barbearia: barbearia, whatsapp: whats, cidade: $("lCidade").value.trim(), barbeiros: $("lBarbeiros").value, plano: plano, website: $("lSite").value, pagina: (location.pathname + location.search).slice(0, 120) }),
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+      .catch(function () { return { ok: false, j: { message: "Sem conexão com a internet. Tente de novo." } }; })
+      .then(function (res) {
+        enviando = false; botao.disabled = false; botao.textContent = rotulo;
+        if (!res.ok) { msg.className = "msg-form erro"; msg.textContent = (res.j && res.j.message) || "Não conseguimos enviar agora. Tente de novo em instantes."; return; }
+        $("lNomeBarbearia").textContent = barbearia;
+        $("campos").hidden = true;
+        $("lPronto").hidden = false;
+      });
+  });
+})();
+</script>
+</body>
+</html>

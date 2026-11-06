@@ -5,12 +5,14 @@
 //   GET  /api/config?saude=1&resumo=1  resumo das últimas 24 h (erros, Web Vitals). Só a conta da plataforma.
 //   POST /api/config { tipo: "vital" | "erro", ... }  eventos do navegador (Web Vitals e erros de JavaScript).
 //   POST /api/config { tipo: "lead", nome, barbearia, whatsapp, ... }  contato da página de vendas.
+//   POST /api/config?stripe=webhook   avisos do Stripe sobre a assinatura das barbearias (lib/assinatura.js).
 // Variáveis na Vercel: SUPABASE_URL e SUPABASE_ANON_KEY.
 const { rest } = require("../lib/supabase");
 const { registrar, origemDe, contarTentativas, corpoDe, falha } = require("../lib/seguranca");
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 
 const { VERSAO: GERADOR_VERSAO } = require("../lib/gerador");
+const assinatura = require("../lib/assinatura");
 
 const VITAIS = ["LCP", "CLS", "INP", "FCP", "TTFB", "carregamento"];
 const VERSAO = "2026-11-05";
@@ -101,6 +103,8 @@ async function interessado(req, res, b) {
 }
 
 module.exports = async (req, res) => {
+  // Avisos do Stripe: lidos antes de qualquer outra coisa, porque precisam do corpo bruto
+  if (req.query && req.query.stripe === "webhook") return assinatura.webhook(req, res);
   if (req.method === "POST") {
     const b = corpoDe(req);
     return b.tipo === "lead" ? interessado(req, res, b) : evento(req, res);

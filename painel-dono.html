@@ -121,6 +121,10 @@
       </section>
     </div>
     <div class="coluna">
+      <section class="cartao" id="secAssinatura" hidden>
+        <div class="cartao-topo"><h2>Assinatura do Bio Site</h2><span id="seloAssinatura"></span></div>
+        <div id="assinatura" class="grade"></div>
+      </section>
       <section class="cartao" id="secSaude" hidden>
         <div class="cartao-topo"><h2>Saúde do sistema</h2><span class="selo selo-neutro">24 h</span></div>
         <div id="saude"></div>
@@ -169,7 +173,7 @@
     P.abas(function (aba) {
       if (aba === "agenda") carregarDia();
       if (aba === "equipe") carregarEquipe();
-      if (aba === "mais") carregarSaude();
+      if (aba === "mais") { carregarSaude(); carregarAssinatura(); }
     });
     carregar();
     P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); }, 30000);
@@ -504,6 +508,56 @@
     $("ativarAvisos").onclick = function () {
       P.acao($("ativarAvisos"), Avisos.ativar().then(function () { P.toast("Avisos ativados neste aparelho.", "ok"); }).catch(function (e) { P.toast(e.message, "erro"); }));
     };
+  }
+
+  // ---------- Assinatura do Bio Site (Stripe) ----------
+  // Some enquanto os pagamentos não estão configurados no servidor
+  var SITUACAO_ASS = { em_teste: ["Período grátis", "info"], ativa: ["Ativa", "ok"], atrasada: ["Pagamento atrasado", "erro"], pausada: ["Pausada", "alerta"], cancelada: ["Cancelada", "neutro"], incompleta: ["Pagamento pendente", "alerta"] };
+  var VIGENTES_ASS = ["em_teste", "ativa", "atrasada", "pausada"];
+  var avisouRetorno = false;
+  function dataCurta(iso) { return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—"; }
+  function carregarAssinatura() {
+    return P.api("/api/equipe?area=assinatura").then(function (j) {
+      if (!j.configurado) { $("secAssinatura").hidden = true; return; }
+      $("secAssinatura").hidden = false;
+      var a = j.assinatura, o = j.oferta;
+      var vigente = a && VIGENTES_ASS.indexOf(a.status) > -1;
+      var s = a ? (SITUACAO_ASS[a.status] || [a.status, "neutro"]) : ["Não contratada", "neutro"];
+      P.trocar($("seloAssinatura"), h("span", { class: "selo selo-" + s[1], texto: s[0] }));
+      if (vigente) {
+        var linhas = [
+          ["Mensalidade", P.brl(a.valor_mensal) + (a.plano === "lancamento" ? " (preço de lançamento)" : "")],
+          a.status === "em_teste" ? ["Primeira cobrança", dataCurta(a.primeira_cobranca_em)] : ["Próxima cobrança", dataCurta(a.proxima_cobranca_em)],
+          ["Implantação", a.implantacao_paga_em ? "paga em " + dataCurta(a.implantacao_paga_em) : "pendente"],
+        ];
+        P.trocar($("assinatura"), [
+          a.status === "atrasada" ? h("p", { class: "aviso-faixa erro", texto: "O último pagamento não passou. Atualize o cartão para não perder o acesso." }) : null,
+          a.cancelar_no_fim ? h("p", { class: "aviso-faixa alerta", texto: "A assinatura termina no fim do período atual." }) : null,
+          h("ul", { class: "mini-lista" }, linhas.map(function (l) { return h("li", null, [h("span", { texto: l[0] }), h("b", { texto: l[1] })]); })),
+          h("button", { type: "button", class: "botao", onclick: function (ev) { abrirStripe(ev.currentTarget, "portal"); } }, [P.icone("dinheiro"), "Cartão, recibos e cancelamento"]),
+        ]);
+      } else {
+        P.trocar($("assinatura"), [
+          o.promocao ? h("p", { class: "aviso-faixa info", texto: "Preço de lançamento: restam " + o.vagasRestantes + " de 10 vagas." }) : null,
+          h("ul", { class: "mini-lista" }, [
+            h("li", null, [h("span", { texto: "Implantação (uma vez)" }), h("b", { texto: P.brl(o.implantacao) })]),
+            h("li", null, [h("span", { texto: "1º mês" }), h("b", { texto: "grátis" })]),
+            h("li", null, [h("span", { texto: "Mensalidade" + (o.promocao ? " (era " + P.brl(o.normal) + ")" : "") }), h("b", { texto: P.brl(o.mensal) })]),
+          ]),
+          h("p", { class: "nota p", texto: "A primeira mensalidade vence " + o.diasAtePrimeiraCobranca + " dias depois da contratação. Sem fidelidade: cancele quando quiser." }),
+          h("button", { type: "button", class: "botao principal", onclick: function (ev) { abrirStripe(ev.currentTarget, "checkout"); } }, [P.icone("dinheiro"), "Contratar com cartão"]),
+        ]);
+      }
+      if (!avisouRetorno && /[?&]assinatura=ok/.test(location.search)) {
+        avisouRetorno = true;
+        P.toast(vigente ? "Assinatura ativa. Obrigado!" : "Pagamento recebido. A assinatura aparece aqui em alguns segundos.", "ok");
+        if (!vigente) setTimeout(carregarAssinatura, 4000);
+      }
+    }).catch(function () { $("secAssinatura").hidden = true; });
+  }
+  // Pagamento e troca de cartão acontecem no ambiente seguro do Stripe
+  function abrirStripe(botao, acao) {
+    P.acao(botao, P.api("/api/equipe?area=assinatura", { corpo: { acao: acao } }).then(function (j) { location.href = j.url; }).catch(function (e) { P.toast(e.message, "erro"); }));
   }
 
   // Saúde do sistema: só a conta da plataforma vê

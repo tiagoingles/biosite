@@ -150,12 +150,25 @@ section{scroll-margin-top:72px}
 .publico.ouro li svg{color:#fde68a}
 
 /* planos */
-.ciclo{display:inline-flex;gap:4px;padding:4px;border-radius:14px;background:var(--papel-2);border:1px solid var(--linha);margin:0 auto 32px}
-.ciclo button{font:700 15px var(--fonte);border:0;background:transparent;padding:10px 18px;border-radius:10px;cursor:pointer;color:var(--suave)}
-.ciclo button[aria-pressed="true"]{background:var(--branco);color:var(--texto);box-shadow:0 2px 8px -4px rgba(0,0,0,.3)}
-.ciclo button span{font-size:12px;color:var(--verde);margin-left:4px}
-.planos{display:grid;gap:18px;align-items:stretch}
-@media (min-width:900px){.planos{grid-template-columns:repeat(3,1fr)}}
+.oferta{display:grid;gap:18px;max-width:980px;margin:0 auto}
+@media (min-width:900px){.oferta{grid-template-columns:1.1fr .9fr;align-items:stretch}}
+.plano .de{color:var(--fraco);font-size:16px;font-weight:600;margin-bottom:-10px}
+.plano .de s{text-decoration-thickness:2px;text-decoration-color:var(--erro)}
+.como-paga{background:var(--tinta);color:#fff;border-radius:24px;padding:28px;display:grid;gap:16px;align-content:start}
+.como-paga h3{font-size:22px}
+.linha-tempo{list-style:none;margin:6px 0 0;padding:0;display:grid}
+.linha-tempo li{position:relative;display:grid;gap:2px;padding:0 0 22px 32px}
+.linha-tempo li::before{content:"";position:absolute;left:4px;top:6px;width:14px;height:14px;border-radius:50%;background:var(--ouro);box-shadow:0 0 0 4px rgba(234,179,8,.18)}
+.linha-tempo li::after{content:"";position:absolute;left:10px;top:24px;bottom:0;width:2px;background:rgba(234,179,8,.35)}
+.linha-tempo li:last-child{padding-bottom:4px}
+.linha-tempo li:last-child::after{display:none}
+.linha-tempo b{color:var(--ouro);font-size:15px}
+.linha-tempo span{color:#e7e5e4}
+.nota-paga{color:#a8a29e;font-size:15px}
+.nota-paga a{color:#fde68a}
+.promo{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-radius:999px;background:rgba(234,179,8,.16);border:1px solid rgba(234,179,8,.4);color:#fde68a;font-size:14px;font-weight:700;text-decoration:none}
+.promo span{color:#fff;text-decoration:underline;text-underline-offset:3px}
+.promo:hover{background:rgba(234,179,8,.24)}
 .plano{position:relative;background:var(--branco);border:1px solid var(--linha);border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--sombra)}
 .plano.destaque{border:2px solid var(--ouro);box-shadow:0 30px 60px -30px rgba(161,98,7,.55)}
 .plano .fita{position:absolute;top:-14px;left:28px;background:var(--ouro);color:var(--tinta);font-weight:800;font-size:13px;padding:5px 12px;border-radius:999px}
@@ -165,14 +178,11 @@ section{scroll-margin-top:72px}
 .preco .rs{font-weight:700;font-size:18px}
 .preco b{font-size:48px;font-weight:800;letter-spacing:-.03em;line-height:1}
 .preco .mes{color:var(--suave);font-weight:500}
-.preco .sob{font-size:30px;font-weight:800;letter-spacing:-.02em}
 .cobranca{font-size:14px;color:var(--fraco);min-height:22px;margin-top:-8px}
 .plano ul{list-style:none;margin:4px 0 8px;padding:0;display:grid;gap:10px;flex:1}
 .plano li{display:flex;gap:10px;align-items:flex-start;font-size:15px}
 .plano li svg{width:18px;height:18px;flex:none;margin-top:3px;color:var(--verde)}
 .plano .botao{width:100%}
-.todos{margin-top:24px;text-align:center;color:var(--suave);font-size:15px}
-.todos b{color:var(--texto)}
 
 /* dúvidas */
 .duvidas{max-width:820px;margin:0 auto;display:grid;gap:10px}
@@ -249,7 +259,7 @@ section{scroll-margin-top:72px}
       <a class="so-largo" href="#precos">Preços</a>
       <a class="so-largo" href="#duvidas">Dúvidas</a>
       <a href="/entrar">Entrar</a>
-      <a class="botao ouro p" href="#comecar">Testar grátis</a>
+      <a class="botao ouro p" href="#comecar" data-plano="Lançamento">Garantir vaga</a>
     </nav>
   </div>
 </header>
@@ -259,15 +269,15 @@ section{scroll-margin-top:72px}
   <section class="abertura" aria-labelledby="t-abertura">
     <div class="miolo">
       <div>
-        <span class="selo-topo">✂️ Feito para barbearias</span>
+        <a class="promo" href="#precos">Lançamento: R$ 39,90/mês para as 10 primeiras barbearias <span>Ver condições</span></a>
         <h1 id="t-abertura">Sua barbearia com <em>site próprio</em> e agenda online.</h1>
         <p class="lead">O cliente escolhe o serviço, o barbeiro e o horário em 30 segundos, sem baixar aplicativo. O pedido chega no seu WhatsApp e no painel, e você confirma com um toque.</p>
         <div class="acoes">
-          <a class="botao ouro" href="#comecar">Quero testar grátis</a>
+          <a class="botao ouro" href="#comecar" data-plano="Lançamento">Quero garantir minha vaga</a>
           <a class="botao vazado" href="#como-funciona">Ver como funciona</a>
         </div>
         <div class="garantias">
-          <span><svg><use href="#i-check"/></svg>14 dias grátis</span>
+          <span><svg><use href="#i-check"/></svg>1º mês grátis</span>
           <span><svg><use href="#i-check"/></svg>Sem fidelidade</span>
           <span><svg><use href="#i-check"/></svg>A gente monta o seu site</span>
         </div>
@@ -401,61 +411,39 @@ section{scroll-margin-top:72px}
   <section class="bloco" id="precos" aria-labelledby="t-precos">
     <div class="miolo">
       <div class="titulo-bloco centro">
-        <span class="sobre">Preços</span>
-        <h2 id="t-precos">Menos que dois cortes por mês.</h2>
-        <p>Se evitar duas faltas no mês, o sistema já se pagou.</p>
+        <span class="sobre">Preço de lançamento</span>
+        <h2 id="t-precos">Só para as 10 primeiras barbearias.</h2>
+        <p>Pelo preço de um corte por mês. Se evitar uma falta, o sistema já se pagou.</p>
       </div>
-      <div class="centro" style="text-align:center">
-        <div class="ciclo" role="group" aria-label="Forma de pagamento">
-          <button type="button" data-ciclo="mensal" aria-pressed="true">Mensal</button>
-          <button type="button" data-ciclo="anual" aria-pressed="false">Anual<span>2 meses grátis</span></button>
-        </div>
-      </div>
-      <div class="planos">
-        <article class="plano">
-          <h3>Solo</h3>
-          <p class="para">Para quem atende sozinho</p>
-          <p class="preco"><span class="rs">R$</span><b data-mensal="49" data-anual="41">49</b><span class="mes">/mês</span></p>
-          <p class="cobranca" data-mensal="Cobrado todo mês" data-anual="R$ 490 por ano">Cobrado todo mês</p>
-          <ul>
-            <li><svg><use href="#i-check"/></svg>1 barbeiro</li>
-            <li><svg><use href="#i-check"/></svg>Site profissional com agendamento</li>
-            <li><svg><use href="#i-check"/></svg>Painel no celular e aviso de pedido novo</li>
-            <li><svg><use href="#i-check"/></svg>Seu link para o Instagram</li>
-            <li><svg><use href="#i-check"/></svg>Suporte pelo WhatsApp</li>
-          </ul>
-          <a class="botao claro" href="#comecar" data-plano="Solo">Começar grátis</a>
-        </article>
+      <div class="oferta">
         <article class="plano destaque">
-          <span class="fita">Mais escolhido</span>
-          <h3>Barbearia</h3>
-          <p class="para">Para quem tem equipe</p>
-          <p class="preco"><span class="rs">R$</span><b data-mensal="89" data-anual="74">89</b><span class="mes">/mês</span></p>
-          <p class="cobranca" data-mensal="Cobrado todo mês" data-anual="R$ 890 por ano">Cobrado todo mês</p>
+          <span class="fita">Lançamento · só 10 vagas</span>
+          <h3>Bio Site completo</h3>
+          <p class="para">Site, agenda online, painéis e financeiro</p>
+          <p class="de">De <s>R$ 89,90/mês</s></p>
+          <p class="preco"><span class="rs">R$</span><b>39,90</b><span class="mes">/mês</span></p>
+          <p class="cobranca">Para as 10 primeiras barbearias. Depois das 10 vagas, R$ 89,90/mês.</p>
           <ul>
-            <li><svg><use href="#i-check"/></svg>Até 6 barbeiros</li>
-            <li><svg><use href="#i-check"/></svg>Tudo do plano Solo</li>
-            <li><svg><use href="#i-check"/></svg>Painel de cada barbeiro</li>
+            <li><svg><use href="#i-check"/></svg>Site profissional com agendamento online</li>
+            <li><svg><use href="#i-check"/></svg>Painel do dono e painel de cada barbeiro</li>
             <li><svg><use href="#i-check"/></svg>Comissões e financeiro</li>
             <li><svg><use href="#i-check"/></svg>Link de agendamento de cada barbeiro</li>
+            <li><svg><use href="#i-check"/></svg>Aviso de pedido novo no celular</li>
+            <li><svg><use href="#i-check"/></svg>Suporte pelo WhatsApp</li>
           </ul>
-          <a class="botao ouro" href="#comecar" data-plano="Barbearia">Começar grátis</a>
+          <a class="botao ouro" href="#comecar" data-plano="Lançamento">Garantir minha vaga</a>
         </article>
-        <article class="plano">
-          <h3>Sob medida</h3>
-          <p class="para">Para equipes grandes e redes</p>
-          <p class="preco"><span class="sob">Fale com a gente</span></p>
-          <p class="cobranca">Preço conforme o tamanho da equipe</p>
-          <ul>
-            <li><svg><use href="#i-check"/></svg>7 barbeiros ou mais</li>
-            <li><svg><use href="#i-check"/></svg>Mais de uma unidade</li>
-            <li><svg><use href="#i-check"/></svg>Implantação acompanhada</li>
-            <li><svg><use href="#i-check"/></svg>Treinamento da equipe</li>
-          </ul>
-          <a class="botao escuro" href="#comecar" data-plano="Sob medida">Falar com a gente</a>
-        </article>
+        <aside class="como-paga" aria-labelledby="t-paga">
+          <h3 id="t-paga">Como você paga</h3>
+          <ol class="linha-tempo">
+            <li><b>Na implantação</b><span>R$&nbsp;120, uma vez só. A gente monta o seu site.</span></li>
+            <li><b>1º mês</b><span>Grátis. Use à vontade com os seus clientes.</span></li>
+            <li><b>60 dias depois da implantação</b><span>Primeira mensalidade: R$&nbsp;39,90.</span></li>
+          </ol>
+          <p class="nota-paga">Sem fidelidade: cancele quando quiser.</p>
+          <p class="nota-paga">Rede ou mais de uma unidade? <a href="#comecar" data-plano="Sob medida">Fale com a gente</a>.</p>
+        </aside>
       </div>
-      <p class="todos">Em todos os planos: <b>14 dias grátis</b>, <b>montagem do site sem custo</b> e <b>sem fidelidade</b>. Cancele quando quiser.</p>
     </div>
   </section>
 
@@ -471,7 +459,9 @@ section{scroll-margin-top:72px}
         <details><summary>Funciona com o meu WhatsApp de sempre?</summary><p>Sim. O pedido chega no número de WhatsApp da barbearia que você já usa, com o código do pedido. Você continua conversando com o cliente normalmente.</p></details>
         <details><summary>E se o barbeiro não usar o painel?</summary><p>O dono publica a agenda dele pelo painel. Quem quiser pode ter login próprio e cuidar da própria agenda e comissão.</p></details>
         <details><summary>Quanto tempo leva para ficar pronto?</summary><p>Até 48 horas úteis depois de recebermos o logo, as fotos, os serviços com preços e os horários da equipe.</p></details>
-        <details><summary>Tem fidelidade ou multa para cancelar?</summary><p>Não. Você pode cancelar quando quiser. No plano anual, o valor é pago de uma vez com 2 meses de desconto.</p></details>
+        <details><summary>Como funciona o preço de lançamento?</summary><p>As 10 primeiras barbearias que contratarem pagam R$ 39,90 por mês, em vez de R$ 89,90. Quando as 10 vagas acabarem, novas barbearias pagam o preço normal de R$ 89,90 por mês.</p></details>
+        <details><summary>Quanto pago e quando?</summary><p>Na implantação você paga R$ 120, uma vez só. O primeiro mês é grátis e a primeira mensalidade só vence 60 dias depois da implantação.</p></details>
+        <details><summary>Tem fidelidade ou multa para cancelar?</summary><p>Não. Você pode cancelar quando quiser, sem multa.</p></details>
         <details><summary>Posso mudar preços e serviços depois?</summary><p>Sim. Os preços cadastrados no financeiro aparecem no site, e o que você não conseguir mudar sozinho a gente muda para você.</p></details>
         <details><summary>Os dados dos meus clientes ficam seguros?</summary><p>Cada pessoa da equipe entra com a própria senha, o acesso é protegido e os dados são guardados em servidores no Brasil. Os dados dos seus clientes são seus: não vendemos nem usamos para outra finalidade.</p></details>
       </div>
@@ -482,17 +472,17 @@ section{scroll-margin-top:72px}
   <section class="comecar" id="comecar" aria-labelledby="t-comecar">
     <div class="miolo">
       <div>
-        <h2 id="t-comecar">Teste grátis por 14 dias.</h2>
-        <p class="lead">Deixe seu contato. A gente chama você no WhatsApp para montar o seu site.</p>
+        <h2 id="t-comecar">Garanta o preço de lançamento.</h2>
+        <p class="lead">Deixe seu contato e a gente chama você no WhatsApp para montar o seu site. São só 10 vagas a R$ 39,90 por mês.</p>
         <ol>
           <li>Você manda logo, fotos, serviços e horários pelo WhatsApp.</li>
-          <li>Em até 48 horas o seu site está no ar, com agenda online.</li>
-          <li>Você usa 14 dias de graça e só continua se gostar.</li>
+          <li>Em até 48 horas o seu site está no ar. A implantação custa R$ 120, uma vez só.</li>
+          <li>O primeiro mês é grátis: a primeira mensalidade só vence 60 dias depois.</li>
         </ol>
       </div>
       <form class="formulario" id="formLead" novalidate>
         <div id="campos" style="display:grid;gap:14px">
-          <h3>Quero o meu site</h3>
+          <h3>Quero a minha vaga</h3>
           <label class="campo">Seu nome<input id="lNome" name="nome" autocomplete="name" maxlength="80" required></label>
           <label class="campo">Nome da barbearia<input id="lBarbearia" name="barbearia" autocomplete="organization" maxlength="80" required></label>
           <div class="dupla">
@@ -508,7 +498,7 @@ section{scroll-margin-top:72px}
             </select>
           </label>
           <label class="isca" aria-hidden="true">Não preencha<input id="lSite" name="website" tabindex="-1" autocomplete="off"></label>
-          <button type="submit" class="botao ouro" id="lEnviar">Quero testar grátis</button>
+          <button type="submit" class="botao ouro" id="lEnviar">Quero garantir minha vaga</button>
           <p class="msg-form" id="lMsg" role="status"></p>
           <p class="aviso-form">Usamos seu contato só para falar com você sobre o Bio Site. Veja o <a href="#privacidade">aviso de privacidade</a>.</p>
           <a class="botao whats" id="lWhatsVendas" hidden target="_blank" rel="noopener"><svg width="20" height="20"><use href="#i-whats"/></svg>Prefiro chamar no WhatsApp</a>
@@ -540,6 +530,7 @@ section{scroll-margin-top:72px}
       <a href="#precos">Preços</a>
       <a href="#duvidas">Dúvidas</a>
       <a href="#privacidade">Privacidade</a>
+      <a id="whatsRodape" hidden target="_blank" rel="noopener">Suporte: (81) 9918-6042</a>
       <a href="/entrar">Entrar</a>
     </nav>
   </div>
@@ -549,19 +540,10 @@ section{scroll-margin-top:72px}
 <script>
 (function () {
   "use strict";
-  // Número do WhatsApp de vendas (só dígitos, com 55 e DDD). Vazio: os botões de WhatsApp ficam escondidos.
-  var WHATS_VENDAS = "";
+  // WhatsApp de vendas e suporte (só dígitos, com 55 e DDD). Vazio: os botões de WhatsApp ficam escondidos.
+  var WHATS_VENDAS = "558199186042";
   var $ = function (id) { return document.getElementById(id); };
   $("ano").textContent = new Date().getFullYear();
-
-  // Mensal ou anual
-  document.querySelectorAll("[data-ciclo]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var ciclo = b.getAttribute("data-ciclo");
-      document.querySelectorAll("[data-ciclo]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
-      document.querySelectorAll(".plano [data-mensal]").forEach(function (el) { el.textContent = el.getAttribute("data-" + ciclo); });
-    });
-  });
 
   // Plano escolhido vai junto com o contato
   var plano = "";
@@ -571,8 +553,8 @@ section{scroll-margin-top:72px}
 
   // WhatsApp de vendas (quando configurado)
   if (WHATS_VENDAS) {
-    var link = "https://wa.me/" + WHATS_VENDAS + "?text=" + encodeURIComponent("Olá! Quero conhecer o Bio Site para a minha barbearia.");
-    [$("lWhatsVendas"), $("whatsFlutuante")].forEach(function (a) { a.href = link; a.hidden = false; });
+    var link = "https://wa.me/" + WHATS_VENDAS + "?text=" + encodeURIComponent("Olá! Quero garantir uma vaga no preço de lançamento do Bio Site para a minha barbearia.");
+    [$("lWhatsVendas"), $("whatsFlutuante"), $("whatsRodape")].forEach(function (a) { a.href = link; a.hidden = false; });
   }
 
   // Contato: grava o interessado para a equipe chamar no WhatsApp

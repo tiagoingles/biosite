@@ -1,7 +1,7 @@
 -- Fase 9: interessados da página de vendas (index.html).
 -- O formulário grava pelo servidor (POST /api/config tipo "lead"), com a chave de serviço.
 -- O navegador nunca lê esta tabela: RLS ligado, sem políticas, e sem permissão para anon/authenticated.
--- Aplicada como migração "fase9_interessados_pagina_de_vendas".
+-- Aplicada como migrações "fase9_interessados_pagina_de_vendas" e "fase9b_interessados_plano_lancamento" (plano Lançamento).
 
 create table if not exists public.leads (
   id uuid primary key default gen_random_uuid(),
@@ -11,7 +11,7 @@ create table if not exists public.leads (
   cidade text not null default '' check (char_length(cidade) <= 80),
   whatsapp text not null check (whatsapp ~ '^[0-9]{10,13}$'),
   barbeiros text not null default '' check (barbeiros in ('', '1', '2-3', '4-6', '7+')),
-  plano text not null default '' check (plano in ('', 'Solo', 'Barbearia', 'Sob medida')),
+  plano text not null default '' check (plano in ('', 'Lançamento', 'Sob medida', 'Solo', 'Barbearia')),
   pagina text not null default '' check (char_length(pagina) <= 120),
   origem text,
   status text not null default 'novo' check (status in ('novo', 'contatado', 'cliente', 'descartado')),

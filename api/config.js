@@ -66,7 +66,7 @@ async function evento(req, res) {
 // Interessados da página de vendas (index.html): guarda o contato para a equipe chamar no WhatsApp.
 // Público, então: campos limitados, campo-isca contra robôs e no máximo 5 contatos por origem por hora.
 const BARBEIROS = ["1", "2-3", "4-6", "7+"];
-const PLANOS = ["", "Solo", "Barbearia", "Sob medida"];
+const PLANOS = ["", "Lançamento", "Sob medida", "Solo", "Barbearia"];
 function limpo(v, max) {
   return String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
@@ -115,3 +115,6 @@ module.exports = async (req, res) => {
   // Chave pública do Web Push (não é segredo): o navegador precisa dela para assinar os avisos
   return res.status(200).json({ url, anon, vapidPublic: process.env.VAPID_PUBLIC_KEY || "" });
 };
+
+// Planos que a página de vendas pode enviar (os testes conferem a página contra esta lista)
+module.exports.PLANOS = PLANOS;

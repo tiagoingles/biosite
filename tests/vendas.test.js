@@ -90,14 +90,15 @@ test("interessados: só a conta da plataforma vê e muda a situação", async ()
   assert.equal(mudancas[0].corpo.status, "contatado");
 });
 
-test("página de vendas: formulário, aviso de privacidade e preços anuais coerentes", () => {
+test("página de vendas: oferta de lançamento clara, formulário e aviso de privacidade", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   assert.match(html, /tipo: "lead"/, "o formulário grava pelo servidor");
   assert.match(html, /id="privacidade"/, "tem aviso de privacidade");
   assert.match(html, /name="website"/, "tem campo-isca contra robôs");
-  const precos = [...html.matchAll(/data-mensal="(\d+)" data-anual="(\d+)"/g)];
-  assert.ok(precos.length >= 2, "planos com preço");
-  for (const [, mensal, anual] of precos) assert.equal(Number(anual), Math.round((Number(mensal) * 10) / 12), `anual de ${mensal} = 10 meses / 12`);
-  const totais = [...html.matchAll(/data-anual="R\$ (\d+) por ano"/g)].map((m) => Number(m[1]));
-  assert.deepEqual(totais, precos.map(([, mensal]) => Number(mensal) * 10), "total anual = 10 mensalidades");
+  // Promoção com as condições à vista: preço de lançamento, preço normal, vagas, implantação e primeira cobrança
+  for (const trecho of ["R$ 39,90", "R$ 89,90", "10 primeiras barbearias", "R$ 120", "60 dias depois"]) assert.ok(html.includes(trecho), trecho);
+  assert.doesNotMatch(html, /14 dias grátis|data-ciclo/, "sem a oferta antiga");
+  // Todo plano que a página envia é aceito pelo servidor
+  const { PLANOS } = require("../api/config");
+  for (const [, p] of html.matchAll(/data-plano="([^"]+)"/g)) assert.ok(PLANOS.includes(p), p);
 });

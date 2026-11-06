@@ -538,7 +538,7 @@
         ]);
       } else {
         P.trocar($("assinatura"), [
-          o.promocao ? h("p", { class: "aviso-faixa info", texto: "Preço de lançamento: restam " + o.vagasRestantes + " de 10 vagas." }) : null,
+          o.promocao ? h("p", { class: "aviso-faixa info", texto: "Preço de lançamento, garantido para sempre: restam " + o.vagasRestantes + " de 10 vagas." }) : null,
           h("ul", { class: "mini-lista" }, [
             h("li", null, [h("span", { texto: "Implantação (uma vez)" }), h("b", { texto: P.brl(o.implantacao) })]),
             h("li", null, [h("span", { texto: "1º mês" }), h("b", { texto: "grátis" })]),

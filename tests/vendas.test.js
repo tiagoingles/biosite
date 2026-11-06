@@ -96,7 +96,7 @@ test("página de vendas: oferta de lançamento clara, formulário e aviso de pri
   assert.match(html, /id="privacidade"/, "tem aviso de privacidade");
   assert.match(html, /name="website"/, "tem campo-isca contra robôs");
   // Promoção com as condições à vista: preço de lançamento, preço normal, vagas, implantação e primeira cobrança
-  for (const trecho of ["R$ 39,90", "R$ 89,90", "10 primeiras barbearias", "R$ 120", "60 dias depois"]) assert.ok(html.includes(trecho), trecho);
+  for (const trecho of ["R$ 39,90", "R$ 89,90", "10 primeiras barbearias", "para sempre", "R$ 120", "60 dias depois"]) assert.ok(html.includes(trecho), trecho);
   assert.doesNotMatch(html, /14 dias grátis|data-ciclo/, "sem a oferta antiga");
   // Todo plano que a página envia é aceito pelo servidor
   const { PLANOS } = require("../api/config");

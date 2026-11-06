@@ -73,13 +73,16 @@ test("assinatura: sem Stripe configurado o painel não mostra nada; barbeiro nã
 
 test("assinatura: preço de lançamento enquanto houver vaga, depois o preço normal", async () => {
   ligarStripe();
-  A.instalarFetch(rotas({ vagas: 3 }));
+  const chamadas = A.instalarFetch(rotas({ vagas: 3 }));
   let r = await A.chamar(equipe, { metodo: "GET", query: { area: "assinatura" }, token: "token-dono" });
   assert.equal(r.body.oferta.promocao, true);
   assert.equal(r.body.oferta.vagasRestantes, 7);
   assert.equal(r.body.oferta.mensal, 39.9);
   assert.equal(r.body.oferta.implantacao, 120);
   assert.equal(r.body.oferta.diasAtePrimeiraCobranca, 60);
+  // As 10 primeiras: conta quem pagou a implantação, mesmo que tenha cancelado (a vaga não volta)
+  const contagem = decodeURIComponent(chamadas.find((c) => c.url.includes("assinaturas?plano=eq.lancamento")).url);
+  assert.ok(contagem.includes("or=(implantacao_paga_em.not.is.null,status.in.(em_teste,ativa,atrasada,pausada))"), contagem);
   A.instalarFetch(rotas({ vagas: 10 }));
   r = await A.chamar(equipe, { metodo: "GET", query: { area: "assinatura" }, token: "token-dono" });
   assert.equal(r.body.oferta.promocao, false);

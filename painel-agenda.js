@@ -38,17 +38,21 @@
     if (editavel) botao(secundarias, "Cancelar", "perigo", "x", function (b) { cancelar(p, ctx, b); });
     var acoes = h("div", { class: "acoes" }, [primarias.childNodes.length ? primarias : null, secundarias.childNodes.length ? secundarias : null]);
 
+    // Assinante do clube: já pagou a mensalidade, não cobra no balcão; o barbeiro ganha a comissão fixa do plano
+    var clube = !!p.clube_assinante_id;
+    var nomeClube = clube && p.clube_assinantes && p.clube_assinantes.nome;
     var meta = [
-      h("span", { texto: p.cliente }),
+      h("span", { texto: p.cliente + (nomeClube && nomeClube.toLowerCase() !== String(p.cliente || "").toLowerCase() ? " (assinante: " + nomeClube + ")" : "") }),
       opcoes.mostrarBarbeiro && p.profissional ? h("span", { texto: "com " + p.profissional }) : null,
       h("span", { texto: P.duracao(p.duracao_min || 30) }),
-      h("span", { texto: p.valor == null ? "sem preço" : P.brl(p.valor) }),
+      h("span", { texto: clube ? (Number(p.valor) ? P.brl(p.valor) + " extra" : "pago no clube") : p.valor == null ? "sem preço" : P.brl(p.valor) }),
+      clube && p.comissao_valor != null ? h("span", { texto: "comissão " + P.brl(p.comissao_valor) }) : null,
       p.codigo ? h("span", { texto: "código " + p.codigo }) : null,
     ];
-    return h("article", { class: classe, dataset: { id: p.id } }, [
+    return h("article", { class: classe + (clube ? " do-clube" : ""), dataset: { id: p.id } }, [
       h("div", { class: "hora" }, [h("b", { texto: P.hm(p.horario) }), opcoes.mostrarDia || p.dia !== hoje ? h("small", { texto: P.diaCurto(p.dia) }) : h("small", { texto: P.hm(p.horario_fim) ? "até " + P.hm(p.horario_fim) : "" })]),
       h("div", { class: "info" }, [
-        h("div", { class: "titulo" }, [h("b", { texto: p.servico }), P.selo(p)]),
+        h("div", { class: "titulo" }, [h("b", { texto: p.servico }), h("span", { class: "selos" }, [clube ? h("span", { class: "selo selo-clube", texto: "Clube · não cobrar" }) : null, P.selo(p)])]),
         h("div", { class: "meta" }, meta),
         p.observacao ? h("p", { class: "obs", texto: p.observacao }) : null,
         acoes.childNodes.length ? acoes : null,

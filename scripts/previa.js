@@ -22,7 +22,39 @@ let pedidos = [
   P({ dia: somaDias(hoje, 1), horario: "16:00", horario_fim: "16:30", duracao_min: 30, servico: "Corte social", cliente: "André Costa", status: "pendente", valor: 35, profissional: "Rafael", profissional_id: "b2" }),
   P({ horario: "15:00", cliente: "Lucas Almeida", status: "recusado" }),
   P({ dia: somaDias(hoje, -1), horario: "17:00", horario_fim: "17:30", duracao_min: 30, cliente: "Diego Ramos", status: "confirmado", valor: 35 }),
+  // Assinante do clube: não paga no balcão, comissão fixa
+  P({ horario: "16:30", horario_fim: "17:10", cliente: "Pedrinho", status: "confirmado", valor: 0, comissao_valor: 15, clube_assinante_id: "a1", clube_assinantes: { nome: "Pedro Henrique" } }),
 ];
+
+// Clube de assinatura (prévia): planos, assinantes e uso
+let clubePlanos = [
+  { id: "pl1", nome: "Corte ilimitado", descricao: "Cabelo sempre em dia, sem pagar a cada corte", preco: 99.9, servicos: ["Corte degradê", "Corte social"], intervalo_dias: 7, dias_semana: [1, 2, 3, 4], hora_limite: "17:00", comissao_valor: 15, ativo: true },
+  { id: "pl2", nome: "Corte + barba", descricao: "", preco: 149.9, servicos: ["Corte + barba", "Barba tradicional"], intervalo_dias: 14, dias_semana: [1, 2, 3, 4, 5, 6], hora_limite: null, comissao_valor: 25, ativo: true },
+];
+let clubeAssinantes = [
+  { id: "a1", plano_id: "pl1", nome: "Pedro Henrique", whatsapp: "81999990001", status: "ativo", pago_ate: somaDias(hoje, 18), observacao: "Paga por Pix todo dia 5" },
+  { id: "a2", plano_id: "pl1", nome: "Thiago Moura", whatsapp: "81999990002", status: "ativo", pago_ate: somaDias(hoje, -2), observacao: "" },
+  { id: "a3", plano_id: "pl2", nome: "Felipe Andrade", whatsapp: "81999990003", status: "ativo", pago_ate: somaDias(hoje, 2), observacao: "" },
+  { id: "a4", plano_id: "pl1", nome: "Rodrigo Lima", whatsapp: "81999990004", status: "pausado", pago_ate: somaDias(hoje, -20), observacao: "Viajando" },
+];
+const DIAS_R = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+function regrasPrevia(pl) {
+  const d = [...pl.dias_semana].sort();
+  const dias = d.length === 7 ? "" : d.length > 2 && d.every((x, i) => !i || x === d[i - 1] + 1) ? `${DIAS_R[d[0]]} a ${DIAS_R[d[d.length - 1]]}` : d.map((x) => DIAS_R[x]).join(", ");
+  return [pl.intervalo_dias ? `1 vez a cada ${pl.intervalo_dias} dias` : "sem intervalo mínimo", dias, pl.hora_limite ? "até " + pl.hora_limite : ""].filter(Boolean).join(" · ");
+}
+function clubePrevia() {
+  const ativos = clubeAssinantes.filter((a) => a.status === "ativo");
+  const receita = ativos.reduce((t, a) => t + (clubePlanos.find((p) => p.id === a.plano_id) || { preco: 0 }).preco, 0);
+  return {
+    hoje, slug: "gw-barbearia",
+    planos: clubePlanos.map((p) => ({ ...p, regras: regrasPrevia(p), assinantes: ativos.filter((a) => a.plano_id === p.id).length })),
+    assinantes: clubeAssinantes.map((a) => ({ ...a, plano: (clubePlanos.find((p) => p.id === a.plano_id) || {}).nome || "", usosMes: a.id === "a1" ? 3 : a.id === "a3" ? 1 : 0, ultimoUso: a.id === "a1" ? somaDias(hoje, -6) : null, emAberto: a.id === "a1" ? hoje : null, liberaEm: a.id === "a1" ? somaDias(hoje, 1) : null, vencido: a.status === "ativo" && a.pago_ate < hoje })),
+    servicos: ["Barba tradicional", "Corte + barba", "Corte degradê", "Corte social"],
+    kpis: { ativos: ativos.length, vencidos: ativos.filter((a) => a.pago_ate < hoje).length, receitaMensal: receita, usosMes: 4, comissoesMes: 70, resultadoMes: receita - 70 },
+  };
+}
+function maisUmMesPrevia(iso) { const [a, m, d] = iso.split("-").map(Number); const u = new Date(Date.UTC(a, m + 1, 0)).getUTCDate(); return new Date(Date.UTC(a, m, Math.min(d, u))).toISOString().slice(0, 10); }
 
 let equipeGestao = [
   { id: "b1", nome: "Bruno", ativo: true, perfil_user_id: "u2", foto_url: null, comissao_pct: 40, atendimentos: { total: 148, ultimos30: 41, servicos: [{ nome: "Corte degradê", quantidade: 77 }, { nome: "Corte social", quantidade: 39 }, { nome: "Barba tradicional", quantidade: 32 }] } },
@@ -139,6 +171,31 @@ const servidor = http.createServer(async (req, res) => {
         if (metodo === "POST") return json(res, 200, { url: "/painel-dono.html#mais" });
         return json(res, 200, { configurado: true, assinatura: assinaturaPrevia, oferta: { promocao: true, vagasRestantes: 7, mensal: 39.9, normal: 89.9, implantacao: 120, diasAtePrimeiraCobranca: 60 } });
       }
+      if (q.area === "clube") {
+        if (metodo === "GET") return json(res, 200, clubePrevia());
+        if (b.acao === "plano-salvar") {
+          if (!b.nome || String(b.nome).trim().length < 2) return json(res, 400, { message: "Dê um nome ao plano." });
+          const corpo = { nome: b.nome, descricao: b.descricao || "", preco: Number(String(b.preco).replace(",", ".")), servicos: b.servicos, intervalo_dias: Number(b.intervalo_dias), dias_semana: b.dias_semana, hora_limite: b.hora_limite || null, comissao_valor: Number(String(b.comissao_valor || 0).replace(",", ".")) };
+          const pl = clubePlanos.find((x) => x.id === b.id);
+          if (pl) Object.assign(pl, corpo); else clubePlanos.push({ id: "pl" + seq++, ativo: true, ...corpo });
+          return json(res, pl ? 200 : 201, { plano: corpo });
+        }
+        if (b.acao === "plano-ativo") { const pl = clubePlanos.find((x) => x.id === b.id); if (pl) pl.ativo = b.ativo === true; return json(res, 200, { ok: true }); }
+        if (b.acao === "assinante-salvar") {
+          const zap = String(b.whatsapp || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+          if (zap.length < 10) return json(res, 400, { message: "Informe o WhatsApp do assinante com DDD." });
+          if (clubeAssinantes.some((x) => x.whatsapp === zap && x.id !== b.id)) return json(res, 409, { message: "Já existe um assinante com este WhatsApp." });
+          const corpo = { nome: b.nome, whatsapp: zap, plano_id: b.plano_id, pago_ate: b.pago_ate || null, observacao: b.observacao || "" };
+          const a = clubeAssinantes.find((x) => x.id === b.id);
+          if (a) { Object.assign(a, corpo); return json(res, 200, { assinante: a }); }
+          const novo = { id: "a" + seq++, status: "ativo", ...corpo };
+          clubeAssinantes.push(novo);
+          return json(res, 201, { assinante: novo });
+        }
+        if (b.acao === "assinante-pagou") { const a = clubeAssinantes.find((x) => x.id === b.id); a.pago_ate = maisUmMesPrevia(a.pago_ate && a.pago_ate > hoje ? a.pago_ate : hoje); a.status = "ativo"; return json(res, 200, { pago_ate: a.pago_ate }); }
+        if (b.acao === "assinante-status") { const a = clubeAssinantes.find((x) => x.id === b.id); a.status = b.status; return json(res, 200, { ok: true }); }
+        return json(res, 400, { message: "Ação desconhecida." });
+      }
       if (q.agenda === "1") return json(res, 200, { profissional: { id: q.profissionalId, nome: "Rafael", temLogin: false }, ...semana(q.de || hoje, q.dias) });
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));
       if (metodo === "GET") return json(res, 200, { profissionais: equipeGestao, convites });
@@ -157,7 +214,10 @@ const servidor = http.createServer(async (req, res) => {
     // Site público (agendamento): equipe e horários fictícios
     // Site sem cadastro no sistema (como a JM): a API não conhece a barbearia
     if (u.pathname === "/api/profissionais" && q.slug !== "gw-barbearia") return json(res, 404, { message: "Barbearia não encontrada." });
-    if (u.pathname === "/api/profissionais") return json(res, 200, { profissionais: equipeGestao.map((p) => ({ id: p.id, nome: p.nome, foto_url: p.foto_url })), precos: {} });
+    if (u.pathname === "/api/profissionais") {
+      const planos = clubePlanos.filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome, descricao: p.descricao, preco: p.preco, servicos: p.servicos, regras: `Inclui ${p.servicos.join(", ")} · ${regrasPrevia(p)}` }));
+      return json(res, 200, { profissionais: equipeGestao.map((p) => ({ id: p.id, nome: p.nome, foto_url: p.foto_url })), precos: {}, clube: planos.length ? { planos } : null });
+    }
     if (u.pathname === "/api/horarios") {
       if (q.dias === "1") return json(res, 200, { dias: [hoje, somaDias(hoje, 1), somaDias(hoje, 2)] });
       return json(res, 200, { horarios: ["10:00", "10:30", "14:00", "15:30", "17:00"] });
@@ -171,6 +231,20 @@ const servidor = http.createServer(async (req, res) => {
       if (b.acao === "cancelar" && p) { p.status = "cancelado"; return json(res, 200, { pedido: p }); }
       if (b.acao === "remarcar" && p) { p.dia = b.dia; p.horario = b.horario; return json(res, 200, { pedido: p }); }
       if (b.acao === "avulso") { const n = P({ servico: b.servico, cliente: b.cliente, dia: b.dia, horario: b.horario, status: "avulso", duracao_min: b.duracao }); pedidos.push(n); return json(res, 201, { pedido: n }); }
+      // Pedido feito no site (prévia): assinante do clube pelo WhatsApp cadastrado
+      if (metodo === "POST" && b.slug) {
+        let a = null;
+        if (b.clube === true) {
+          const zap = String(b.clubeWhatsapp || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+          a = clubeAssinantes.find((x) => x.whatsapp === zap);
+          if (!a) return json(res, 422, { message: "Não encontramos assinatura do clube com este WhatsApp. Confira o número ou marque sem o clube.", clube: true });
+          if (a.status !== "ativo") return json(res, 422, { message: "Sua assinatura do clube está pausada ou cancelada. Fale com a barbearia.", clube: true });
+          if (a.pago_ate && a.pago_ate < b.dia) return json(res, 422, { message: `A mensalidade do clube venceu em ${a.pago_ate.slice(8, 10)}/${a.pago_ate.slice(5, 7)}. Fale com a barbearia para renovar.`, clube: true });
+        }
+        const n = P({ servico: b.servico, cliente: b.cliente, dia: b.dia, horario: b.horario, status: "pendente", valor: a ? 0 : 40, comissao_valor: a ? 15 : null, clube_assinante_id: a ? a.id : null, clube_assinantes: a ? { nome: a.nome } : null });
+        pedidos.push(n);
+        return json(res, 201, { codigo: n.codigo, profissional: b.profissional || "Bruno", verificado: true, clube: !!a });
+      }
       return json(res, 400, { message: "Ação desconhecida." });
     }
     return json(res, 404, { message: "Sem prévia para " + u.pathname });

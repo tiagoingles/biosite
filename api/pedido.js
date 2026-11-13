@@ -2,6 +2,8 @@
 // POST: recebe um pedido feito no site. Confere o horário com a agenda publicada, grava como
 // "pendente" de forma atômica (sem dois clientes no mesmo horário) e devolve o código que o
 // cliente envia junto na mensagem do WhatsApp.
+// Assinante do clube (clube: true, clubeWhatsapp): o WhatsApp identifica a assinatura e as regras do
+// plano são conferidas no banco; o pedido vai com valor 0 e a comissão fixa do plano.
 // GET, PATCH e POST com "acao": o painel lista e decide os pedidos (ver lib/pedidos-painel.js).
 // Usa a mesma função para não passar do limite de funções da Vercel no plano gratuito.
 const { rest } = require("../lib/supabase");
@@ -11,7 +13,8 @@ const { avisarNovoPedido } = require("../lib/avisos");
 const { disponibilidadeDoDia, escolherLivre } = require("../lib/disponibilidade");
 const { precoDoServico } = require("../lib/precos");
 const { dataValida, horaValida, hojeBr, somaDias } = require("../lib/horarios");
-const { origemDe, falha, corpoDe, UUID } = require("../lib/seguranca");
+const { origemDe, falha, corpoDe, UUID, bloqueadoPorTentativas, registrarErroDeSenha } = require("../lib/seguranca");
+const clube = require("../lib/clube");
 
 const DIAS_A_FRENTE = 60; // até quantos dias à frente o cliente pode agendar
 // Limites contra abuso (robô ou pessoa enchendo a agenda de pedidos falsos)
@@ -56,11 +59,26 @@ module.exports = async (req, res) => {
   if (!servico) return erro(res, 400, "Escolha o serviço.");
   if (cliente.length < 2) return erro(res, 400, "Informe seu nome.");
   if (!profissionalNome && !profissionalId && !qualquer) return erro(res, 400, "Escolha o profissional.");
+  const peloClube = b.clube === true;
+  if (peloClube && !clube.normalizarWhats(b.clubeWhatsapp)) return res.status(400).json({ message: "Informe o WhatsApp do clube com DDD.", clube: true });
 
   try {
     const barb = await rest(`barbearias?slug=eq.${slug}&select=id`);
     if (!barb.length) return erro(res, 404, "Barbearia não encontrada.");
     const barbearia_id = barb[0].id;
+
+    // Assinante do clube. Número não encontrado conta como tentativa errada (ninguém fica testando números à toa).
+    let assinante = null;
+    if (peloClube) {
+      if (await bloqueadoPorTentativas(req, "clube")) return res.status(429).json({ message: "Muitas tentativas com o WhatsApp do clube. Espere 15 minutos ou marque sem o clube.", clube: true });
+      assinante = await clube.assinantePorWhatsapp(barbearia_id, b.clubeWhatsapp);
+      if (assinante.erro) {
+        await registrarErroDeSenha(req, "clube");
+        return res.status(422).json({ message: assinante.erro, clube: true });
+      }
+    }
+    // O nome do serviço vai escrito como está no plano (o banco compara o texto exato)
+    const servicoPedido = assinante ? clube.servicoDoPlano(assinante.servicos, servico) : servico;
     const equipe = await rest(`profissionais?barbearia_id=eq.${barbearia_id}&ativo=eq.true&select=id,nome&order=criado_em.asc`);
 
     // Quem vai atender: o escolhido, um livre da equipe, ou (site antigo, sem id) o barbeiro com aquele nome
@@ -104,7 +122,7 @@ module.exports = async (req, res) => {
               profissional_id: escolhido ? escolhido.id : null,
               profissional: escolhido ? escolhido.nome : profissionalNome,
               codigo,
-              servico,
+              servico: servicoPedido,
               dia,
               horario,
               cliente,
@@ -116,6 +134,7 @@ module.exports = async (req, res) => {
               limite_hora_origem: LIMITE_HORA_ORIGEM,
               limite_dia_origem: LIMITE_DIA_ORIGEM,
               limite_dia_barbearia: limiteBarbearia,
+              clube_assinante_id: assinante ? assinante.id : null,
             },
           },
         });
@@ -126,13 +145,14 @@ module.exports = async (req, res) => {
       if (r && r.erro === "conflito") return erro(res, 409, "Este horário acabou de ser reservado. Escolha outro.");
       if (r && r.erro === "limite_origem") return erro(res, 429, "Você já fez vários pedidos agora há pouco. Se precisar de mais, fale com a barbearia pelo WhatsApp.");
       if (r && r.erro === "limite_barbearia") return erro(res, 429, "A barbearia recebeu muitos pedidos hoje. Fale com ela pelo WhatsApp.");
+      if (r && r.erro === "clube") return res.status(422).json({ message: clube.mensagemDoClube(r), clube: true });
       if (!r || !r.id) throw new Error("Pedido não gravado: resposta inesperada do banco.");
 
       // Aviso no celular do dono e do barbeiro; se falhar, o pedido já foi gravado
-      await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico, dia, horario }).catch((e) =>
+      await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico: assinante ? servicoPedido + " · Clube" : servico, dia, horario }).catch((e) =>
         console.error("aviso de pedido:", e.message)
       );
-      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado });
+      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado, clube: !!assinante });
     }
     throw new Error("Não foi possível gerar um código livre para o pedido.");
   } catch (e) {

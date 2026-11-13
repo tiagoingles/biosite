@@ -22,6 +22,7 @@
   <a href="#hoje" data-aba="hoje"></a>
   <a href="#agenda" data-aba="agenda"></a>
   <a href="#equipe" data-aba="equipe"></a>
+  <a href="#clube" data-aba="clube"></a>
   <a href="#mais" data-aba="mais"></a>
 </nav>
 
@@ -110,6 +111,38 @@
     </div>
   </section>
 
+  <!-- ===== Clube de assinatura (você recebe a mensalidade e registra aqui) ===== -->
+  <section class="tela duas" data-tela="clube" hidden>
+    <div class="kpis larga" id="kpisClube"><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div></div>
+    <div class="larga" id="avisoClube"></div>
+    <div class="coluna">
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Assinantes <span class="contador" id="qtdAssinantes">0</span></h2><button type="button" class="botao p principal" id="novoAssinante"></button></div>
+        <p class="nota p">Quem está cadastrado aqui marca pelo site informando o WhatsApp. Você recebe a mensalidade (Pix, cartão ou dinheiro) e toca em "Recebi" a cada mês pago.</p>
+        <input type="search" id="buscaAssinante" class="busca-painel" placeholder="Buscar por nome ou WhatsApp" aria-label="Buscar assinante" hidden>
+        <div class="lista" id="listaAssinantes"><div class="esqueleto"></div></div>
+      </section>
+    </div>
+    <div class="coluna">
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Planos</h2><button type="button" class="botao p" id="novoPlano"></button></div>
+        <p class="nota p">Os planos ativos aparecem no seu site, na seção Clube, com o botão "Quero assinar", que chama você no WhatsApp.</p>
+        <div class="lista" id="listaPlanos"><div class="esqueleto"></div></div>
+        <a class="botao p" id="verClubeSite" target="_blank" rel="noopener" hidden></a>
+      </section>
+      <section class="cartao">
+        <div class="cartao-topo"><h2>Como funciona</h2></div>
+        <ul class="mini-lista passos">
+          <li>Crie o plano: preço por mês, serviços incluídos e regras (por exemplo, 1 corte a cada 7 dias, de segunda a quinta).</li>
+          <li>O cliente pede para assinar pelo site e você combina o pagamento com ele.</li>
+          <li>Cadastre o assinante com o WhatsApp dele e toque em "Recebi" a cada mês pago.</li>
+          <li>No site, ele marca "Sou assinante do clube" e informa o WhatsApp. O sistema confere as regras do plano.</li>
+          <li>O pedido chega com o selo "Clube · não cobrar" e o barbeiro ganha a comissão fixa do plano.</li>
+        </ul>
+      </section>
+    </div>
+  </section>
+
   <!-- ===== Mais ===== -->
   <section class="tela duas" data-tela="mais" hidden>
     <div class="coluna">
@@ -144,7 +177,7 @@
   if (!P.exigirLogin()) return;
   P.monitorar();
 
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["equipe", "equipe", "Equipe"], ["mais", "mais", "Mais"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["equipe", "equipe", "Equipe"], ["clube", "clube", "Clube"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
@@ -173,6 +206,7 @@
     P.abas(function (aba) {
       if (aba === "agenda") carregarDia();
       if (aba === "equipe") carregarEquipe();
+      if (aba === "clube") carregarClube();
       if (aba === "mais") { carregarSaude(); carregarAssinatura(); }
     });
     carregar();
@@ -474,6 +508,280 @@
     });
   }
 
+  // ---------- Clube de assinatura (versão manual: você recebe a mensalidade e registra) ----------
+  var clube = null, buscaClube = "";
+  var DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  var SITUACAO_CLUBE = { ativo: ["Ativo", "ok"], pausado: ["Pausado", "alerta"], cancelado: ["Cancelado", "neutro"] };
+  P.trocar($("novoPlano"), [P.icone("mais_um"), "Novo plano"]);
+  P.trocar($("novoAssinante"), [P.icone("mais_um"), "Novo assinante"]);
+  P.trocar($("verClubeSite"), [P.icone("site"), "Ver o clube no site"]);
+  $("novoPlano").onclick = function () { abrirPlano(null); };
+  $("novoAssinante").onclick = function () { abrirAssinante(null); };
+  $("buscaAssinante").oninput = function () { buscaClube = $("buscaAssinante").value.trim().toLowerCase(); desenharAssinantes(); };
+
+  function carregarClube() {
+    return P.api("/api/equipe?area=clube").then(function (j) { clube = j; desenharClube(); }).catch(function (e) { P.toast(e.message, "erro"); });
+  }
+  function apiClube(corpo) { return P.api("/api/equipe?area=clube", { corpo: corpo }); }
+  function siteDoClube() { return clube && clube.slug ? location.origin + "/" + clube.slug : ""; }
+  function whatsBr(n) { n = String(n || ""); return n.length === 11 ? "(" + n.slice(0, 2) + ") " + n.slice(2, 7) + "-" + n.slice(7) : n.length === 10 ? "(" + n.slice(0, 2) + ") " + n.slice(2, 6) + "-" + n.slice(6) : n; }
+  function dataBrAno(iso) { return iso ? P.dataBr(iso) + "/" + iso.slice(0, 4) : "—"; }
+  function reais(v) { return v == null || v === "" ? "" : Number(v).toFixed(2).replace(".", ","); }
+  // Um mês depois (31/01 -> 28/02), a mesma conta do servidor
+  function maisUmMes(iso) { var p = iso.split("-").map(Number), ultimo = new Date(Date.UTC(p[0], p[1] + 1, 0)).getUTCDate(); return new Date(Date.UTC(p[0], p[1], Math.min(p[2], ultimo))).toISOString().slice(0, 10); }
+  function planoPorId(id) { return clube ? clube.planos.filter(function (pl) { return pl.id === id; })[0] || null : null; }
+  function venceLogo(a) { return a.status === "ativo" && a.pago_ate && !a.vencido && a.pago_ate <= P.somaDias(clube.hoje, 3); }
+
+  function desenharClube() {
+    var j = clube, k = j.kpis;
+    P.trocar($("kpisClube"), [
+      kpi("Assinantes ativos", String(k.ativos), k.vencidos ? k.vencidos + " com a mensalidade vencida" : "todos em dia"),
+      kpi("Receita do clube", P.brl(k.receitaMensal), "por mês, somando os ativos"),
+      kpi("Usos no mês", String(k.usosMes), P.brl(k.comissoesMes) + " de comissão"),
+      kpi("Resultado do mês", P.brl(k.resultadoMes), "receita menos comissões"),
+    ]);
+    var avisos = [];
+    if (!j.servicos.length) avisos.push(h("div", { class: "aviso-faixa info" }, [h("span", { texto: "Cadastre os serviços e preços no Financeiro: o plano usa os mesmos serviços do site." }), h("a", { href: P.link("financeiro.html"), class: "botao p", texto: "Cadastrar" })]));
+    else if (!j.planos.length) avisos.push(h("div", { class: "aviso-faixa info" }, [h("span", { texto: "Crie o primeiro plano: ele aparece no seu site com o botão \"Quero assinar\"." })]));
+    if (k.vencidos) avisos.push(h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: (k.vencidos > 1 ? k.vencidos + " assinantes estão" : "1 assinante está") + " com a mensalidade vencida e só volta a marcar pelo clube depois de renovar." })]));
+    P.trocar($("avisoClube"), avisos);
+    $("verClubeSite").hidden = !(j.slug && j.planos.some(function (pl) { return pl.ativo; }));
+    if (j.slug) $("verClubeSite").href = "/" + j.slug + "#clube";
+    desenharPlanos();
+    desenharAssinantes();
+  }
+
+  function desenharPlanos() {
+    var j = clube;
+    P.trocar($("listaPlanos"), j.planos.length ? j.planos.map(function (pl) {
+      var bEditar = h("button", { type: "button", class: "botao p" }, [P.icone("lapis"), "Editar"]);
+      var bAtivo = h("button", { type: "button", class: "botao p" + (pl.ativo ? "" : " principal") }, [P.icone(pl.ativo ? "relogio" : "check"), pl.ativo ? "Pausar plano" : "Reativar plano"]);
+      bEditar.onclick = function () { abrirPlano(pl); };
+      bAtivo.onclick = function () { ativarPlano(pl, bAtivo); };
+      return h("div", { class: "plano-clube" + (pl.ativo ? "" : " off") }, [
+        h("div", { class: "plano-topo" }, [
+          h("div", null, [h("div", { class: "nome", texto: pl.nome }), h("div", { class: "plano-preco" }, [P.brl(pl.preco), h("small", { texto: " por mês" })])]),
+          h("span", { class: "selo " + (pl.ativo ? "selo-ok" : "selo-neutro"), texto: pl.ativo ? "No site" : "Pausado" }),
+        ]),
+        pl.descricao ? h("p", { class: "nota p", texto: pl.descricao }) : null,
+        h("p", { class: "regras", texto: "Inclui " + pl.servicos.join(", ") + " · " + pl.regras }),
+        h("p", { class: "nota p", texto: pl.assinantes + (pl.assinantes === 1 ? " assinante ativo" : " assinantes ativos") + " · comissão de " + P.brl(pl.comissao_valor) + " por atendimento" }),
+        h("div", { class: "linha" }, [bEditar, bAtivo]),
+      ]);
+    }) : P.vazio("👑", "Nenhum plano ainda. Toque em Novo plano."));
+  }
+  function ativarPlano(pl, botao) {
+    var ativar = !pl.ativo;
+    (ativar ? Promise.resolve(true) : P.confirmar("Pausar o plano " + pl.nome + "?", "O plano sai do site e os assinantes dele não marcam pelo clube enquanto estiver pausado. Dá para reativar quando quiser.", "Pausar plano", true)).then(function (ok) {
+      if (!ok) return;
+      P.acao(botao, apiClube({ acao: "plano-ativo", id: pl.id, ativo: ativar }).then(function () {
+        P.toast(ativar ? "Plano de volta ao site." : "Plano pausado.", "ok");
+        carregarClube();
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
+  }
+
+  // Formulário do plano. Se o servidor recusar, reabre com o que foi digitado.
+  function abrirPlano(pl, rascunho) {
+    var j = clube;
+    if (!j) return;
+    if (!j.servicos.length) {
+      P.janela({ titulo: "Cadastre os serviços primeiro", conteudo: h("p", { class: "nota", texto: "O plano usa os serviços cadastrados no Financeiro (os mesmos que aparecem no site). Cadastre os serviços e preços e volte aqui." }), acoes: [{ texto: "Entendi", classe: "principal", valor: "ok" }] });
+      return;
+    }
+    var v = rascunho || (pl
+      ? { nome: pl.nome, preco: reais(pl.preco), descricao: pl.descricao, servicos: pl.servicos, intervalo_dias: pl.intervalo_dias, dias_semana: pl.dias_semana, hora_limite: pl.hora_limite || "", comissao_valor: reais(pl.comissao_valor) }
+      : { nome: "", preco: "", descricao: "", servicos: [], intervalo_dias: 7, dias_semana: [1, 2, 3, 4, 5, 6], hora_limite: "", comissao_valor: "" });
+    var nome = h("input", { maxlength: "60", placeholder: "Ex.: Corte ilimitado", value: v.nome });
+    var preco = h("input", { inputmode: "decimal", placeholder: "Ex.: 99,90", value: v.preco });
+    var comissao = h("input", { inputmode: "decimal", placeholder: "Ex.: 15,00", value: v.comissao_valor });
+    var desc = h("input", { maxlength: "160", placeholder: "Ex.: Cabelo sempre em dia, sem pagar a cada corte", value: v.descricao });
+    // Serviços do Financeiro; um serviço do plano que saiu do cadastro continua na lista para poder ser desmarcado
+    var nomes = j.servicos.concat(v.servicos.filter(function (s) { return j.servicos.indexOf(s) < 0; }));
+    var servicos = h("div", { class: "opcoes-check" }, nomes.map(function (s) {
+      return h("label", null, [h("input", { type: "checkbox", value: s, checked: v.servicos.indexOf(s) > -1 }), s]);
+    }));
+    var opcoes = [[0, "Sem limite de vezes"], [1, "1 vez por dia"], [7, "1 vez a cada 7 dias"], [10, "1 vez a cada 10 dias"], [14, "1 vez a cada 14 dias"], [15, "1 vez a cada 15 dias"], [30, "1 vez a cada 30 dias"]];
+    var atual = Number(v.intervalo_dias);
+    if (!opcoes.some(function (o) { return o[0] === atual; })) opcoes.push([atual, "1 vez a cada " + atual + " dias"]);
+    var intervalo = h("select", null, opcoes.map(function (o) { return h("option", { value: String(o[0]), selected: o[0] === atual, texto: o[1] }); }));
+    var dias = h("div", { class: "opcoes-check" }, DIAS_CURTOS.map(function (d, i) {
+      return h("label", null, [h("input", { type: "checkbox", value: String(i), checked: v.dias_semana.map(Number).indexOf(i) > -1 }), d]);
+    }));
+    var hora = h("input", { type: "time", value: v.hora_limite });
+    function marcados(caixa) { return Array.prototype.slice.call(caixa.querySelectorAll("input:checked")).map(function (i) { return i.value; }); }
+    function lido() {
+      return { nome: nome.value.trim(), preco: preco.value.trim(), comissao_valor: comissao.value.trim(), descricao: desc.value.trim(), servicos: marcados(servicos), intervalo_dias: Number(intervalo.value), dias_semana: marcados(dias).map(Number), hora_limite: hora.value };
+    }
+    P.janela({
+      titulo: pl ? "Editar plano" : "Novo plano",
+      conteudo: h("div", { class: "grade" }, [
+        h("label", { class: "campo" }, ["Nome do plano", nome]),
+        h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Preço por mês (R$)", preco]), h("label", { class: "campo" }, ["Comissão (R$)", comissao])]),
+        h("label", { class: "campo" }, ["Descrição curta (opcional)", desc]),
+        h("fieldset", { class: "campo-grupo" }, [h("legend", { texto: "Serviços incluídos" }), servicos]),
+        h("label", { class: "campo" }, ["Quantas vezes pode usar", intervalo]),
+        h("fieldset", { class: "campo-grupo" }, [h("legend", { texto: "Dias da semana em que o plano vale" }), dias]),
+        h("label", { class: "campo" }, ["Só para horários antes de (opcional)", hora]),
+        h("p", { class: "nota p", texto: "A comissão é o valor que o barbeiro ganha a cada atendimento de assinante. Dica: valer só nos dias mais vazios (por exemplo, segunda a quinta) enche a agenda sem tirar horário de quem paga avulso." }),
+      ]),
+      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: pl ? "Salvar plano" : "Criar plano", classe: "principal", valor: "ok" }],
+      validar: function () {
+        var x = lido();
+        if (x.nome.length < 2) return "Dê um nome ao plano.";
+        if (!(Number(x.preco.replace(/\.(?=\d{3})/g, "").replace(",", ".")) > 0)) return "Informe o preço do plano por mês.";
+        if (!x.servicos.length) return "Escolha pelo menos um serviço incluído.";
+        if (!x.dias_semana.length) return "Escolha pelo menos um dia da semana.";
+        return "";
+      },
+    }).then(function (r) {
+      if (r.valor !== "ok") return;
+      var x = lido();
+      apiClube(Object.assign({ acao: "plano-salvar", id: pl ? pl.id : undefined }, x)).then(function () {
+        P.toast(pl ? "Plano salvo." : "Plano criado. Ele já aparece no seu site.", "ok");
+        carregarClube();
+      }).catch(function (e) { P.toast(e.message, "erro"); abrirPlano(pl, x); });
+    });
+  }
+
+  function desenharAssinantes() {
+    var j = clube;
+    var ordem = { ativo: 0, pausado: 1, cancelado: 2 };
+    var lista = j.assinantes.slice().sort(function (a, b) { return (Number(b.vencido) - Number(a.vencido)) || ((ordem[a.status] || 0) - (ordem[b.status] || 0)) || a.nome.localeCompare(b.nome, "pt-BR"); });
+    $("qtdAssinantes").textContent = j.kpis.ativos;
+    $("buscaAssinante").hidden = j.assinantes.length < 7;
+    if (buscaClube) {
+      var digitos = buscaClube.replace(/\D/g, "");
+      lista = lista.filter(function (a) { return a.nome.toLowerCase().indexOf(buscaClube) > -1 || (digitos && a.whatsapp.indexOf(digitos) > -1); });
+    }
+    P.trocar($("listaAssinantes"), lista.length ? lista.map(cartaoAssinante) : P.vazio("👑", j.assinantes.length ? "Ninguém encontrado com essa busca." : j.planos.length ? "Nenhum assinante ainda. Cadastre quem já paga o plano." : "Crie um plano primeiro; depois cadastre os assinantes."));
+  }
+  function cartaoAssinante(a) {
+    var hoje = clube.hoje;
+    var s = SITUACAO_CLUBE[a.status] || [a.status, "neutro"];
+    var selos = [h("span", { class: "selo selo-" + s[1], texto: s[0] })];
+    if (a.vencido) selos.unshift(h("span", { class: "selo selo-erro", texto: "Venceu " + P.dataBr(a.pago_ate) }));
+    else if (venceLogo(a)) selos.unshift(h("span", { class: "selo selo-alerta", texto: "Vence " + P.dataBr(a.pago_ate) }));
+    var uso = [a.usosMes + (a.usosMes === 1 ? " atendimento" : " atendimentos") + " no mês"];
+    if (a.emAberto) uso.push("marcado para " + P.dataBr(a.emAberto));
+    else if (a.liberaEm && a.liberaEm > hoje) uso.push("próximo a partir de " + P.dataBr(a.liberaEm));
+    var bRecebi = a.status !== "cancelado" ? h("button", { type: "button", class: "botao p principal" }, [P.icone("dinheiro"), "Recebi"]) : null;
+    if (bRecebi) bRecebi.onclick = function () { registrarPagamento(a, bRecebi); };
+    var bWhats = h("button", { type: "button", class: "botao p whats" }, [P.icone("whats"), "WhatsApp"]);
+    bWhats.onclick = function () { abrirWhatsAssinante(a, false); };
+    var bEditar = h("button", { type: "button", class: "botao mini" }, [P.icone("lapis"), "Editar"]);
+    bEditar.onclick = function () { abrirAssinante(a); };
+    var bStatus = h("button", { type: "button", class: "botao mini" }, a.status === "ativo" ? [P.icone("relogio"), "Pausar"] : [P.icone("check"), "Reativar"]);
+    bStatus.onclick = function () { mudarStatus(a, a.status === "ativo" ? "pausado" : "ativo", bStatus); };
+    var bCancelar = a.status !== "cancelado" ? h("button", { type: "button", class: "botao mini perigo" }, [P.icone("x"), "Cancelar"]) : null;
+    if (bCancelar) bCancelar.onclick = function () { mudarStatus(a, "cancelado", bCancelar); };
+    return h("div", { class: "assinante" + (a.status === "cancelado" ? " apagado" : "") }, [
+      h("div", { class: "assinante-topo" }, [
+        h("div", { class: "cresce" }, [h("div", { class: "nome", texto: a.nome }), h("div", { class: "det", texto: (a.plano || "Plano removido") + " · " + whatsBr(a.whatsapp) })]),
+        h("span", { class: "selos" }, selos),
+      ]),
+      h("p", { class: "nota p", texto: (a.pago_ate ? "Pago até " + dataBrAno(a.pago_ate) : "Sem data de vencimento") + " · " + uso.join(" · ") }),
+      a.observacao ? h("p", { class: "obs", texto: a.observacao }) : null,
+      h("div", { class: "linha" }, [bRecebi, bWhats]),
+      h("div", { class: "secundarias" }, [bEditar, bStatus, bCancelar]),
+    ]);
+  }
+
+  // Cadastro do assinante. Depois de cadastrar, oferece as boas-vindas pelo WhatsApp com o passo a passo.
+  function abrirAssinante(a, rascunho) {
+    var j = clube;
+    if (!j) return;
+    var planos = j.planos.filter(function (pl) { return pl.ativo || (a && pl.id === a.plano_id); });
+    if (!planos.length) { P.toast("Crie um plano antes de cadastrar assinantes.", "erro"); return; }
+    var v = rascunho || (a
+      ? { nome: a.nome, whatsapp: whatsBr(a.whatsapp), plano_id: a.plano_id, pago_ate: a.pago_ate || "", observacao: a.observacao || "" }
+      : { nome: "", whatsapp: "", plano_id: planos[0].id, pago_ate: maisUmMes(j.hoje), observacao: "" });
+    var nome = h("input", { maxlength: "80", placeholder: "Nome do cliente", autocomplete: "off", value: v.nome });
+    var whats = h("input", { type: "tel", inputmode: "tel", maxlength: "20", placeholder: "(81) 99999-9999", autocomplete: "off", value: v.whatsapp });
+    var plano = h("select", null, planos.map(function (pl) { return h("option", { value: pl.id, selected: pl.id === v.plano_id, texto: pl.nome + " · " + P.brl(pl.preco) }); }));
+    var pago = h("input", { type: "date", value: v.pago_ate });
+    var obs = h("input", { maxlength: "200", placeholder: "Ex.: paga por Pix todo dia 10", value: v.observacao });
+    function lido() { return { nome: nome.value.trim(), whatsapp: whats.value.trim(), plano_id: plano.value, pago_ate: pago.value, observacao: obs.value.trim() }; }
+    P.janela({
+      titulo: a ? "Editar assinante" : "Novo assinante",
+      conteudo: h("div", { class: "grade" }, [
+        h("label", { class: "campo" }, ["Nome", nome]),
+        h("label", { class: "campo" }, ["WhatsApp com DDD (é com ele que o cliente marca pelo site)", whats]),
+        h("label", { class: "campo" }, ["Plano", plano]),
+        h("label", { class: "campo" }, ["Pago até", pago]),
+        h("label", { class: "campo" }, ["Observação (opcional)", obs]),
+        a ? null : h("p", { class: "nota p", texto: "Pago até já vem com 1 mês a partir de hoje, para quem acabou de pagar. Depois, toque em \"Recebi\" a cada mês." }),
+      ]),
+      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: a ? "Salvar" : "Cadastrar", classe: "principal", valor: "ok" }],
+      validar: function () {
+        var x = lido();
+        if (x.nome.length < 2) return "Informe o nome do assinante.";
+        if (x.whatsapp.replace(/\D/g, "").length < 10) return "Informe o WhatsApp com DDD.";
+        return "";
+      },
+    }).then(function (r) {
+      if (r.valor !== "ok") return;
+      var x = lido();
+      apiClube(Object.assign({ acao: "assinante-salvar", id: a ? a.id : undefined }, x)).then(function (resp) {
+        carregarClube();
+        if (a) { P.toast("Assinante salvo.", "ok"); return; }
+        var novo = Object.assign({}, resp.assinante, { plano: (planoPorId(resp.assinante.plano_id) || {}).nome || "" });
+        P.janela({
+          titulo: "Assinante cadastrado",
+          conteudo: h("div", { class: "grade" }, [
+            h("p", { class: "nota", texto: "Mande as boas-vindas com o link do site e o passo a passo para marcar pelo clube." }),
+            h("p", { class: "obs", style: "white-space:pre-line", texto: textoAssinante(novo, true) }),
+          ]),
+          acoes: [{ texto: "Agora não", valor: "cancelar" }, { texto: "Enviar no WhatsApp", classe: "whats", valor: "ok" }],
+        }).then(function (r2) { if (r2.valor === "ok") abrirWhatsAssinante(novo, true); });
+      }).catch(function (e) { P.toast(e.message, "erro"); abrirAssinante(a, x); });
+    });
+  }
+
+  function registrarPagamento(a, botao) {
+    var base = a.pago_ate && a.pago_ate > clube.hoje ? a.pago_ate : clube.hoje;
+    var novo = maisUmMes(base);
+    P.confirmar("Recebi o pagamento de " + P.primeiroNome(a.nome), "Registra 1 mês do plano " + (a.plano || "") + ": pago até " + (a.pago_ate ? "passa de " + dataBrAno(a.pago_ate) + " " : "fica ") + "para " + dataBrAno(novo) + ".", "Registrar pagamento").then(function (ok) {
+      if (!ok) return;
+      P.acao(botao, apiClube({ acao: "assinante-pagou", id: a.id }).then(function (r) {
+        P.toast("Pagamento registrado: pago até " + dataBrAno(r.pago_ate) + ".", "ok");
+        carregarClube();
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
+  }
+  function mudarStatus(a, status, botao) {
+    var quem = P.primeiroNome(a.nome);
+    var t = {
+      pausado: ["Pausar a assinatura de " + quem + "?", "Enquanto estiver pausada, " + quem + " não marca pelo clube. Dá para reativar quando quiser.", "Pausar", false],
+      cancelado: ["Cancelar a assinatura de " + quem + "?", quem + " deixa de marcar pelo clube. Os atendimentos já feitos continuam no histórico e no financeiro.", "Cancelar assinatura", true],
+      ativo: ["Reativar a assinatura de " + quem + "?", quem + " volta a marcar pelo clube" + (a.pago_ate && a.pago_ate < clube.hoje ? ", mas a mensalidade está vencida: registre o pagamento em \"Recebi\"." : "."), "Reativar", false],
+    }[status];
+    P.confirmar(t[0], t[1], t[2], t[3]).then(function (ok) {
+      if (!ok) return;
+      P.acao(botao, apiClube({ acao: "assinante-status", id: a.id, status: status }).then(function () {
+        P.toast(status === "ativo" ? "Assinatura reativada." : status === "pausado" ? "Assinatura pausada." : "Assinatura cancelada.", "ok");
+        carregarClube();
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
+  }
+
+  // Mensagem para o assinante: boas-vindas, lembrete de vencimento ou mensalidade vencida
+  function textoAssinante(a, boasVindas) {
+    var nome = P.primeiroNome(a.nome), casa = ctx.barbearia || "barbearia", pl = planoPorId(a.plano_id), site = siteDoClube(), plano = a.plano || (pl ? pl.nome : "");
+    if (!boasVindas && a.vencido) return "Olá, " + nome + "! A mensalidade do seu plano " + plano + " da " + casa + " venceu em " + P.dataBr(a.pago_ate) + ". Para continuar marcando pelo clube, é só renovar. Qualquer dúvida, estou por aqui!";
+    if (!boasVindas && venceLogo(a)) return "Olá, " + nome + "! Passando para lembrar que a mensalidade do seu plano " + plano + " da " + casa + " vence em " + P.dataBr(a.pago_ate) + ". Assim você continua marcando pelo clube sem parar.";
+    var t = boasVindas ? "Olá, " + nome + "! Agora você é assinante do plano " + plano + " da " + casa + " 🎉" : "Olá, " + nome + "! Seu plano " + plano + " da " + casa + " está ativo" + (a.pago_ate ? " até " + P.dataBr(a.pago_ate) : "") + ".";
+    if (site) t += "\n\nPara marcar: abra " + site + ", escolha o serviço e o horário e, em Seus dados, marque \"Sou assinante do clube\" com este WhatsApp.";
+    if (pl) t += "\n\nSeu plano inclui " + pl.servicos.join(", ") + " · " + pl.regras + ".";
+    return t;
+  }
+  function abrirWhatsAssinante(a, boasVindas) {
+    var l = h("a", { href: "https://wa.me/55" + a.whatsapp + "?text=" + encodeURIComponent(textoAssinante(a, boasVindas)), target: "_blank", rel: "noopener" });
+    document.body.appendChild(l);
+    l.click();
+    l.remove();
+  }
+
   // ---------- Mais ----------
   function itemMenu(icone, titulo, detalhe, props) {
     return h(props && props.href ? "a" : "button", Object.assign({ type: props && props.href ? null : "button" }, props || {}), [P.icone(icone), h("span", null, [titulo, detalhe ? h("small", { texto: detalhe }) : null])]);
@@ -484,6 +792,7 @@
     var itens = [
       itemMenu("grafico", "Financeiro", "Faturamento, comissões, gastos e insumos", { href: P.link("financeiro.html") }),
       itemMenu("equipe", "Equipe e convites", "Convidar barbeiros, fotos e links de cada um", { href: "#equipe" }),
+      itemMenu("clube", "Clube de assinatura", "Planos mensais, assinantes e pagamentos", { href: "#clube" }),
       slug ? itemMenu("site", "Ver o site", linkSite.replace(/^https?:\/\//, ""), { href: "/" + slug, target: "_blank", rel: "noopener" }) : null,
       slug ? itemMenu("link", "Copiar link de agendamento", "Para colocar no Instagram e no WhatsApp", { onclick: function () {
         (navigator.clipboard ? navigator.clipboard.writeText(linkSite) : Promise.reject()).then(function () { P.toast("Link copiado: " + linkSite, "ok"); }).catch(function () { P.janela({ titulo: "Link de agendamento", conteudo: h("p", { class: "obs", texto: linkSite }), acoes: [{ texto: "OK", classe: "principal", valor: "ok" }] }); });
@@ -496,9 +805,9 @@
   function exportar60() {
     P.api("/api/pedido?realizados=1").then(function (j) {
       if (!j.pedidos.length) { P.toast("Nada para exportar ainda."); return; }
-      P.baixarCsv("atendimentos-60-dias.csv", [["Dia", "Horário", "Barbeiro", "Cliente", "Serviço", "Situação", "Valor", "Comissão %", "Comissão R$"]].concat(j.pedidos.map(function (p) {
+      P.baixarCsv("atendimentos-60-dias.csv", [["Dia", "Horário", "Barbeiro", "Cliente", "Serviço", "Situação", "Valor", "Comissão %", "Comissão R$", "Clube"]].concat(j.pedidos.map(function (p) {
         var v = Number(p.valor) || 0, c = Number(p.comissao_pct) || 0;
-        return [P.dataBr(p.dia) + "/" + p.dia.slice(0, 4), P.hm(p.horario), p.profissional, p.cliente, p.servico, (P.STATUS[p.status] || [p.status])[0], v.toFixed(2).replace(".", ","), c, (v * c / 100).toFixed(2).replace(".", ",")];
+        return [P.dataBr(p.dia) + "/" + p.dia.slice(0, 4), P.hm(p.horario), p.profissional, p.cliente, p.servico, (P.STATUS[p.status] || [p.status])[0], v.toFixed(2).replace(".", ","), p.comissao_valor != null ? "fixa" : c, P.comissao(p).toFixed(2).replace(".", ","), p.clube_assinante_id ? "sim" : ""];
       })));
     }).catch(function (e) { P.toast(e.message, "erro"); });
   }

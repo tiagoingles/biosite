@@ -190,10 +190,10 @@
   function kpi(rotulo, valor, detalhe, barra) {
     return h("div", { class: "kpi" }, [h("span", { texto: rotulo }), h("b", { texto: valor }), detalhe ? h("small", { texto: detalhe }) : null, barra != null ? h("div", { class: "barra" }, h("i", { style: "width:" + Math.max(0, Math.min(100, barra)) + "%" })) : null]);
   }
-  // Comissão prevista de uma lista de pedidos (usa a do pedido quando já foi encerrado)
+  // Comissão prevista de uma lista de pedidos (usa a do pedido quando já foi encerrado; assinante do clube tem valor fixo)
   function minhaParte(lista) {
     var pct = Number((eu && eu.profissional && eu.profissional.comissao_pct) || 0);
-    return lista.reduce(function (t, p) { return t + (Number(p.valor) || 0) * (p.comissao_pct != null ? Number(p.comissao_pct) : pct) / 100; }, 0);
+    return lista.reduce(function (t, p) { return t + P.comissao(p, pct); }, 0);
   }
 
   // ---------- Hoje ----------
@@ -316,7 +316,7 @@
       realizados = j.pedidos;
       var feitos = j.pedidos.filter(function (p) { return p.status === "realizado"; });
       var total = feitos.reduce(function (t, p) { return t + (Number(p.valor) || 0); }, 0);
-      var com = feitos.reduce(function (t, p) { return t + (Number(p.valor) || 0) * (Number(p.comissao_pct) || 0) / 100; }, 0);
+      var com = feitos.reduce(function (t, p) { return t + P.comissao(p); }, 0);
       var faltas = j.pedidos.length - feitos.length;
       P.trocar($("resumoHist"), [
         kpi("Sua comissão", P.brl(com), "de " + P.brl(total) + " atendidos"),
@@ -334,9 +334,9 @@
   $("verTodos").onclick = function () { todos = !todos; desenharRealizados(); };
   $("btnCsv").onclick = function () {
     if (!realizados.length) { P.toast("Nada para exportar ainda."); return; }
-    P.baixarCsv("meus-atendimentos.csv", [["Dia", "Horário", "Cliente", "Serviço", "Situação", "Valor", "Comissão %", "Comissão R$"]].concat(realizados.map(function (p) {
+    P.baixarCsv("meus-atendimentos.csv", [["Dia", "Horário", "Cliente", "Serviço", "Situação", "Valor", "Comissão %", "Comissão R$", "Clube"]].concat(realizados.map(function (p) {
       var v = Number(p.valor) || 0, c = Number(p.comissao_pct) || 0;
-      return [P.dataBr(p.dia) + "/" + p.dia.slice(0, 4), P.hm(p.horario), p.cliente, p.servico, (P.STATUS[p.status] || [p.status])[0], v.toFixed(2).replace(".", ","), c, (v * c / 100).toFixed(2).replace(".", ",")];
+      return [P.dataBr(p.dia) + "/" + p.dia.slice(0, 4), P.hm(p.horario), p.cliente, p.servico, (P.STATUS[p.status] || [p.status])[0], v.toFixed(2).replace(".", ","), p.comissao_valor != null ? "fixa" : c, P.comissao(p).toFixed(2).replace(".", ","), p.clube_assinante_id ? "sim" : ""];
     })));
   };
 

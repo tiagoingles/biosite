@@ -69,6 +69,8 @@
     seta_esq: "M15 5l-7 7 7 7",
     seta_dir: "M9 5l7 7-7 7",
     saude: "M3 12h4l2.5-6 4 12 2.5-6h5",
+    clube: "M4 17.5L3 8.5l5 3.5 4-6 4 6 5-3.5-1 9zM5 20.5h14",
+    lapis: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4",
   };
   P.icone = function (nome) {
     var NS = "http://www.w3.org/2000/svg";
@@ -138,6 +140,12 @@
     return h("span", { class: "selo selo-" + s[1], texto: t });
   };
   P.ativo = function (p) { return ["pendente", "confirmado", "avulso", "realizado"].indexOf(p.status) > -1; };
+  // Comissão do barbeiro num atendimento: fixa (assinante do clube, que não paga no balcão) ou % do valor
+  P.comissao = function (p, pctPadrao) {
+    if (p.comissao_valor != null) return Number(p.comissao_valor) || 0;
+    var pct = p.comissao_pct != null ? Number(p.comissao_pct) : Number(pctPadrao || 0);
+    return (Number(p.valor) || 0) * pct / 100;
+  };
 
   // ---------- API ----------
   // Conta da plataforma abrindo o painel de um site (?barbearia=id): as chamadas levam esse id

@@ -445,7 +445,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
 
 <script src="/conta.js"></script>
 <script>
-const GERADOR_VERSAO = 4;
+const GERADOR_VERSAO = 5;
 const FONTS = {
   "Poppins":"Poppins:wght@400;600;700",
   "Montserrat":"Montserrat:wght@400;600;800",
@@ -739,6 +739,8 @@ function agendaRuntime(){
   // Etapas: servico -> pref (tem preferência de barbeiro?) -> prof (só se sim) -> dia -> dados -> ok
   var etapa="servico",pilha=[],sel={},dias=[],enviando=false,ultimo=null;
   var equipe=null,cacheHoras={},cacheDias={};
+  // Planos do clube de assinatura (vêm da API junto com a equipe; null quando a barbearia não tem clube)
+  var clube=null;
   // Barbearia sem cadastro no sistema (só o site): o pedido vai direto pelo WhatsApp, sem registro
   var semCadastro=false;
   function carregarEquipe(cb){
@@ -752,9 +754,33 @@ function agendaRuntime(){
         var card=document.querySelector('[data-agendar="'+String(s.id).replace(/["\\]/g,"")+'"] .svc-t small');
         if(card)card.textContent=[s.duracao,brl(v)].filter(Boolean).join(" · ");
       });
+      clube=j&&j.clube&&j.clube.planos&&j.clube.planos.length?j.clube.planos:null;
       equipe=lista.length?lista.map(function(p){return {id:p.id,dbId:p.id,nome:p.nome,foto:p.foto_url||"",servicos:(AG.servicos||[]).map(function(v){return v.id}),dias:[0,1,2,3,4,5,6]}}):(AG.profissionais||[]);
       cb();
     });
+  }
+  // Serviço incluído em algum plano do clube (sem diferença de acento ou maiúscula)
+  function chave(t){return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase()}
+  function noClube(s){return !!(clube&&s&&clube.some(function(pl){return (pl.servicos||[]).some(function(x){return chave(x)===chave(s.nome)})}))}
+  function clubeSalvo(){try{return localStorage.getItem("bio-clube-"+C.slug)||""}catch(e){return ""}}
+  // Seção do clube no site: cada plano com o botão que chama a barbearia no WhatsApp para assinar
+  function desenharClube(){
+    var sec=$("clube"),box=$("clubeLista");
+    if(!sec||!box)return;
+    sec.hidden=!clube;
+    box.textContent="";
+    (clube||[]).forEach(function(pl){
+      var c=document.createElement("article");c.className="plano";
+      var t=document.createElement("h3");t.textContent=pl.nome;c.appendChild(t);
+      var pr=document.createElement("div");pr.className="plano-preco";pr.textContent=brl(Number(pl.preco));
+      var m=document.createElement("small");m.textContent=" por mês";pr.appendChild(m);c.appendChild(pr);
+      if(pl.descricao){var d=document.createElement("p");d.textContent=pl.descricao;c.appendChild(d)}
+      var r=document.createElement("p");r.className="plano-regras";r.textContent=pl.regras;c.appendChild(r);
+      if(whats()){var b=document.createElement("button");b.type="button";b.className="plano-ag";b.setAttribute("data-plano",pl.id);b.textContent="Quero assinar";c.appendChild(b)}
+      else{var n=document.createElement("p");n.className="plano-regras";n.textContent="Para assinar, fale com a barbearia.";c.appendChild(n)}
+      box.appendChild(c);
+    });
+    if(clube&&location.hash==="#clube")setTimeout(function(){sec.scrollIntoView({block:"start"})},50);
   }
   function profs(){return (equipe||[]).filter(function(p){return !sel.servico||(p.servicos||[]).indexOf(sel.servico.id)>-1})}
   function duracaoDe(s){var m=parseInt(String(s&&s.duracao||""),10);return m>=5&&m<=240?m:30}
@@ -850,11 +876,13 @@ function agendaRuntime(){
       titulo="Seus dados";
       var com=sel.qualquer?"Qualquer barbeiro disponível":sel.prof.nome;
       h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
-      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80"></label><label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
+      var zap=noClube(sel.servico)?clubeSalvo():null;
+      var blocoClube=zap===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(zap?" checked":"")+'>Sou assinante do clube</label><label id="agClubeW"'+(zap?"":" hidden")+'>WhatsApp do clube <small>(o número cadastrado na barbearia)</small><input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" value="'+esc(zap)+'"></label>';
+      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80"></label>'+blocoClube+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
     }else{
       titulo="Pedido enviado";
       var cal=linkCalendario();
-      h+='<p class="cobertura"><b>'+esc(ultimo.servico)+'</b> com '+esc(ultimo.quem)+'<br>'+esc(ultimo.diaTxt)+' às '+esc(ultimo.hora)+(ultimo.codigo?'<br>Código do pedido: <b>'+esc(ultimo.codigo)+'</b>':'')+'</p>';
+      h+='<p class="cobertura"><b>'+esc(ultimo.servico)+'</b> com '+esc(ultimo.quem)+'<br>'+esc(ultimo.diaTxt)+' às '+esc(ultimo.hora)+(ultimo.codigo?'<br>Código do pedido: <b>'+esc(ultimo.codigo)+'</b>':'')+(ultimo.clube?'<br><b>Pelo clube de assinatura</b>':'')+'</p>';
       h+='<p class="note">A barbearia confirma pelo WhatsApp. Se o WhatsApp não abriu sozinho, toque abaixo.</p>';
       h+='<a class="ag-op" href="'+esc(ultimo.link)+'" target="_blank" rel="noopener"><b>Abrir o WhatsApp</b><small>Enviar a mensagem com o pedido</small></a>';
       if(cal)h+='<a class="ag-op" href="'+cal+'" download="agendamento.ics"><b>Salvar na agenda do celular</b><small>Com lembrete 1 hora antes</small></a>';
@@ -889,7 +917,11 @@ function agendaRuntime(){
   document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
   // Link pessoal do barbeiro (/slug?barbeiro=id): o site já abre o agendamento com ele escolhido
   function abrirDoLink(){var id="";try{id=new URLSearchParams(location.search).get("barbeiro")||""}catch(e){}if(id&&porId(equipe||[],id))abrirBarbeiro(id)}
-  carregarEquipe(function(){desenharBarbeiros();if(dlg.open)render();else abrirDoLink()});
+  carregarEquipe(function(){desenharBarbeiros();desenharClube();if(dlg.open)render();else abrirDoLink()});
+  // "Quero assinar": abre o WhatsApp da barbearia com o plano escolhido
+  document.addEventListener("click",function(e){var c=e.target.closest("[data-plano]");if(!c)return;var pl=porId(clube||[],c.getAttribute("data-plano"));if(pl)abrirLink(linkWhats("Olá! Quero assinar o plano "+pl.nome+" do clube ("+brl(Number(pl.preco))+" por mês). Como faço?"))});
+  // Marcar "Sou assinante" mostra o campo do WhatsApp do clube
+  $("agSteps").addEventListener("change",function(e){if(e.target.id!=="agClube")return;var w=$("agClubeW");if(w)w.hidden=!e.target.checked;if(e.target.checked&&$("agWhats"))$("agWhats").focus()});
   dlg.querySelector("[data-close]").addEventListener("click",fechar);
   function cliqueWhats(){abrirLink(linkWhats("Olá! Quero agendar um horário"+(sel.servico?" para "+sel.servico.nome:"")+"."))}
   $("agSteps").addEventListener("click",function(e){
@@ -914,19 +946,24 @@ function agendaRuntime(){
     if(enviando)return;
     var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
     if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
+    var peloClube=!!($("agClube")&&$("agClube").checked),zap=$("agWhats")?$("agWhats").value.trim():"";
+    if(peloClube&&zap.replace(/\D/g,"").length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
     if(semCadastro){concluir(nome,obs,{});return}
     var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
+    if(peloClube){corpo.clube=true;corpo.clubeWhatsapp=zap}
     var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
     enviando=true;botao.disabled=true;if(rotulo)rotulo.textContent="Enviando…";
     // Grava o pedido como pendente e recebe o código; se o horário já foi ocupado, avisa e volta à escolha da hora
     fetch("/api/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {status:r.status,ok:r.ok,j:j}})}).catch(function(){return {status:0,ok:false,j:{}}}).then(function(res){
       enviando=false;botao.disabled=false;if(rotulo)rotulo.textContent=original;
       if(res.status===409){$("agErro").textContent=res.j.message||"Este horário não está mais livre. Escolha outro.";sel.hora=null;cacheHoras={};etapa="dia";render();return}
+      if(!res.ok&&res.j&&res.j.clube){$("agErro").textContent=res.j.message||"Não conseguimos conferir sua assinatura do clube.";return}
       if(!res.ok){
         var m=(res.j&&res.j.message)||(res.status===0?"Sem conexão com a internet.":"Não conseguimos registrar seu pedido agora.");
         $("agErro").innerHTML=esc(m)+" Seu pedido não foi registrado."+(whats()?'<br><button type="button" class="ag-op" data-ag="whats"><b>Falar com a barbearia no WhatsApp</b></button>':"");
         return;
       }
+      if(res.j&&res.j.clube){try{localStorage.setItem("bio-clube-"+C.slug,zap)}catch(e){}}
       concluir(nome,obs,res.j||{});
     });
   });
@@ -936,7 +973,8 @@ function agendaRuntime(){
     var quem=sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
     var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
     if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
-    ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),link:linkWhats(txt)};
+    if(j.clube)txt+="\n*Assinante do clube*";
+    ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),clube:!!j.clube,link:linkWhats(txt)};
     pilha=[];etapa="ok";render();
     abrirLink(ultimo.link);
   }
@@ -970,6 +1008,8 @@ function bioHTML(d=s, img=R){
   const barbBloco=agOk?`<section class="barbeiros" id="barbeiros" hidden><div class="barbs" id="barbsLista"></div></section>`:"";
   // Seção de serviços: cada serviço mostra as fotos e vídeos cadastrados para ele
   const svcsBloco=agOk?`<section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista">${(AG.servicos||[]).map(v=>{const m=(v.midia||[]).filter(x=>safeUrl(x.url));const preco=v.preco?(isNaN(num(v.preco))?v.preco:brl(num(v.preco))):"";const midia=x=>x.tipo==="video"?`<video src="${esc(x.url)}" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video>`:`<img src="${esc(x.url)}" alt="${esc(x.titulo||v.nome)}" loading="lazy">`;return `<article class="svc" data-agendar="${esc(v.id)}" role="button" tabindex="0" aria-label="Agendar ${esc(v.nome)}"><div class="svc-midia">${m[0]?midia(m[0]):""}</div><div class="svc-t"><b>${esc(v.nome)}</b><small>${esc([v.duracao,preco].filter(Boolean).join(" · "))}</small><span class="svc-ag">Agendar →</span></div>${m.length>1?`<div class="svc-mais">${m.slice(1).map(midia).join("")}</div>`:""}</article>`}).join("")}</div></section>`:"";
+  // Clube de assinatura: os planos vêm da API junto com a equipe; a seção aparece só quando há plano ativo
+  const clubeBloco=agOk?`<section class="bloco clube" id="clube" hidden><h2>Clube de assinatura</h2><p class="clube-sub">Pague por mês e marque seus horários sem pagar a cada visita.</p><div class="planos" id="clubeLista"></div></section>`:"";
   const agDlg=agOk?`<dialog id="agenda" aria-labelledby="agTitulo"><div class="sheet"><div class="sh-top"><h2 id="agTitulo">Agendar</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div><div id="agSteps" class="ag-steps"></div><p class="erro" id="agErro" role="alert"></p><button type="button" class="enviar" id="agEnviar" hidden>${svg("whats")}<span>Enviar pedido pelo WhatsApp</span></button></div></dialog>`:"";
 
   const notaTxt=(d.mostrarNota&&d.nota)?`${svg("star")}<b>${String(d.nota).replace(".",",")}</b>${d.totalAval?` · ${d.totalAval} avaliações`:""} no Google`:"";
@@ -1238,6 +1278,18 @@ a.ag-op{text-decoration:none}
 .svc-mais img,.svc-mais video{width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none}
 .svc[data-agendar]{cursor:pointer}.svc-ag{margin-top:4px;color:var(--cor);font-weight:700;font-size:14px}
 @media (min-width:640px){.svc-lista{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Clube de assinatura */
+.clube-sub{margin:-4px 0 12px;opacity:.75;font-size:14px}
+.planos{display:grid;gap:12px}
+.plano{display:grid;gap:6px;padding:16px;background:var(--suave);border:1px solid var(--linha);border-radius:14px}
+.plano h3{margin:0;font:700 17px/1.25 var(--ft)}
+.plano-preco{font:800 26px/1.1 var(--fb);font-variant-numeric:tabular-nums}.plano-preco small{font-size:14px;font-weight:600;opacity:.7}
+.plano p{margin:0;font-size:14px;opacity:.85}.plano .plano-regras{font-size:13px;opacity:.7}
+.plano-ag{justify-self:start;margin-top:6px;font:inherit;font-weight:700;padding:10px 18px;border-radius:999px;border:0;background:var(--cor);color:var(--sobre);cursor:pointer;transition:transform .3s var(--ease)}
+.plano-ag:hover{transform:translateY(-2px)}
+.campos .check{display:flex;align-items:center;gap:10px;cursor:pointer}
+.campos .check input[type=checkbox]{width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--cor)}
+@media (min-width:640px){.planos{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 <script type="application/json" id="bio-config">${configJSON(d)}<\/script>
 </head>
@@ -1253,6 +1305,7 @@ ${temCat?acoes:""}
 ${agCta}
 ${barbBloco}
 ${svcsBloco}
+${clubeBloco}
 ${links}
 ${catalogo}
 ${avaliar}

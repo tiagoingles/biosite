@@ -6,6 +6,8 @@
 //   POST /api/config { tipo: "vital" | "erro", ... }  eventos do navegador (Web Vitals e erros de JavaScript).
 //   POST /api/config { tipo: "lead", nome, barbearia, whatsapp, ... }  contato da página de vendas.
 //   POST /api/config?stripe=webhook   avisos do Stripe sobre a assinatura das barbearias (lib/assinatura.js).
+//   GET  /api/config?lembretes=clube  aviso diário do clube no celular do dono (agendado no vercel.json,
+//                                      lib/avisos.js). Só o agendador da Vercel chama.
 // Variáveis na Vercel: SUPABASE_URL e SUPABASE_ANON_KEY.
 const { rest } = require("../lib/supabase");
 const { registrar, origemDe, contarTentativas, corpoDe, falha } = require("../lib/seguranca");
@@ -13,6 +15,7 @@ const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 
 const { VERSAO: GERADOR_VERSAO } = require("../lib/gerador");
 const assinatura = require("../lib/assinatura");
+const { avisoDiarioDoClube } = require("../lib/avisos");
 
 const VITAIS = ["LCP", "CLS", "INP", "FCP", "TTFB", "carregamento"];
 const VERSAO = "2026-11-05";
@@ -111,6 +114,7 @@ module.exports = async (req, res) => {
   }
   if (req.method !== "GET") return res.status(405).json({ message: "Método não permitido." });
   if (req.query && req.query.saude === "1") return saude(req, res);
+  if (req.query && req.query.lembretes === "clube") return avisoDiarioDoClube(req, res);
 
   res.setHeader("Cache-Control", "public, max-age=300");
   const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");

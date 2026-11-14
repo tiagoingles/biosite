@@ -5,6 +5,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { calcularFinanceiro } = require("../lib/financeiro-calculo");
+const { vencimento } = require("../lib/clube");
 
 const PORTA = Number(process.argv[2] || 4321);
 const RAIZ = path.join(__dirname, "..");
@@ -32,11 +33,14 @@ let clubePlanos = [
   { id: "pl1", nome: "Corte ilimitado", descricao: "Cabelo sempre em dia, sem pagar a cada corte", preco: 99.9, servicos: ["Corte degradê", "Corte social"], intervalo_dias: 7, dias_semana: [1, 2, 3, 4], hora_limite: "17:00", comissao_valor: 15, ativo: true },
   { id: "pl2", nome: "Corte + barba", descricao: "", preco: 149.9, servicos: ["Corte + barba", "Barba tradicional"], intervalo_dias: 14, dias_semana: [1, 2, 3, 4, 5, 6], hora_limite: null, comissao_valor: 25, ativo: true },
 ];
+// Lembretes: Thiago foi lembrado antes de vencer (precisa de outro), Marcos já foi lembrado hoje
+const instanteBr = (dia, hm) => new Date(Date.parse(dia + "T" + hm + ":00Z") + 3 * 36e5).toISOString();
 let clubeAssinantes = [
   { id: "a1", plano_id: "pl1", nome: "Pedro Henrique", whatsapp: "81999990001", status: "ativo", pago_ate: somaDias(hoje, 18), observacao: "Paga por Pix todo dia 5" },
-  { id: "a2", plano_id: "pl1", nome: "Thiago Moura", whatsapp: "81999990002", status: "ativo", pago_ate: somaDias(hoje, -2), observacao: "" },
+  { id: "a2", plano_id: "pl1", nome: "Thiago Moura", whatsapp: "81999990002", status: "ativo", pago_ate: somaDias(hoje, -2), observacao: "", lembrete_em: instanteBr(somaDias(hoje, -4), "18:10"), lembrete_pago_ate: somaDias(hoje, -2) },
   { id: "a3", plano_id: "pl2", nome: "Felipe Andrade", whatsapp: "81999990003", status: "ativo", pago_ate: somaDias(hoje, 2), observacao: "" },
   { id: "a4", plano_id: "pl1", nome: "Rodrigo Lima", whatsapp: "81999990004", status: "pausado", pago_ate: somaDias(hoje, -20), observacao: "Viajando" },
+  { id: "a5", plano_id: "pl1", nome: "Marcos Vinícius", whatsapp: "81999990005", status: "ativo", pago_ate: hoje, observacao: "", lembrete_em: instanteBr(hoje, "09:12"), lembrete_pago_ate: hoje },
 ];
 const DIAS_R = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 function regrasPrevia(pl) {
@@ -63,10 +67,14 @@ function clubePrevia() {
   return {
     hoje, slug: "gw-barbearia",
     planos: clubePlanos.map((p) => ({ ...p, regras: regrasPrevia(p), assinantes: ativos.filter((a) => a.plano_id === p.id).length })),
-    assinantes: clubeAssinantes.map((a) => ({ ...a, plano: (clubePlanos.find((p) => p.id === a.plano_id) || {}).nome || "", usosMes: a.id === "a1" ? 3 : a.id === "a3" ? 1 : 0, ultimoUso: a.id === "a1" ? somaDias(hoje, -6) : null, emAberto: a.id === "a1" ? hoje : null, liberaEm: a.id === "a1" ? somaDias(hoje, 1) : null, vencido: a.status === "ativo" && a.pago_ate < hoje, pagamentos: pagamentosDe(a.id) })),
+    assinantes: clubeAssinantes.map((a) => ({ ...a, plano: (clubePlanos.find((p) => p.id === a.plano_id) || {}).nome || "", usosMes: a.id === "a1" ? 3 : a.id === "a3" ? 1 : 0, ultimoUso: a.id === "a1" ? somaDias(hoje, -6) : null, emAberto: a.id === "a1" ? hoje : null, liberaEm: a.id === "a1" ? somaDias(hoje, 1) : null, vencido: a.status === "ativo" && a.pago_ate < hoje, vencimento: vencimento(a, hoje), pagamentos: pagamentosDe(a.id) })),
     servicos: ["Barba tradicional", "Corte + barba", "Corte degradê", "Corte social"],
-    kpis: { ativos: ativos.length, vencidos: ativos.filter((a) => a.pago_ate < hoje).length, receitaMensal: r2(receita), recebidoMes: r2(recebido), pagamentosMes: doMes.length, usosMes: 4, comissoesMes: 70, resultadoMes: r2(recebido - 70) },
+    kpis: { ativos: ativos.length, vencidos: ativos.filter((a) => a.pago_ate < hoje).length, paraLembrar: lembretesPrevia().length, receitaMensal: r2(receita), recebidoMes: r2(recebido), pagamentosMes: doMes.length, usosMes: 4, comissoesMes: 70, resultadoMes: r2(recebido - 70) },
   };
+}
+// Quem ainda precisa ser lembrado (o que a tela Hoje do dono recebe), com a mesma regra do servidor
+function lembretesPrevia() {
+  return clubeAssinantes.map((a) => ({ nome: a.nome, v: vencimento(a, hoje) })).filter((x) => x.v && !x.v.lembrado).map((x) => ({ nome: x.nome, dias: x.v.dias })).sort((a, b) => a.dias - b.dias);
 }
 function maisUmMesPrevia(iso) { const [a, m, d] = iso.split("-").map(Number); const u = new Date(Date.UTC(a, m + 1, 0)).getUTCDate(); return new Date(Date.UTC(a, m, Math.min(d, u))).toISOString().slice(0, 10); }
 function valorPrevia(v, padrao) { if (v == null || String(v).trim() === "") return padrao; const n = Number(String(v).replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".")); return n >= 0 && n < 10000 ? r2(n) : NaN; }
@@ -135,6 +143,7 @@ function painel(dia) {
       mes: { atendimentos: 31, faturamento: 1302, comissao: 520.8 },
     },
     temSimulacao: false,
+    ...(!soDele && dia === hoje ? { lembretesClube: lembretesPrevia() } : {}),
   };
 }
 
@@ -265,6 +274,13 @@ const servidor = http.createServer(async (req, res) => {
           return json(res, 200, { pago_ate: a.pago_ate, valor: pg.valor, manteve });
         }
         if (b.acao === "assinante-status") { const a = clubeAssinantes.find((x) => x.id === b.id); a.status = b.status; return json(res, 200, { ok: true }); }
+        if (b.acao === "assinante-lembrete") {
+          const a = clubeAssinantes.find((x) => x.id === b.id);
+          if (!a) return json(res, 404, { message: "Assinante não encontrado." });
+          a.lembrete_em = new Date().toISOString();
+          a.lembrete_pago_ate = a.pago_ate || null;
+          return json(res, 200, { lembrete_em: a.lembrete_em, lembrete_pago_ate: a.lembrete_pago_ate });
+        }
         return json(res, 400, { message: "Ação desconhecida." });
       }
       if (q.area === "financeiro") {

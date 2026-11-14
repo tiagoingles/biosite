@@ -299,6 +299,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; gap: 16p
 .aviso-faixa.info { background: var(--info-fundo); color: var(--info); }
 .aviso-faixa.erro { background: var(--erro-fundo); color: var(--erro); }
 .aviso-faixa.ok { background: var(--ok-fundo); color: var(--ok); }
+.aviso-faixa + .aviso-faixa { margin-top: 8px; }
 .offline { position: fixed; left: 50%; transform: translateX(-50%); top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 40; background: var(--texto); color: var(--fundo); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; box-shadow: var(--sombra); }
 
 /* ---------- mensagens rápidas ---------- */
@@ -370,6 +371,11 @@ body.sem-abas { padding-bottom: 24px; }
 .opcoes-check label:has(input:checked) { border-color: var(--acento); background: var(--acento-fundo); }
 .check-linha { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; font-weight: 700; color: var(--texto); cursor: pointer; }
 .check-linha input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--acento); }
+.assinante.lembrete { border-left: 4px solid var(--alerta); }
+.assinante.lembrete.feito { border-left-color: var(--ok); background: var(--cartao); }
+.estado-lembrete { display: flex; align-items: center; gap: 6px; }
+.assinante.lembrete.feito .estado-lembrete { color: var(--ok); font-weight: 700; }
+.estado-lembrete svg { width: 16px; height: 16px; flex: none; }
 .pagamentos li { align-items: center; }
 .pagamentos li span { display: grid; gap: 2px; }
 .pagamentos small { color: var(--suave); font-size: 12px; }

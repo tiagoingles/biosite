@@ -116,6 +116,11 @@
     <div class="kpis larga" id="kpisClube"><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div></div>
     <div class="larga" id="avisoClube"></div>
     <div class="coluna">
+      <section class="cartao" id="secLembrar" hidden>
+        <div class="cartao-topo"><h2>Para lembrar <span class="contador" id="qtdLembrar">0</span></h2></div>
+        <p class="nota p" id="notaLembrar"></p>
+        <div class="lista" id="listaLembrar"></div>
+      </section>
       <section class="cartao">
         <div class="cartao-topo"><h2>Assinantes <span class="contador" id="qtdAssinantes">0</span></h2><button type="button" class="botao p principal" id="novoAssinante"></button></div>
         <p class="nota p">Quem está cadastrado aqui marca pelo site informando o WhatsApp. Você recebe a mensalidade (Pix, cartão ou dinheiro) e toca em "Recebi" a cada mês pago: o valor entra no Financeiro.</p>
@@ -136,6 +141,7 @@
           <li>Crie o plano: preço por mês, serviços incluídos e regras (por exemplo, 1 corte a cada 7 dias, de segunda a quinta).</li>
           <li>O cliente pede para assinar pelo site e você combina o pagamento com ele.</li>
           <li>Cadastre o assinante com o WhatsApp dele e toque em "Recebi" a cada mês pago. O valor entra no Financeiro, em Mensalidades.</li>
+          <li>Perto do vencimento, o assinante aparece em "Para lembrar": um toque abre o WhatsApp com a mensagem pronta. Com os avisos ligados, você recebe o lembrete às 9h no celular.</li>
           <li>No site, ele marca "Sou assinante do clube" e informa o WhatsApp. O sistema confere as regras do plano.</li>
           <li>O pedido chega com o selo "Clube · não cobrar" e o barbeiro ganha a comissão fixa do plano.</li>
         </ul>
@@ -241,6 +247,16 @@
     var alertas = [];
     if (sem.length) alertas.push(h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: (sem.length === d.equipe.length ? "Ninguém publicou a agenda de hoje" : sem.map(function (e) { return e.nome; }).join(", ") + (sem.length > 1 ? " não publicaram" : " não publicou") + " a agenda de hoje") + ". Sem agenda publicada, o site não oferece horários." }), h("a", { href: "#equipe", class: "botao p principal", texto: "Publicar" })]));
     if (!d.servicos.length) alertas.push(h("div", { class: "aviso-faixa info" }, [h("span", { texto: "Cadastre os serviços e preços no Financeiro para os valores entrarem certinho e liberar o encaixe." }), h("a", { href: P.link("financeiro.html"), class: "botao p", texto: "Cadastrar" })]));
+    // Clube: assinantes para lembrar da mensalidade (vence em até 3 dias ou já venceu, sem lembrete)
+    var lembrar = d.lembretesClube || [];
+    if (lembrar.length) {
+      var nomes = lembrar.slice(0, 2).map(function (x) { return P.primeiroNome(x.nome) + " (" + quandoVence(x.dias) + ")"; });
+      var textoClube = lembrar.length === 1
+        ? "Clube: lembre " + nomes[0] + " da mensalidade."
+        : "Clube: " + lembrar.length + " assinantes para lembrar da mensalidade: " + nomes.join(", ") + (lembrar.length > 2 ? " e mais " + (lembrar.length - 2) : "") + ".";
+      alertas.push(h("div", { class: "aviso-faixa " + (lembrar.some(function (x) { return x.dias < 0; }) ? "alerta" : "info") }, [h("span", { texto: textoClube }), h("a", { href: "#clube", class: "botao p principal", texto: "Lembrar" })]));
+    }
+    if (d.lembretesClube) P.bolinha("clube", lembrar.length);
     P.trocar($("alertas"), alertas);
 
     P.trocar($("kpis"), [
@@ -534,6 +550,14 @@
   function maisUmMes(iso) { var p = iso.split("-").map(Number), ultimo = new Date(Date.UTC(p[0], p[1] + 1, 0)).getUTCDate(); return new Date(Date.UTC(p[0], p[1], Math.min(p[2], ultimo))).toISOString().slice(0, 10); }
   function planoPorId(id) { return clube ? clube.planos.filter(function (pl) { return pl.id === id; })[0] || null : null; }
   function venceLogo(a) { return a.status === "ativo" && a.pago_ate && !a.vencido && a.pago_ate <= P.somaDias(clube.hoje, 3); }
+  // "vence hoje", "vence amanhã", "vence em 3 dias", "venceu ontem", "venceu há 5 dias" (a mesma conta do servidor)
+  function quandoVence(dias) { return dias === 0 ? "vence hoje" : dias === 1 ? "vence amanhã" : dias > 1 ? "vence em " + dias + " dias" : dias === -1 ? "venceu ontem" : "venceu há " + -dias + " dias"; }
+  function maiuscula(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  // Quando foi o lembrete: "hoje às 10:32", "ontem às 18:05" ou "em 12/11"
+  function quandoFoi(instante) {
+    var t = new Date(Date.parse(instante) - 3 * 36e5).toISOString(), dia = t.slice(0, 10), hm = t.slice(11, 16);
+    return dia === clube.hoje ? "hoje às " + hm : dia === P.somaDias(clube.hoje, -1) ? "ontem às " + hm : "em " + P.dataBr(dia);
+  }
 
   function desenharClube() {
     var j = clube, k = j.kpis;
@@ -546,12 +570,56 @@
     var avisos = [];
     if (!j.servicos.length) avisos.push(h("div", { class: "aviso-faixa info" }, [h("span", { texto: "Cadastre os serviços e preços no Financeiro: o plano usa os mesmos serviços do site." }), h("a", { href: P.link("financeiro.html"), class: "botao p", texto: "Cadastrar" })]));
     else if (!j.planos.length) avisos.push(h("div", { class: "aviso-faixa info" }, [h("span", { texto: "Crie o primeiro plano: ele aparece no seu site com o botão \"Quero assinar\"." })]));
-    if (k.vencidos) avisos.push(h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: (k.vencidos > 1 ? k.vencidos + " assinantes estão" : "1 assinante está") + " com a mensalidade vencida e só volta a marcar pelo clube depois de renovar." })]));
     P.trocar($("avisoClube"), avisos);
     $("verClubeSite").hidden = !(j.slug && j.planos.some(function (pl) { return pl.ativo; }));
     if (j.slug) $("verClubeSite").href = "/" + j.slug + "#clube";
+    P.bolinha("clube", k.paraLembrar || 0);
+    desenharLembretes();
     desenharPlanos();
     desenharAssinantes();
+  }
+
+  // ---------- Para lembrar: vence em até 3 dias ou já venceu ----------
+  // Quem ainda não foi lembrado vem primeiro, e os mais atrasados antes. "Lembrar" abre o WhatsApp com a
+  // mensagem pronta e anota o lembrete; depois do "Recebi", o assinante sai da lista.
+  function desenharLembretes() {
+    var lista = clube.assinantes.filter(function (a) { return a.vencimento; }).sort(function (a, b) {
+      return (Number(a.vencimento.lembrado) - Number(b.vencimento.lembrado)) || (a.vencimento.dias - b.vencimento.dias) || a.nome.localeCompare(b.nome, "pt-BR");
+    });
+    $("secLembrar").hidden = !lista.length;
+    $("qtdLembrar").textContent = clube.kpis.paraLembrar || 0;
+    if (!lista.length) { P.trocar($("listaLembrar"), null); return; }
+    var nota = "Vencem em até 3 dias ou já venceram. \"Lembrar\" abre o WhatsApp com a mensagem pronta e anota o lembrete.";
+    if (lista.some(function (a) { return a.vencido; })) nota += " Quem está vencido só marca pelo clube depois de renovar.";
+    var semAvisos = window.Avisos && Avisos.suportado() && window.Notification && Notification.permission !== "granted";
+    P.trocar($("notaLembrar"), [nota, semAvisos ? h("span", null, [" Para receber este lembrete às 9h no celular, ", h("a", { href: "#mais", texto: "ative os avisos" }), "."]) : null]);
+    P.trocar($("listaLembrar"), lista.map(linhaLembrete));
+  }
+  function linhaLembrete(a) {
+    var v = a.vencimento, pl = planoPorId(a.plano_id);
+    var estado = v.lembrado ? "Lembrado " + quandoFoi(v.lembreteEm)
+      : v.lembreteEm ? "Lembrado " + quandoFoi(v.lembreteEm) + ", antes de vencer. Lembre de novo."
+      : "Ainda não lembrado";
+    var bLembrar = h("button", { type: "button", class: "botao p whats" }, [P.icone("whats"), v.lembrado ? "Lembrar de novo" : "Lembrar"]);
+    bLembrar.onclick = function () { lembrarAssinante(a); };
+    var bRecebi = h("button", { type: "button", class: "botao p" }, [P.icone("dinheiro"), "Recebi"]);
+    bRecebi.onclick = function () { registrarPagamento(a, bRecebi); };
+    return h("div", { class: "assinante lembrete" + (v.lembrado ? " feito" : "") }, [
+      h("div", { class: "assinante-topo" }, [
+        h("div", { class: "cresce" }, [h("div", { class: "nome", texto: a.nome }), h("div", { class: "det", texto: (a.plano || "Plano removido") + (pl ? " · " + P.brl(pl.preco) : "") + " · pago até " + P.dataBr(a.pago_ate) })]),
+        h("span", { class: "selos" }, [h("span", { class: "selo " + (v.dias < 0 ? "selo-erro" : "selo-alerta"), texto: maiuscula(quandoVence(v.dias)) })]),
+      ]),
+      h("p", { class: "nota p estado-lembrete" }, [v.lembrado ? P.icone("check") : null, estado]),
+      h("div", { class: "linha" }, [bLembrar, bRecebi]),
+    ]);
+  }
+  // Abre o WhatsApp na hora do toque (senão o navegador bloqueia) e depois anota o lembrete
+  function lembrarAssinante(a) {
+    abrirWhatsAssinante(a, false);
+    apiClube({ acao: "assinante-lembrete", id: a.id }).then(function () {
+      P.toast("Lembrete de " + P.primeiroNome(a.nome) + " anotado.", "ok");
+      carregarClube();
+    }).catch(function (e) { P.toast("O WhatsApp abriu, mas o lembrete não ficou anotado: " + e.message, "erro"); });
   }
 
   function desenharPlanos() {
@@ -668,10 +736,12 @@
     var uso = [a.usosMes + (a.usosMes === 1 ? " atendimento" : " atendimentos") + " no mês"];
     if (a.emAberto) uso.push("marcado para " + P.dataBr(a.emAberto));
     else if (a.liberaEm && a.liberaEm > hoje) uso.push("próximo a partir de " + P.dataBr(a.liberaEm));
+    if (a.vencimento && a.vencimento.lembreteEm) uso.push("lembrado " + quandoFoi(a.vencimento.lembreteEm));
     var bRecebi = a.status !== "cancelado" ? h("button", { type: "button", class: "botao p principal" }, [P.icone("dinheiro"), "Recebi"]) : null;
     if (bRecebi) bRecebi.onclick = function () { registrarPagamento(a, bRecebi); };
     var bWhats = h("button", { type: "button", class: "botao p whats" }, [P.icone("whats"), "WhatsApp"]);
-    bWhats.onclick = function () { abrirWhatsAssinante(a, false); };
+    // Perto do vencimento, a mensagem é o lembrete: abrir pelo cartão também anota
+    bWhats.onclick = function () { if (a.vencimento) lembrarAssinante(a); else abrirWhatsAssinante(a, false); };
     var bEditar = h("button", { type: "button", class: "botao mini" }, [P.icone("lapis"), "Editar"]);
     bEditar.onclick = function () { abrirAssinante(a); };
     var bPagamentos = h("button", { type: "button", class: "botao mini" }, [P.icone("dinheiro"), "Pagamentos"]);
@@ -847,7 +917,10 @@
   function textoAssinante(a, boasVindas) {
     var nome = P.primeiroNome(a.nome), casa = ctx.barbearia || "barbearia", pl = planoPorId(a.plano_id), site = siteDoClube(), plano = a.plano || (pl ? pl.nome : "");
     if (!boasVindas && a.vencido) return "Olá, " + nome + "! A mensalidade do seu plano " + plano + " da " + casa + " venceu em " + P.dataBr(a.pago_ate) + ". Para continuar marcando pelo clube, é só renovar. Qualquer dúvida, estou por aqui!";
-    if (!boasVindas && venceLogo(a)) return "Olá, " + nome + "! Passando para lembrar que a mensalidade do seu plano " + plano + " da " + casa + " vence em " + P.dataBr(a.pago_ate) + ". Assim você continua marcando pelo clube sem parar.";
+    if (!boasVindas && venceLogo(a)) {
+      var quando = a.pago_ate === clube.hoje ? "vence hoje" : a.pago_ate === P.somaDias(clube.hoje, 1) ? "vence amanhã, " + P.dataBr(a.pago_ate) : "vence em " + P.dataBr(a.pago_ate);
+      return "Olá, " + nome + "! Passando para lembrar que a mensalidade do seu plano " + plano + " da " + casa + " " + quando + ". Assim você continua marcando pelo clube sem parar.";
+    }
     var t = boasVindas ? "Olá, " + nome + "! Agora você é assinante do plano " + plano + " da " + casa + " 🎉" : "Olá, " + nome + "! Seu plano " + plano + " da " + casa + " está ativo" + (a.pago_ate ? " até " + P.dataBr(a.pago_ate) : "") + ".";
     if (site) t += "\n\nPara marcar: abra " + site + ", escolha o serviço e o horário e, em Seus dados, marque \"Sou assinante do clube\" com este WhatsApp.";
     if (pl) t += "\n\nSeu plano inclui " + pl.servicos.join(", ") + " · " + pl.regras + ".";

@@ -248,6 +248,18 @@ test("aviso diário sem push configurado não consulta nada", async () => {
   assert.equal(chamadas.length, 0);
 });
 
+test("agendador chamando sem o ?lembretes também roda o aviso; o navegador continua recebendo a configuração", async () => {
+  desligarPush();
+  A.instalarFetch(A.rotasDeConta());
+  const agendador = await as("2026-11-14T12:30:00Z", () => A.chamar(config, { query: {}, headers: AGENDADOR }));
+  assert.equal(agendador.statusCode, 200);
+  assert.equal(agendador.body.avisos, 0, "foi para o aviso diário");
+  assert.equal(agendador.body.anon, undefined, "não devolve a configuração ao agendador");
+  const navegador = await A.chamar(config, { query: {}, headers: { "user-agent": "Mozilla/5.0" } });
+  assert.equal(navegador.statusCode, 200);
+  assert.equal(navegador.body.anon, process.env.SUPABASE_ANON_KEY);
+});
+
 // ---------- configuração e telas ----------
 test("vercel.json agenda o aviso diário às 9h de Brasília", () => {
   const v = JSON.parse(ler("vercel.json"));

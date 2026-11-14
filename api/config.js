@@ -15,7 +15,7 @@ const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 
 const { VERSAO: GERADOR_VERSAO } = require("../lib/gerador");
 const assinatura = require("../lib/assinatura");
-const { avisoDiarioDoClube } = require("../lib/avisos");
+const { avisoDiarioDoClube, chamadaDoAgendador } = require("../lib/avisos");
 
 const VITAIS = ["LCP", "CLS", "INP", "FCP", "TTFB", "carregamento"];
 const VERSAO = "2026-11-05";
@@ -114,7 +114,9 @@ module.exports = async (req, res) => {
   }
   if (req.method !== "GET") return res.status(405).json({ message: "Método não permitido." });
   if (req.query && req.query.saude === "1") return saude(req, res);
-  if (req.query && req.query.lembretes === "clube") return avisoDiarioDoClube(req, res);
+  // O aviso diário é a única tarefa agendada do projeto: a chamada do agendador da Vercel roda o aviso
+  // mesmo se chegar sem o "?lembretes=clube" do vercel.json
+  if ((req.query && req.query.lembretes === "clube") || chamadaDoAgendador(req)) return avisoDiarioDoClube(req, res);
 
   res.setHeader("Cache-Control", "public, max-age=300");
   const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");

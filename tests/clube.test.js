@@ -19,6 +19,8 @@ const PLANO2 = "aaaaaaaa-0000-4000-8000-000000000002";
 const ASSINANTE = "bbbbbbbb-0000-4000-8000-000000000001";
 const ASSINANTE2 = "bbbbbbbb-0000-4000-8000-000000000002";
 const ASSINANTE3 = "bbbbbbbb-0000-4000-8000-000000000003";
+const PAGAMENTO = "cccccccc-0000-4000-8000-000000000001";
+const PAGAMENTO2 = "cccccccc-0000-4000-8000-000000000002";
 
 // ---------- regras e textos ----------
 test("WhatsApp do assinante fica só com DDD e número de celular", () => {
@@ -202,21 +204,30 @@ test("painel do clube: vencidos, uso no mês, receita e resultado", async () => 
       { clube_assinante_id: ASSINANTE, dia: hoje, status: "realizado", motivo: null, comissao_valor: "15.00" },
       { clube_assinante_id: ASSINANTE, dia: A.daquiA(7), status: "confirmado", motivo: null, comissao_valor: "15.00" },
     ] } },
+    // Do mais novo para o mais antigo: Pedro pagou hoje (com desconto); Thiago pagou há 40 dias (fora do mês)
+    { padrao: /\/rest\/v1\/clube_pagamentos\?barbearia_id=eq\./, resposta: { corpo: [
+      { id: PAGAMENTO, assinante_id: ASSINANTE, valor: "89.90", data: hoje, pago_ate_antes: hoje, pago_ate_depois: A.daquiA(10) },
+      { id: PAGAMENTO2, assinante_id: ASSINANTE2, valor: "149.90", data: A.daquiA(-40), pago_ate_antes: null, pago_ate_depois: A.daquiA(-1) },
+    ] } },
   ]));
   const r = await A.chamar(equipe, { query: { area: "clube" }, token: "token-dono" });
   assert.equal(r.statusCode, 200, JSON.stringify(r.body));
   const k = r.body.kpis;
   assert.equal(k.ativos, 2);
   assert.equal(k.vencidos, 1);
-  assert.equal(k.receitaMensal, 249.8);
+  assert.equal(k.receitaMensal, 249.8, "o que os ativos pagam por mês");
+  assert.equal(k.recebidoMes, 89.9, "o que entrou de fato no mês");
+  assert.equal(k.pagamentosMes, 1);
   assert.equal(k.usosMes, 1);
   assert.equal(k.comissoesMes, 15);
-  assert.equal(k.resultadoMes, 234.8);
+  assert.equal(k.resultadoMes, 74.9, "recebido no mês menos as comissões do clube");
   const pedro = r.body.assinantes.find((a) => a.id === ASSINANTE);
   assert.equal(pedro.usosMes, 1);
   assert.equal(pedro.ultimoUso, hoje);
   assert.equal(pedro.emAberto, A.daquiA(7));
   assert.equal(pedro.liberaEm, A.daquiA(7));
+  assert.deepEqual(pedro.pagamentos, [{ id: PAGAMENTO, valor: 89.9, data: hoje, pago_ate_antes: hoje, pago_ate_depois: A.daquiA(10) }]);
+  assert.equal(r.body.assinantes.find((a) => a.id === ASSINANTE3).pagamentos.length, 0);
   assert.equal(r.body.assinantes.find((a) => a.id === ASSINANTE2).vencido, true);
   assert.equal(r.body.assinantes.find((a) => a.id === ASSINANTE3).vencido, false, "pausado não conta como vencido");
   assert.equal(r.body.planos[0].assinantes, 1);
@@ -273,20 +284,114 @@ test("assinante: WhatsApp normalizado e sem número repetido", async () => {
   assert.equal(semNumero.statusCode, 400);
 });
 
-test("\"Recebi\" soma 1 mês a partir do vencimento (ou de hoje, se já venceu)", async () => {
-  for (const [pagoAte, esperado] of [[A.daquiA(10), clube.maisUmMes(A.daquiA(10))], [A.daquiA(-5), clube.maisUmMes(A.hoje())], [null, clube.maisUmMes(A.hoje())]]) {
-    const chamadas = A.instalarFetch(rotasDoDono([
-      { metodo: "GET", padrao: /\/rest\/v1\/clube_assinantes\?id=eq\./, resposta: { corpo: [{ pago_ate: pagoAte }] } },
-      { metodo: "PATCH", padrao: /\/rest\/v1\/clube_assinantes\?id=eq\./, resposta: { status: 204 } },
+// O banco (clube_registrar_pagamento) grava o pagamento e soma 1 mês ao vencimento na mesma operação
+function rotasDoPagamento(extra = []) {
+  return rotasDoDono([
+    { metodo: "GET", padrao: /\/rest\/v1\/clube_assinantes\?id=eq\./, resposta: (url) => ({ corpo: url.includes(ASSINANTE) ? [{ id: ASSINANTE, clube_planos: { preco: "99.90" } }] : [] }) },
+    ...extra,
+  ]);
+}
+
+test("\"Recebi\" grava o pagamento com o preço do plano ou o valor digitado", async () => {
+  const pagoAte = clube.maisUmMes(A.daquiA(10));
+  for (const [valor, esperado] of [[undefined, 99.9], ["", 99.9], ["79,90", 79.9], ["1.299,90", 1299.9], ["0", 0]]) {
+    const chamadas = A.instalarFetch(rotasDoPagamento([
+      { metodo: "POST", padrao: /\/rest\/v1\/rpc\/clube_registrar_pagamento$/, resposta: (u, o, corpo) => ({ corpo: { id: PAGAMENTO, valor: corpo.p_valor, data: A.hoje(), pago_ate: pagoAte } }) },
     ]));
-    const r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { acao: "assinante-pagou", id: ASSINANTE } });
+    const r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { acao: "assinante-pagou", id: ASSINANTE, valor } });
     assert.equal(r.statusCode, 200, JSON.stringify(r.body));
-    assert.equal(r.body.pago_ate, esperado, String(pagoAte));
-    const patch = chamadas.find((c) => c.metodo === "PATCH");
-    assert.equal(patch.corpo.pago_ate, esperado);
-    assert.equal(patch.corpo.status, "ativo", "pagamento reativa a assinatura");
-    assert.ok(patch.url.includes("barbearia_id=eq." + UUIDS.barbearia), "só mexe na própria barbearia");
+    const rpc = chamadas.find((c) => /clube_registrar_pagamento/.test(c.url)).corpo;
+    assert.deepEqual(rpc, { p_barbearia: UUIDS.barbearia, p_assinante: ASSINANTE, p_valor: esperado }, String(valor));
+    assert.equal(r.body.pago_ate, pagoAte);
+    assert.deepEqual(r.body.pagamento, { id: PAGAMENTO, valor: esperado, data: A.hoje() });
+    assert.ok(!chamadas.some((c) => c.metodo === "PATCH"), "o vencimento muda só dentro da função do banco");
   }
+});
+
+test("\"Recebi\" recusa valor inválido e assinante de outra barbearia", async () => {
+  const chamadas = A.instalarFetch(rotasDoPagamento([
+    { metodo: "POST", padrao: /\/rest\/v1\/rpc\/clube_registrar_pagamento$/, resposta: { corpo: { erro: "assinante" } } },
+  ]));
+  for (const valor of ["abc", "-5", "10000"]) {
+    const r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { acao: "assinante-pagou", id: ASSINANTE, valor } });
+    assert.equal(r.statusCode, 400, valor);
+    assert.match(r.body.message, /valor recebido/);
+  }
+  const outro = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { acao: "assinante-pagou", id: ASSINANTE2 } });
+  assert.equal(outro.statusCode, 404, "a busca do assinante já filtra pela barbearia do dono");
+  assert.ok(chamadas.filter((c) => c.metodo === "GET" && /clube_assinantes\?id=eq\./.test(c.url)).every((c) => c.url.includes("barbearia_id=eq." + UUIDS.barbearia)));
+  const sumiu = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { acao: "assinante-pagou", id: ASSINANTE } });
+  assert.equal(sumiu.statusCode, 404, "o banco também confere a barbearia");
+  const semId = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { acao: "assinante-pagou", id: "x" } });
+  assert.equal(semId.statusCode, 400);
+});
+
+test("desfazer o último pagamento: só o que o dono está vendo", async () => {
+  let resposta = { ok: true, valor: 89.9, pago_ate: A.daquiA(-2) };
+  const chamadas = A.instalarFetch(rotasDoDono([
+    { metodo: "POST", padrao: /\/rest\/v1\/rpc\/clube_desfazer_pagamento$/, resposta: () => ({ corpo: resposta }) },
+  ]));
+  const corpo = { acao: "assinante-desfazer-pagamento", id: ASSINANTE, pagamento: PAGAMENTO };
+  let r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body, { pago_ate: A.daquiA(-2), valor: 89.9, manteve: false });
+  assert.deepEqual(chamadas.find((c) => /clube_desfazer_pagamento/.test(c.url)).corpo, { p_barbearia: UUIDS.barbearia, p_assinante: ASSINANTE, p_pagamento: PAGAMENTO });
+
+  resposta = { ok: true, valor: 89.9, pago_ate: A.daquiA(40), manteve: true };
+  r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo });
+  assert.equal(r.body.manteve, true, "vencimento mudado à mão depois do pagamento fica como está");
+
+  resposta = { erro: "ultimo" };
+  r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo });
+  assert.equal(r.statusCode, 409);
+  resposta = { erro: "assinante" };
+  r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo });
+  assert.equal(r.statusCode, 404);
+  r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { ...corpo, pagamento: "1" } });
+  assert.equal(r.statusCode, 400);
+  const barbeiro = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-bruno", corpo });
+  assert.equal(barbeiro.statusCode, 403);
+});
+
+test("cadastro de quem acabou de pagar já registra a 1ª mensalidade", async () => {
+  let rpcFalha = false;
+  const chamadas = A.instalarFetch(rotasDoDono([
+    { padrao: /\/rest\/v1\/clube_planos\?id=eq\./, resposta: { corpo: [{ id: PLANO, preco: "99.90" }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/clube_assinantes\?barbearia_id=eq\..*whatsapp=eq\./, resposta: { corpo: [] } },
+    { metodo: "POST", padrao: /\/rest\/v1\/clube_assinantes$/, resposta: (u, o, corpo) => ({ status: 201, corpo: [{ id: ASSINANTE, ...corpo }] }) },
+    { metodo: "POST", padrao: /\/rest\/v1\/rpc\/clube_registrar_pagamento$/, resposta: (u, o, corpo) => (rpcFalha ? { status: 500, corpo: { message: "falhou" } } : { corpo: { id: PAGAMENTO, valor: corpo.p_valor, data: A.hoje(), pago_ate: clube.maisUmMes(A.hoje()) } }) },
+  ]));
+  const novo = { acao: "assinante-salvar", nome: "Pedro Henrique", whatsapp: "81999186042", plano_id: PLANO, pago_ate: A.daquiA(90), recebeu: true, valor: "89,90" };
+  const r = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: novo });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  const gravado = chamadas.find((c) => c.metodo === "POST" && /clube_assinantes$/.test(c.url)).corpo;
+  assert.equal(gravado.pago_ate, null, "o vencimento sai do pagamento, não da data digitada");
+  assert.deepEqual(chamadas.find((c) => /clube_registrar_pagamento/.test(c.url)).corpo, { p_barbearia: UUIDS.barbearia, p_assinante: ASSINANTE, p_valor: 89.9 });
+  assert.equal(r.body.assinante.pago_ate, clube.maisUmMes(A.hoje()));
+  assert.ok(!r.body.aviso);
+
+  // Sem valor: o preço do plano. Valor inválido: recusa antes de cadastrar.
+  const semValor = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { ...novo, valor: "" } });
+  assert.equal(semValor.statusCode, 201);
+  assert.equal(chamadas.filter((c) => /clube_registrar_pagamento/.test(c.url)).pop().corpo.p_valor, 99.9);
+  const antes = chamadas.length;
+  const invalido = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { ...novo, valor: "abc" } });
+  assert.equal(invalido.statusCode, 400);
+  assert.ok(!chamadas.slice(antes).some((c) => c.metodo === "POST" && /clube_assinantes$/.test(c.url)), "não cadastra sem um valor válido");
+
+  // Pagamento falhou depois do cadastro: o cadastro vale e o dono é avisado para usar o "Recebi"
+  rpcFalha = true;
+  const falhou = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: novo });
+  assert.equal(falhou.statusCode, 201);
+  assert.match(falhou.body.aviso, /Recebi/);
+
+  // Sem marcar "Recebi agora": vale a data digitada e nada vai para o pagamento
+  const n = chamadas.length;
+  const semPagar = await A.chamar(equipe, { metodo: "POST", query: { area: "clube" }, token: "token-dono", corpo: { ...novo, recebeu: false } });
+  assert.equal(semPagar.statusCode, 201);
+  const depois = chamadas.slice(n);
+  assert.equal(depois.find((c) => c.metodo === "POST" && /clube_assinantes$/.test(c.url)).corpo.pago_ate, A.daquiA(90));
+  assert.ok(!depois.some((c) => /clube_registrar_pagamento/.test(c.url)));
 });
 
 // ---------- site e painéis ----------
@@ -307,4 +412,16 @@ test("painéis mostram o selo do clube e usam a comissão fixa", () => {
   const barbeiro = ler("painel-barbeiro.html");
   assert.ok(!/valor\) \|\| 0\) \* \(Number\(p\.comissao_pct\)/.test(barbeiro), "nada de comissão calculada só pela porcentagem");
   assert.match(barbeiro, /P\.comissao\(p/);
+});
+
+test("painel do dono: \"Recebi\" com o valor, 1ª mensalidade no cadastro e desfazer", () => {
+  const ler = (p) => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
+  const dono = ler("painel-dono.html");
+  assert.match(dono, /acao: "assinante-pagou", id: a\.id, valor: valor\.value\.trim\(\)/);
+  assert.match(dono, /Recebi agora a 1ª mensalidade/);
+  assert.match(dono, /acao: "assinante-desfazer-pagamento", id: a\.id, pagamento: pg\.id/);
+  assert.match(dono, /Desfazer o último/);
+  assert.match(dono, /Recebido no mês/);
+  // O aviso com "Desfazer" vem do P.toast com botão
+  assert.match(ler("painel-comum.js"), /P\.toast = function \(msg, tipo, botao\)/);
 });

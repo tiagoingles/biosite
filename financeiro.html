@@ -7,8 +7,8 @@
 <meta name="robots" content="noindex">
 <title>Financeiro | Bio Site</title>
 <style>
-:root{--cor:#a16207;--fundo:#f5f5f4;--texto:#1c1917;--linha:#e7e5e4;--suave:#ffffff;--erro:#b91c1c;--ok:#15803d;--aviso:#b45309;--aviso-fundo:#fef3c7}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#0f0d0c;--texto:#f5f5f4;--linha:#2f2b28;--suave:#1c1917;--aviso:#fbbf24;--aviso-fundo:#3a2a06}}
+:root{--cor:#a16207;--cor-clube:#0f766e;--fundo:#f5f5f4;--texto:#1c1917;--linha:#e7e5e4;--suave:#ffffff;--erro:#b91c1c;--ok:#15803d;--aviso:#b45309;--aviso-fundo:#fef3c7}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cor-clube:#2dd4bf;--fundo:#0f0d0c;--texto:#f5f5f4;--linha:#2f2b28;--suave:#1c1917;--aviso:#fbbf24;--aviso-fundo:#3a2a06}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--fundo);color:var(--texto);font:15px/1.45 system-ui,sans-serif}
 header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 16px;background:var(--suave);border-bottom:1px solid var(--linha);position:sticky;top:0;z-index:5}
@@ -38,14 +38,23 @@ button.perigo{color:var(--erro)}
 .pill.aviso{color:var(--aviso);background:var(--aviso-fundo);border-color:transparent}
 .sim{font-size:12px;font-weight:700;background:var(--aviso-fundo);color:var(--aviso);padding:4px 10px;border-radius:999px}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.cards{grid-template-columns:1fr}}
 @media (min-width:900px){.cards{grid-template-columns:repeat(4,1fr)}}
 .card{border:1px solid var(--linha);border-radius:12px;padding:12px;display:grid;gap:6px;background:var(--fundo);align-content:start}
 .card .valor{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
 .detalhe{display:flex;justify-content:space-between;gap:8px;font-size:13px}
 .detalhe b{font-variant-numeric:tabular-nums}
+.detalhe.total{border-top:1px solid var(--linha);padding-top:6px;font-weight:700}
+.detalhe.clube span{color:var(--cor-clube);font-weight:600}
 .aviso-card{font-size:12px;color:var(--aviso)}
 .grafico{display:flex;align-items:flex-end;gap:3px;height:150px;border-bottom:1px solid var(--linha);padding-top:6px}
-.barra{flex:1;min-width:4px;background:var(--cor);border-radius:4px 4px 0 0}
+.coluna{flex:1;min-width:4px;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+.seg{background:var(--cor);flex:none}
+.seg.clube{background:var(--cor-clube)}
+.coluna .seg:first-child{border-radius:4px 4px 0 0}
+.legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;opacity:.85}
+.legenda span{display:inline-flex;align-items:center;gap:6px}
+.legenda i{width:10px;height:10px;border-radius:3px;display:inline-block}
 .eixo{display:flex;justify-content:space-between;font-size:12px;opacity:.7}
 .check{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px}
 .check input{width:auto}
@@ -77,7 +86,7 @@ button.perigo{color:var(--erro)}
 
   <section class="largo" id="secPeriodos" hidden>
     <h2>Faturamento</h2>
-    <p class="note">Faturamento = atendimentos realizados. Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos.</p>
+    <p class="note" id="notaFaturamento">Faturamento = atendimentos realizados. Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos.</p>
     <div class="cards" id="cardsPeriodos"></div>
   </section>
 
@@ -85,11 +94,12 @@ button.perigo{color:var(--erro)}
     <h2>Últimos 30 dias</h2>
     <div class="grafico" id="grafico" role="img" aria-label="Faturamento dos últimos 30 dias"></div>
     <div class="eixo"><span id="eixoIni"></span><span id="eixoFim"></span></div>
+    <div class="legenda" id="legendaGrafico" hidden><span><i style="background:var(--cor)"></i>Atendimentos</span><span><i style="background:var(--cor-clube)"></i>Mensalidades do clube</span></div>
   </section>
 
   <section id="secComissoes" hidden>
     <h2>Comissão dos barbeiros</h2>
-    <p class="note">Quanto cada barbeiro recebe sobre o valor de cada atendimento realizado. Mudar a porcentagem vale para os próximos atendimentos; os já realizados mantêm a comissão do dia.</p>
+    <p class="note">Quanto cada barbeiro recebe sobre o valor de cada atendimento realizado. Mudar a porcentagem vale para os próximos atendimentos; os já realizados mantêm a comissão do dia. No atendimento de assinante do clube, vale a comissão fixa do plano.</p>
     <div id="listaComissoes"></div>
     <p class="msg" id="msgComissoes" role="status"></p>
   </section>
@@ -188,7 +198,7 @@ button.perigo{color:var(--erro)}
       $("simBadge").hidden = !j.temSimulacao;
       ["secPeriodos", "secGrafico", "secComissoes", "secDespesas", "secInsumos", "secPrecos"].forEach(function (s) { $(s).hidden = false; });
       desenharPeriodos(j);
-      desenharGrafico(j.serie);
+      desenharGrafico(j.serie, j.temClube);
       desenharComissoes(j.comissoes);
       desenharDespesas(j.despesas);
       desenharInsumos(j.insumos);
@@ -199,17 +209,26 @@ button.perigo{color:var(--erro)}
     });
   }
 
-  // Cartões dia, semana, mês e trimestre
+  // Cartões dia, semana, mês e trimestre. Com o clube, o valor grande soma atendimentos e mensalidades.
   function desenharPeriodos(j) {
     var box = $("cardsPeriodos"); box.textContent = "";
+    $("notaFaturamento").textContent = j.temClube
+      ? "Faturamento = atendimentos realizados + mensalidades do clube (no dia em que você tocou em \"Recebi\"). Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos."
+      : "Faturamento = atendimentos realizados. Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos.";
     ["dia", "semana", "ultimos30", "mes", "trimestre"].forEach(function (k) {
       var p = j.resumo[k];
       var c = el("div", "card");
       c.appendChild(el("span", "note", p.rotulo + " · " + dataBr(p.de) + (p.de !== p.ate ? " a " + dataBr(p.ate) : "")));
-      c.appendChild(el("span", "valor", brl(p.faturamento)));
-      c.appendChild(el("span", "note", p.atendimentos + " atendimento(s)" + (p.naoRealizados ? " · " + p.naoRealizados + " não realizado(s)" : "")));
-      [["Comissões", p.comissoes], ["Gastos fixos", p.gastosFixos], ["Insumos comprados", p.insumosComprados], ["Lucro", p.lucro]].forEach(function (linha) {
-        var d = el("div", "detalhe");
+      c.appendChild(el("span", "valor", brl(p.entradas != null ? p.entradas : p.faturamento)));
+      c.appendChild(el("span", "note", p.atendimentos + " atendimento(s)" + (p.atendimentosClube ? " · " + p.atendimentosClube + " do clube" : "") + (p.naoRealizados ? " · " + p.naoRealizados + " não realizado(s)" : "")));
+      var linhas = [];
+      if (j.temClube) {
+        linhas.push(["Atendimentos", p.faturamento]);
+        linhas.push(["Mensalidades" + (p.pagamentosClube ? " (" + p.pagamentosClube + ")" : ""), p.clube, "clube"]);
+      }
+      linhas.push(["Comissões", p.comissoes], ["Gastos fixos", p.gastosFixos], ["Insumos comprados", p.insumosComprados], ["Lucro", p.lucro, "total"]);
+      linhas.forEach(function (linha) {
+        var d = el("div", "detalhe" + (linha[2] ? " " + linha[2] : ""));
         d.appendChild(el("span", null, linha[0]));
         d.appendChild(el("b", null, brl(linha[1])));
         c.appendChild(d);
@@ -219,15 +238,26 @@ button.perigo{color:var(--erro)}
     });
   }
 
-  function desenharGrafico(serie) {
+  // Uma coluna por dia: atendimentos embaixo e, com o clube, as mensalidades em cima
+  function desenharGrafico(serie, temClube) {
     var box = $("grafico"); box.textContent = "";
-    var max = Math.max.apply(null, serie.map(function (s) { return s.faturamento; })) || 1;
+    var max = Math.max.apply(null, serie.map(function (s) { return s.faturamento + (s.clube || 0); })) || 1;
     serie.forEach(function (s) {
-      var b = el("div", "barra");
-      b.style.height = Math.max(2, (s.faturamento / max) * 100) + "%";
-      b.title = dataBr(s.dia) + ": " + brl(s.faturamento) + " · " + s.atendimentos + " atendimento(s)";
-      box.appendChild(b);
+      var col = el("div", "coluna");
+      var clube = s.clube || 0;
+      if (clube > 0) {
+        var c = el("div", "seg clube");
+        c.style.height = (clube / max) * 100 + "%";
+        col.appendChild(c);
+      }
+      var b = el("div", "seg");
+      b.style.height = (s.faturamento > 0 || !clube ? Math.max(2, (s.faturamento / max) * 100) : 0) + "%";
+      col.appendChild(b);
+      col.title = dataBr(s.dia) + ": " + brl(s.faturamento) + " · " + s.atendimentos + " atendimento(s)" + (clube ? " · " + brl(clube) + " do clube" : "");
+      box.appendChild(col);
     });
+    $("legendaGrafico").hidden = !temClube;
+    $("grafico").setAttribute("aria-label", temClube ? "Faturamento dos últimos 30 dias: atendimentos e mensalidades do clube" : "Faturamento dos últimos 30 dias");
     $("eixoIni").textContent = serie.length ? dataBr(serie[0].dia) : "";
     $("eixoFim").textContent = serie.length ? dataBr(serie[serie.length - 1].dia) : "";
   }

@@ -118,7 +118,7 @@
     <div class="coluna">
       <section class="cartao">
         <div class="cartao-topo"><h2>Assinantes <span class="contador" id="qtdAssinantes">0</span></h2><button type="button" class="botao p principal" id="novoAssinante"></button></div>
-        <p class="nota p">Quem está cadastrado aqui marca pelo site informando o WhatsApp. Você recebe a mensalidade (Pix, cartão ou dinheiro) e toca em "Recebi" a cada mês pago.</p>
+        <p class="nota p">Quem está cadastrado aqui marca pelo site informando o WhatsApp. Você recebe a mensalidade (Pix, cartão ou dinheiro) e toca em "Recebi" a cada mês pago: o valor entra no Financeiro.</p>
         <input type="search" id="buscaAssinante" class="busca-painel" placeholder="Buscar por nome ou WhatsApp" aria-label="Buscar assinante" hidden>
         <div class="lista" id="listaAssinantes"><div class="esqueleto"></div></div>
       </section>
@@ -135,7 +135,7 @@
         <ul class="mini-lista passos">
           <li>Crie o plano: preço por mês, serviços incluídos e regras (por exemplo, 1 corte a cada 7 dias, de segunda a quinta).</li>
           <li>O cliente pede para assinar pelo site e você combina o pagamento com ele.</li>
-          <li>Cadastre o assinante com o WhatsApp dele e toque em "Recebi" a cada mês pago.</li>
+          <li>Cadastre o assinante com o WhatsApp dele e toque em "Recebi" a cada mês pago. O valor entra no Financeiro, em Mensalidades.</li>
           <li>No site, ele marca "Sou assinante do clube" e informa o WhatsApp. O sistema confere as regras do plano.</li>
           <li>O pedido chega com o selo "Clube · não cobrar" e o barbeiro ganha a comissão fixa do plano.</li>
         </ul>
@@ -527,6 +527,9 @@
   function whatsBr(n) { n = String(n || ""); return n.length === 11 ? "(" + n.slice(0, 2) + ") " + n.slice(2, 7) + "-" + n.slice(7) : n.length === 10 ? "(" + n.slice(0, 2) + ") " + n.slice(2, 6) + "-" + n.slice(6) : n; }
   function dataBrAno(iso) { return iso ? P.dataBr(iso) + "/" + iso.slice(0, 4) : "—"; }
   function reais(v) { return v == null || v === "" ? "" : Number(v).toFixed(2).replace(".", ","); }
+  // "1.299,90" ou "99,9" -> número (vazio não vale)
+  function numeroBr(s) { s = String(s == null ? "" : s).replace(/\s/g, ""); return s ? Number(s.replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".")) : NaN; }
+  function valorValido(s) { var n = numeroBr(s); return n >= 0 && n < 10000; }
   // Um mês depois (31/01 -> 28/02), a mesma conta do servidor
   function maisUmMes(iso) { var p = iso.split("-").map(Number), ultimo = new Date(Date.UTC(p[0], p[1] + 1, 0)).getUTCDate(); return new Date(Date.UTC(p[0], p[1], Math.min(p[2], ultimo))).toISOString().slice(0, 10); }
   function planoPorId(id) { return clube ? clube.planos.filter(function (pl) { return pl.id === id; })[0] || null : null; }
@@ -536,9 +539,9 @@
     var j = clube, k = j.kpis;
     P.trocar($("kpisClube"), [
       kpi("Assinantes ativos", String(k.ativos), k.vencidos ? k.vencidos + " com a mensalidade vencida" : "todos em dia"),
-      kpi("Receita do clube", P.brl(k.receitaMensal), "por mês, somando os ativos"),
+      kpi("Recebido no mês", P.brl(k.recebidoMes || 0), "de " + P.brl(k.receitaMensal) + " por mês dos ativos"),
       kpi("Usos no mês", String(k.usosMes), P.brl(k.comissoesMes) + " de comissão"),
-      kpi("Resultado do mês", P.brl(k.resultadoMes), "receita menos comissões"),
+      kpi("Resultado do mês", P.brl(k.resultadoMes), "recebido menos comissões"),
     ]);
     var avisos = [];
     if (!j.servicos.length) avisos.push(h("div", { class: "aviso-faixa info" }, [h("span", { texto: "Cadastre os serviços e preços no Financeiro: o plano usa os mesmos serviços do site." }), h("a", { href: P.link("financeiro.html"), class: "botao p", texto: "Cadastrar" })]));
@@ -671,6 +674,8 @@
     bWhats.onclick = function () { abrirWhatsAssinante(a, false); };
     var bEditar = h("button", { type: "button", class: "botao mini" }, [P.icone("lapis"), "Editar"]);
     bEditar.onclick = function () { abrirAssinante(a); };
+    var bPagamentos = h("button", { type: "button", class: "botao mini" }, [P.icone("dinheiro"), "Pagamentos"]);
+    bPagamentos.onclick = function () { verPagamentos(a); };
     var bStatus = h("button", { type: "button", class: "botao mini" }, a.status === "ativo" ? [P.icone("relogio"), "Pausar"] : [P.icone("check"), "Reativar"]);
     bStatus.onclick = function () { mudarStatus(a, a.status === "ativo" ? "pausado" : "ativo", bStatus); };
     var bCancelar = a.status !== "cancelado" ? h("button", { type: "button", class: "botao mini perigo" }, [P.icone("x"), "Cancelar"]) : null;
@@ -683,7 +688,7 @@
       h("p", { class: "nota p", texto: (a.pago_ate ? "Pago até " + dataBrAno(a.pago_ate) : "Sem data de vencimento") + " · " + uso.join(" · ") }),
       a.observacao ? h("p", { class: "obs", texto: a.observacao }) : null,
       h("div", { class: "linha" }, [bRecebi, bWhats]),
-      h("div", { class: "secundarias" }, [bEditar, bStatus, bCancelar]),
+      h("div", { class: "secundarias" }, [bEditar, bPagamentos, bStatus, bCancelar]),
     ]);
   }
 
@@ -695,28 +700,50 @@
     if (!planos.length) { P.toast("Crie um plano antes de cadastrar assinantes.", "erro"); return; }
     var v = rascunho || (a
       ? { nome: a.nome, whatsapp: whatsBr(a.whatsapp), plano_id: a.plano_id, pago_ate: a.pago_ate || "", observacao: a.observacao || "" }
-      : { nome: "", whatsapp: "", plano_id: planos[0].id, pago_ate: maisUmMes(j.hoje), observacao: "" });
+      : { nome: "", whatsapp: "", plano_id: planos[0].id, pago_ate: maisUmMes(j.hoje), observacao: "", recebeu: true, valor: reais(planos[0].preco) });
     var nome = h("input", { maxlength: "80", placeholder: "Nome do cliente", autocomplete: "off", value: v.nome });
     var whats = h("input", { type: "tel", inputmode: "tel", maxlength: "20", placeholder: "(81) 99999-9999", autocomplete: "off", value: v.whatsapp });
     var plano = h("select", null, planos.map(function (pl) { return h("option", { value: pl.id, selected: pl.id === v.plano_id, texto: pl.nome + " · " + P.brl(pl.preco) }); }));
     var pago = h("input", { type: "date", value: v.pago_ate });
     var obs = h("input", { maxlength: "200", placeholder: "Ex.: paga por Pix todo dia 10", value: v.observacao });
-    function lido() { return { nome: nome.value.trim(), whatsapp: whats.value.trim(), plano_id: plano.value, pago_ate: pago.value, observacao: obs.value.trim() }; }
+    // Só no cadastro: quem acabou de pagar já entra com a 1ª mensalidade registrada (vai para o Financeiro de hoje)
+    var recebeu = h("input", { type: "checkbox", checked: !a && v.recebeu });
+    var valor = h("input", { inputmode: "decimal", placeholder: "Ex.: 99,90", value: v.valor || "" });
+    var valorMexido = !!rascunho;
+    valor.addEventListener("input", function () { valorMexido = true; });
+    plano.addEventListener("change", function () { if (!valorMexido) valor.value = reais((planoPorId(plano.value) || {}).preco); });
+    var campoValor = h("label", { class: "campo" }, ["Valor recebido (R$)", valor]);
+    var campoPago = h("label", { class: "campo" }, ["Pago até", pago]);
+    var notaNovo = h("p", { class: "nota p" });
+    function alternar() {
+      var r = !a && recebeu.checked;
+      campoValor.hidden = !r;
+      campoPago.hidden = r;
+      notaNovo.textContent = r
+        ? "O pagamento entra no Financeiro de hoje e vale 1 mês, até " + dataBrAno(maisUmMes(j.hoje)) + ". Depois, toque em \"Recebi\" a cada mês."
+        : "Para quem já pagava antes: informe até quando está pago. Nada entra no Financeiro agora.";
+    }
+    recebeu.addEventListener("change", alternar);
+    alternar();
+    function lido() { return { nome: nome.value.trim(), whatsapp: whats.value.trim(), plano_id: plano.value, pago_ate: pago.value, observacao: obs.value.trim(), recebeu: !a && recebeu.checked, valor: valor.value.trim() }; }
     P.janela({
       titulo: a ? "Editar assinante" : "Novo assinante",
       conteudo: h("div", { class: "grade" }, [
         h("label", { class: "campo" }, ["Nome", nome]),
         h("label", { class: "campo" }, ["WhatsApp com DDD (é com ele que o cliente marca pelo site)", whats]),
         h("label", { class: "campo" }, ["Plano", plano]),
-        h("label", { class: "campo" }, ["Pago até", pago]),
+        a ? null : h("label", { class: "check-linha" }, [recebeu, "Recebi agora a 1ª mensalidade"]),
+        a ? null : campoValor,
+        campoPago,
+        a ? null : notaNovo,
         h("label", { class: "campo" }, ["Observação (opcional)", obs]),
-        a ? null : h("p", { class: "nota p", texto: "Pago até já vem com 1 mês a partir de hoje, para quem acabou de pagar. Depois, toque em \"Recebi\" a cada mês." }),
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: a ? "Salvar" : "Cadastrar", classe: "principal", valor: "ok" }],
       validar: function () {
         var x = lido();
         if (x.nome.length < 2) return "Informe o nome do assinante.";
         if (x.whatsapp.replace(/\D/g, "").length < 10) return "Informe o WhatsApp com DDD.";
+        if (x.recebeu && !valorValido(x.valor)) return "Informe o valor recebido.";
         return "";
       },
     }).then(function (r) {
@@ -725,6 +752,7 @@
       apiClube(Object.assign({ acao: "assinante-salvar", id: a ? a.id : undefined }, x)).then(function (resp) {
         carregarClube();
         if (a) { P.toast("Assinante salvo.", "ok"); return; }
+        if (resp.aviso) P.toast(resp.aviso, "erro");
         var novo = Object.assign({}, resp.assinante, { plano: (planoPorId(resp.assinante.plano_id) || {}).nome || "" });
         P.janela({
           titulo: "Assinante cadastrado",
@@ -738,15 +766,65 @@
     });
   }
 
+  // "Recebi": confirma o valor (já vem o preço do plano), grava o pagamento e soma 1 mês.
+  // Toque errado: dá para desfazer pelo aviso que aparece ou em Pagamentos.
   function registrarPagamento(a, botao) {
     var base = a.pago_ate && a.pago_ate > clube.hoje ? a.pago_ate : clube.hoje;
     var novo = maisUmMes(base);
-    P.confirmar("Recebi o pagamento de " + P.primeiroNome(a.nome), "Registra 1 mês do plano " + (a.plano || "") + ": pago até " + (a.pago_ate ? "passa de " + dataBrAno(a.pago_ate) + " " : "fica ") + "para " + dataBrAno(novo) + ".", "Registrar pagamento").then(function (ok) {
-      if (!ok) return;
-      P.acao(botao, apiClube({ acao: "assinante-pagou", id: a.id }).then(function (r) {
-        P.toast("Pagamento registrado: pago até " + dataBrAno(r.pago_ate) + ".", "ok");
+    var pl = planoPorId(a.plano_id);
+    var valor = h("input", { inputmode: "decimal", placeholder: "Ex.: 99,90", value: reais(pl ? pl.preco : "") });
+    P.janela({
+      titulo: "Recebi o pagamento de " + P.primeiroNome(a.nome),
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "nota", texto: "Registra 1 mês do plano " + (a.plano || "") + ": pago até " + (a.pago_ate ? "passa de " + dataBrAno(a.pago_ate) + " " : "fica ") + "para " + dataBrAno(novo) + "." }),
+        h("label", { class: "campo" }, ["Valor recebido (R$)", valor]),
+        h("p", { class: "nota p", texto: "Entra no Financeiro de hoje, em Mensalidades do clube." }),
+      ]),
+      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Registrar pagamento", classe: "principal", valor: "ok" }],
+      validar: function () { return valorValido(valor.value) ? "" : "Informe o valor recebido."; },
+    }).then(function (r) {
+      if (r.valor !== "ok") return;
+      P.acao(botao, apiClube({ acao: "assinante-pagou", id: a.id, valor: valor.value.trim() }).then(function (resp) {
+        var pg = resp.pagamento;
+        P.toast("Pagamento de " + P.brl(pg ? pg.valor : numeroBr(valor.value)) + " registrado: pago até " + dataBrAno(resp.pago_ate) + ".", "ok",
+          pg ? { texto: "Desfazer", acao: function () { desfazerPagamento(a, pg, true); } } : null);
         carregarClube();
       }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
+  }
+
+  // Histórico de pagamentos do assinante. O último pode ser desfeito (por exemplo, "Recebi" tocado no assinante errado).
+  function verPagamentos(a) {
+    var lista = a.pagamentos || [];
+    P.janela({
+      titulo: "Pagamentos de " + P.primeiroNome(a.nome),
+      conteudo: lista.length
+        ? h("div", { class: "grade" }, [
+            h("ul", { class: "mini-lista pagamentos" }, lista.map(function (pg, i) {
+              return h("li", null, [
+                h("span", null, [dataBrAno(pg.data), h("small", { texto: "vale até " + dataBrAno(pg.pago_ate_depois) + (i === 0 ? " · último" : "") })]),
+                h("b", { texto: P.brl(pg.valor) }),
+              ]);
+            })),
+            h("p", { class: "nota p", texto: "Cada pagamento entra no Financeiro no dia em que foi registrado." }),
+          ])
+        : h("p", { class: "nota", texto: "Nenhum pagamento registrado ainda. Toque em \"Recebi\" quando receber a mensalidade." }),
+      acoes: lista.length
+        ? [{ texto: "Fechar", valor: "cancelar" }, { texto: "Desfazer o último", classe: "perigo", valor: "desfazer" }]
+        : [{ texto: "Fechar", classe: "principal", valor: "cancelar" }],
+    }).then(function (r) { if (r.valor === "desfazer") desfazerPagamento(a, lista[0], false); });
+  }
+  function desfazerPagamento(a, pg, direto) {
+    var pergunta = direto ? Promise.resolve(true) : P.confirmar(
+      "Desfazer o pagamento de " + dataBrAno(pg.data) + "?",
+      "Tira " + P.brl(pg.valor) + " das mensalidades do clube no Financeiro, e o pago até volta para " + (pg.pago_ate_antes ? dataBrAno(pg.pago_ate_antes) : "sem data") + ".",
+      "Desfazer pagamento", true);
+    pergunta.then(function (ok) {
+      if (!ok) return;
+      apiClube({ acao: "assinante-desfazer-pagamento", id: a.id, pagamento: pg.id }).then(function (r) {
+        P.toast("Pagamento desfeito." + (r.manteve ? " O pago até ficou como você deixou." : r.pago_ate ? " Pago até " + dataBrAno(r.pago_ate) + "." : " Sem data de vencimento."), "ok");
+        carregarClube();
+      }).catch(function (e) { P.toast(e.message, "erro"); });
     });
   }
   function mudarStatus(a, status, botao) {

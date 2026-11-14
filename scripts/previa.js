@@ -4,6 +4,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { calcularFinanceiro } = require("../lib/financeiro-calculo");
 
 const PORTA = Number(process.argv[2] || 4321);
 const RAIZ = path.join(__dirname, "..");
@@ -43,18 +44,62 @@ function regrasPrevia(pl) {
   const dias = d.length === 7 ? "" : d.length > 2 && d.every((x, i) => !i || x === d[i - 1] + 1) ? `${DIAS_R[d[0]]} a ${DIAS_R[d[d.length - 1]]}` : d.map((x) => DIAS_R[x]).join(", ");
   return [pl.intervalo_dias ? `1 vez a cada ${pl.intervalo_dias} dias` : "sem intervalo mínimo", dias, pl.hora_limite ? "até " + pl.hora_limite : ""].filter(Boolean).join(" · ");
 }
+// Pagamentos do clube (o "Recebi"); ordem maior = mais novo
+const PG = (assinante_id, valor, dias, antes, depois) => ({ id: "pg" + seq++, ordem: seq, assinante_id, valor, data: somaDias(hoje, dias), pago_ate_antes: antes, pago_ate_depois: depois });
+let clubePagamentos = [
+  PG("a4", 99.9, -50, null, somaDias(hoje, -20)),
+  PG("a1", 99.9, -42, somaDias(hoje, -42), somaDias(hoje, -12)),
+  PG("a2", 99.9, -32, null, somaDias(hoje, -2)),
+  PG("a3", 149.9, -28, null, somaDias(hoje, 2)),
+  PG("a1", 89.9, -12, somaDias(hoje, -12), somaDias(hoje, 18)),
+];
+const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 function clubePrevia() {
   const ativos = clubeAssinantes.filter((a) => a.status === "ativo");
   const receita = ativos.reduce((t, a) => t + (clubePlanos.find((p) => p.id === a.plano_id) || { preco: 0 }).preco, 0);
+  const doMes = clubePagamentos.filter((pg) => pg.data >= hoje.slice(0, 8) + "01" && pg.data <= hoje);
+  const recebido = doMes.reduce((t, pg) => t + pg.valor, 0);
+  const pagamentosDe = (id) => clubePagamentos.filter((pg) => pg.assinante_id === id).sort((x, y) => y.ordem - x.ordem).map(({ id, valor, data, pago_ate_antes, pago_ate_depois }) => ({ id, valor, data, pago_ate_antes, pago_ate_depois }));
   return {
     hoje, slug: "gw-barbearia",
     planos: clubePlanos.map((p) => ({ ...p, regras: regrasPrevia(p), assinantes: ativos.filter((a) => a.plano_id === p.id).length })),
-    assinantes: clubeAssinantes.map((a) => ({ ...a, plano: (clubePlanos.find((p) => p.id === a.plano_id) || {}).nome || "", usosMes: a.id === "a1" ? 3 : a.id === "a3" ? 1 : 0, ultimoUso: a.id === "a1" ? somaDias(hoje, -6) : null, emAberto: a.id === "a1" ? hoje : null, liberaEm: a.id === "a1" ? somaDias(hoje, 1) : null, vencido: a.status === "ativo" && a.pago_ate < hoje })),
+    assinantes: clubeAssinantes.map((a) => ({ ...a, plano: (clubePlanos.find((p) => p.id === a.plano_id) || {}).nome || "", usosMes: a.id === "a1" ? 3 : a.id === "a3" ? 1 : 0, ultimoUso: a.id === "a1" ? somaDias(hoje, -6) : null, emAberto: a.id === "a1" ? hoje : null, liberaEm: a.id === "a1" ? somaDias(hoje, 1) : null, vencido: a.status === "ativo" && a.pago_ate < hoje, pagamentos: pagamentosDe(a.id) })),
     servicos: ["Barba tradicional", "Corte + barba", "Corte degradê", "Corte social"],
-    kpis: { ativos: ativos.length, vencidos: ativos.filter((a) => a.pago_ate < hoje).length, receitaMensal: receita, usosMes: 4, comissoesMes: 70, resultadoMes: receita - 70 },
+    kpis: { ativos: ativos.length, vencidos: ativos.filter((a) => a.pago_ate < hoje).length, receitaMensal: r2(receita), recebidoMes: r2(recebido), pagamentosMes: doMes.length, usosMes: 4, comissoesMes: 70, resultadoMes: r2(recebido - 70) },
   };
 }
 function maisUmMesPrevia(iso) { const [a, m, d] = iso.split("-").map(Number); const u = new Date(Date.UTC(a, m + 1, 0)).getUTCDate(); return new Date(Date.UTC(a, m, Math.min(d, u))).toISOString().slice(0, 10); }
+function valorPrevia(v, padrao) { if (v == null || String(v).trim() === "") return padrao; const n = Number(String(v).replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".")); return n >= 0 && n < 10000 ? r2(n) : NaN; }
+
+// Financeiro (prévia): 100 dias de atendimentos fictícios, gastos, insumos e as mensalidades do clube acima.
+// Usa a mesma conta do servidor (lib/financeiro-calculo.js).
+function financeiroPrevia() {
+  let s = 7;
+  const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const precos = [{ id: "s1", nome: "Barba tradicional", preco: 25 }, { id: "s2", nome: "Corte degradê", preco: 40 }, { id: "s3", nome: "Corte social", preco: 35 }, { id: "s4", nome: "Corte + barba", preco: 60 }];
+  const lista = [];
+  for (let i = 100; i >= 0; i--) {
+    const dia = somaDias(hoje, -i);
+    if (new Date(dia + "T12:00:00Z").getUTCDay() === 0) continue;
+    const n = 5 + Math.floor(rnd() * 6);
+    for (let k = 0; k < n; k++) {
+      const sv = precos[Math.floor(rnd() * precos.length)];
+      const bruno = rnd() < 0.55;
+      lista.push({ id: `f${i}-${k}`, dia, status: rnd() < 0.05 ? "nao_realizado" : "realizado", valor: sv.preco, comissao_pct: bruno ? 40 : 45, comissao_valor: null, clube_assinante_id: null, profissional_id: bruno ? "b1" : "b2", profissional: bruno ? "Bruno" : "Rafael", servico: sv.nome, simulado: false });
+    }
+    // Assinantes do clube: perto de 1 atendimento a cada 3 dias, com a comissão fixa do plano
+    if (rnd() < 0.35) lista.push({ id: `fc${i}`, dia, status: "realizado", valor: 0, comissao_pct: 40, comissao_valor: 15, clube_assinante_id: "a1", profissional_id: "b1", profissional: "Bruno", servico: "Corte degradê", simulado: false });
+  }
+  return calcularFinanceiro(hoje, {
+    pedidos: lista,
+    despesas: [{ id: "d1", descricao: "Aluguel do ponto", categoria: "aluguel", valor: 1800, ativo: true }, { id: "d2", descricao: "Luz e água", categoria: "contas", valor: 420, ativo: true }, { id: "d3", descricao: "Bio Site", categoria: "software", valor: 39.9, ativo: true }],
+    insumos: [{ id: "i1", nome: "Pomada modeladora", unidade: "un", estoque_minimo: 5 }, { id: "i2", nome: "Lâmina descartável", unidade: "cx", estoque_minimo: 2 }],
+    movimentos: [{ id: "m1", insumo_id: "i1", tipo: "entrada", quantidade: 12, valor_total: 216, data: somaDias(hoje, -20) }, { id: "m2", insumo_id: "i1", tipo: "saida", quantidade: 8, data: somaDias(hoje, -5) }, { id: "m3", insumo_id: "i2", tipo: "entrada", quantidade: 3, valor_total: 89.7, data: somaDias(hoje, -3) }],
+    precos,
+    profissionais: [{ id: "b1", nome: "Bruno", comissao_pct: 40 }, { id: "b2", nome: "Rafael", comissao_pct: 45 }],
+    pagamentosClube: clubePagamentos.map((pg) => ({ id: pg.id, valor: pg.valor, data: pg.data })),
+  });
+}
 
 let equipeGestao = [
   { id: "b1", nome: "Bruno", ativo: true, perfil_user_id: "u2", foto_url: null, comissao_pct: 40, atendimentos: { total: 148, ultimos30: 41, servicos: [{ nome: "Corte degradê", quantidade: 77 }, { nome: "Corte social", quantidade: 39 }, { nome: "Barba tradicional", quantidade: 32 }] } },
@@ -189,12 +234,42 @@ const servidor = http.createServer(async (req, res) => {
           const a = clubeAssinantes.find((x) => x.id === b.id);
           if (a) { Object.assign(a, corpo); return json(res, 200, { assinante: a }); }
           const novo = { id: "a" + seq++, status: "ativo", ...corpo };
+          if (b.recebeu === true) {
+            const valor = valorPrevia(b.valor, (clubePlanos.find((p) => p.id === b.plano_id) || { preco: 0 }).preco);
+            if (!Number.isFinite(valor)) return json(res, 400, { message: "Informe o valor recebido." });
+            novo.pago_ate = maisUmMesPrevia(hoje);
+            clubePagamentos.push({ id: "pg" + seq++, ordem: seq, assinante_id: novo.id, valor, data: hoje, pago_ate_antes: null, pago_ate_depois: novo.pago_ate });
+          }
           clubeAssinantes.push(novo);
           return json(res, 201, { assinante: novo });
         }
-        if (b.acao === "assinante-pagou") { const a = clubeAssinantes.find((x) => x.id === b.id); a.pago_ate = maisUmMesPrevia(a.pago_ate && a.pago_ate > hoje ? a.pago_ate : hoje); a.status = "ativo"; return json(res, 200, { pago_ate: a.pago_ate }); }
+        if (b.acao === "assinante-pagou") {
+          const a = clubeAssinantes.find((x) => x.id === b.id);
+          const valor = valorPrevia(b.valor, (clubePlanos.find((p) => p.id === a.plano_id) || { preco: 0 }).preco);
+          if (!Number.isFinite(valor)) return json(res, 400, { message: "Informe o valor recebido." });
+          const antes = a.pago_ate || null;
+          a.pago_ate = maisUmMesPrevia(a.pago_ate && a.pago_ate > hoje ? a.pago_ate : hoje);
+          a.status = "ativo";
+          const pg = { id: "pg" + seq++, ordem: seq, assinante_id: a.id, valor, data: hoje, pago_ate_antes: antes, pago_ate_depois: a.pago_ate };
+          clubePagamentos.push(pg);
+          return json(res, 200, { pago_ate: a.pago_ate, pagamento: { id: pg.id, valor, data: hoje } });
+        }
+        if (b.acao === "assinante-desfazer-pagamento") {
+          const a = clubeAssinantes.find((x) => x.id === b.id);
+          const meus = clubePagamentos.filter((pg) => pg.assinante_id === b.id).sort((x, y) => y.ordem - x.ordem);
+          if (!meus.length || meus[0].id !== b.pagamento) return json(res, 409, { message: "Este já não é o último pagamento do assinante. Abra os pagamentos de novo para conferir." });
+          const pg = meus[0];
+          clubePagamentos = clubePagamentos.filter((x) => x !== pg);
+          const manteve = a.pago_ate !== pg.pago_ate_depois;
+          if (!manteve) a.pago_ate = pg.pago_ate_antes;
+          return json(res, 200, { pago_ate: a.pago_ate, valor: pg.valor, manteve });
+        }
         if (b.acao === "assinante-status") { const a = clubeAssinantes.find((x) => x.id === b.id); a.status = b.status; return json(res, 200, { ok: true }); }
         return json(res, 400, { message: "Ação desconhecida." });
+      }
+      if (q.area === "financeiro") {
+        if (metodo === "GET") return json(res, 200, { ...financeiroPrevia(), plataforma: false });
+        return json(res, 200, { ok: true });
       }
       if (q.agenda === "1") return json(res, 200, { profissional: { id: q.profissionalId, nome: "Rafael", temLogin: false }, ...semana(q.de || hoje, q.dias) });
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));

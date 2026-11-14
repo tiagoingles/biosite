@@ -163,12 +163,15 @@
   };
 
   // ---------- mensagens rápidas ----------
-  P.toast = function (msg, tipo) {
+  // botao (opcional): { texto, acao } — por exemplo "Desfazer"; o aviso fica mais tempo na tela
+  P.toast = function (msg, tipo, botao) {
     var box = P.$("toasts");
     if (!box) { box = h("div", { id: "toasts", class: "toasts", "aria-live": "polite" }); document.body.appendChild(box); }
-    var t = h("div", { class: "toast " + (tipo || ""), role: tipo === "erro" ? "alert" : "status", texto: msg });
+    var t = h("div", { class: "toast " + (tipo || "") + (botao ? " com-acao" : ""), role: tipo === "erro" ? "alert" : "status" }, botao
+      ? [h("span", { texto: msg }), h("button", { type: "button", class: "toast-acao", texto: botao.texto, onclick: function () { t.remove(); botao.acao(); } })]
+      : msg);
     box.appendChild(t);
-    setTimeout(function () { t.classList.add("sai"); setTimeout(function () { t.remove(); }, 400); }, tipo === "erro" ? 6500 : 3500);
+    setTimeout(function () { t.classList.add("sai"); setTimeout(function () { t.remove(); }, 400); }, botao ? 9000 : tipo === "erro" ? 6500 : 3500);
   };
 
   // ---------- janelas ----------

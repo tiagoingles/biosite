@@ -445,7 +445,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
 
 <script src="/conta.js"></script>
 <script>
-const GERADOR_VERSAO = 5;
+const GERADOR_VERSAO = 6;
 const FONTS = {
   "Poppins":"Poppins:wght@400;600;700",
   "Montserrat":"Montserrat:wght@400;600;800",
@@ -763,6 +763,8 @@ function agendaRuntime(){
   function chave(t){return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase()}
   function noClube(s){return !!(clube&&s&&clube.some(function(pl){return (pl.servicos||[]).some(function(x){return chave(x)===chave(s.nome)})}))}
   function clubeSalvo(){try{return localStorage.getItem("bio-clube-"+C.slug)||""}catch(e){return ""}}
+  function salvo(k){try{return localStorage.getItem("bio-"+k+"-"+C.slug)||""}catch(e){return ""}}
+  function guardar(k,v){try{if(v)localStorage.setItem("bio-"+k+"-"+C.slug,v)}catch(e){}}
   // Seção do clube no site: cada plano com o botão que chama a barbearia no WhatsApp para assinar
   function desenharClube(){
     var sec=$("clube"),box=$("clubeLista");
@@ -876,9 +878,12 @@ function agendaRuntime(){
       titulo="Seus dados";
       var com=sel.qualquer?"Qualquer barbeiro disponível":sel.prof.nome;
       h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
-      var zap=noClube(sel.servico)?clubeSalvo():null;
-      var blocoClube=zap===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(zap?" checked":"")+'>Sou assinante do clube</label><label id="agClubeW"'+(zap?"":" hidden")+'>WhatsApp do clube <small>(o número cadastrado na barbearia)</small><input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" value="'+esc(zap)+'"></label>';
-      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80"></label>'+blocoClube+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
+      var doClube=noClube(sel.servico)?clubeSalvo():null;
+      var zap=doClube||salvo("zap");
+      var blocoZap=semCadastro?"":'<label>Seu WhatsApp <small>(opcional, para a barbearia lembrar você do horário)</small><input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" value="'+esc(zap)+'"></label>';
+      var blocoClube=doClube===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(doClube?" checked":"")+'><span>Sou assinante do clube <small>(com o WhatsApp cadastrado no clube)</small></span></label>';
+      var blocoNovidades=semCadastro?"":'<label class="check"><input type="checkbox" id="agNovidades"><span>Quero receber promoções e novidades da '+esc(C.nome)+' pelo WhatsApp</span></label>';
+      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80" value="'+esc(salvo("nome"))+'"></label>'+blocoZap+blocoClube+blocoNovidades+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
     }else{
       titulo="Pedido enviado";
       var cal=linkCalendario();
@@ -920,8 +925,8 @@ function agendaRuntime(){
   carregarEquipe(function(){desenharBarbeiros();desenharClube();if(dlg.open)render();else abrirDoLink()});
   // "Quero assinar": abre o WhatsApp da barbearia com o plano escolhido
   document.addEventListener("click",function(e){var c=e.target.closest("[data-plano]");if(!c)return;var pl=porId(clube||[],c.getAttribute("data-plano"));if(pl)abrirLink(linkWhats("Olá! Quero assinar o plano "+pl.nome+" do clube ("+brl(Number(pl.preco))+" por mês). Como faço?"))});
-  // Marcar "Sou assinante" mostra o campo do WhatsApp do clube
-  $("agSteps").addEventListener("change",function(e){if(e.target.id!=="agClube")return;var w=$("agClubeW");if(w)w.hidden=!e.target.checked;if(e.target.checked&&$("agWhats"))$("agWhats").focus()});
+  // Marcar "Sou assinante" (ou as novidades) leva ao campo do WhatsApp, se estiver vazio
+  $("agSteps").addEventListener("change",function(e){if(e.target.id!=="agClube"&&e.target.id!=="agNovidades")return;if(e.target.checked&&$("agWhats")&&!$("agWhats").value.trim())$("agWhats").focus()});
   dlg.querySelector("[data-close]").addEventListener("click",fechar);
   function cliqueWhats(){abrirLink(linkWhats("Olá! Quero agendar um horário"+(sel.servico?" para "+sel.servico.nome:"")+"."))}
   $("agSteps").addEventListener("click",function(e){
@@ -947,9 +952,13 @@ function agendaRuntime(){
     var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
     if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
     var peloClube=!!($("agClube")&&$("agClube").checked),zap=$("agWhats")?$("agWhats").value.trim():"";
-    if(peloClube&&zap.replace(/\D/g,"").length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
+    var novidades=!!($("agNovidades")&&$("agNovidades").checked),digitos=zap.replace(/\D/g,"");
+    if(peloClube&&digitos.length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
+    if(digitos&&(digitos.length<10||digitos.length>13)){$("agErro").textContent="Confira seu WhatsApp: DDD e número.";return}
+    if(novidades&&!digitos){$("agErro").textContent="Para receber as novidades, informe seu WhatsApp.";return}
     if(semCadastro){concluir(nome,obs,{});return}
     var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
+    if(digitos){corpo.whatsapp=zap;corpo.novidades=novidades}
     if(peloClube){corpo.clube=true;corpo.clubeWhatsapp=zap}
     var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
     enviando=true;botao.disabled=true;if(rotulo)rotulo.textContent="Enviando…";
@@ -964,6 +973,7 @@ function agendaRuntime(){
         return;
       }
       if(res.j&&res.j.clube){try{localStorage.setItem("bio-clube-"+C.slug,zap)}catch(e){}}
+      guardar("nome",nome);if(digitos)guardar("zap",zap);
       concluir(nome,obs,res.j||{});
     });
   });
@@ -1289,6 +1299,7 @@ a.ag-op{text-decoration:none}
 .plano-ag:hover{transform:translateY(-2px)}
 .campos .check{display:flex;align-items:center;gap:10px;cursor:pointer}
 .campos .check input[type=checkbox]{width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--cor)}
+.campos .check small{display:block;opacity:.7;font-size:12px}
 @media (min-width:640px){.planos{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 <script type="application/json" id="bio-config">${configJSON(d)}<\/script>

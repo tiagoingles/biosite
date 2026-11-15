@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { calcularFinanceiro } = require("../lib/financeiro-calculo");
 const { vencimento } = require("../lib/clube");
+const CL = require("../lib/clientes");
 
 const PORTA = Number(process.argv[2] || 4321);
 const RAIZ = path.join(__dirname, "..");
@@ -18,7 +19,7 @@ let seq = 1;
 const P = (extra) => ({ id: "p" + seq++, codigo: "K" + (100 + seq), servico: "Corte degradê", profissional: "Bruno", profissional_id: "b1", dia: hoje, horario: "10:00", horario_fim: "10:40", duracao_min: 40, cliente: "Carlos Souza", observacao: "", status: "confirmado", motivo: null, valor: 40, comissao_pct: null, simulado: false, ...extra });
 let pedidos = [
   P({ horario: "09:00", horario_fim: "09:30", duracao_min: 30, servico: "Corte social", cliente: "João Pedro", status: "realizado", valor: 35, comissao_pct: 40 }),
-  P({ horario: "10:00", cliente: "Carlos Souza", status: "confirmado" }),
+  P({ horario: "10:00", cliente: "Carlos Souza", status: "confirmado", cliente_id: "c9", clientes: { nome: "Carlos Souza", telefone: "81999990009" } }),
   P({ horario: "11:30", horario_fim: "12:20", duracao_min: 50, servico: "Corte + barba", cliente: "Rafael Lima", status: "avulso", valor: 60, profissional: "Rafael", profissional_id: "b2" }),
   P({ horario: "14:00", horario_fim: "14:30", duracao_min: 30, servico: "Barba tradicional", cliente: "Marcos Vinícius", status: "pendente", valor: 25, observacao: "Prefiro máquina 2 nas laterais" }),
   P({ dia: somaDias(hoje, 1), horario: "16:00", horario_fim: "16:30", duracao_min: 30, servico: "Corte social", cliente: "André Costa", status: "pendente", valor: 35, profissional: "Rafael", profissional_id: "b2" }),
@@ -72,6 +73,60 @@ function clubePrevia() {
     kpis: { ativos: ativos.length, vencidos: ativos.filter((a) => a.pago_ate < hoje).length, paraLembrar: lembretesPrevia().length, receitaMensal: r2(receita), recebidoMes: r2(recebido), pagamentosMes: doMes.length, usosMes: 4, comissoesMes: 70, resultadoMes: r2(recebido - 70) },
   };
 }
+// Carteira de clientes (prévia): visitas em dias atrás, com ritmos diferentes para mostrar cada situação.
+// Usa as mesmas contas do servidor (lib/clientes.js).
+const aniv = (ano, dias) => ano + somaDias(hoje, dias).slice(4);
+const VISITAS = { c1: [6, 27, 48, 69], c2: [35, 55, 75], c3: [12, 42, 72], c4: [10], c5: [28], c6: [95, 120, 145], c7: [220, 250], c8: [8, 23, 38, 53], c9: [50, 80, 110], c12: [15, 45], c13: [3, 33, 63, 93], c14: [40], c15: [19, 40, 61] };
+const SERVICOS_PREVIA = ["Corte degradê", "Corte social", "Corte + barba", "Barba tradicional"];
+let clientesPrev = [
+  { id: "c1", nome: "Pedro Henrique", telefone: "81999990001", cpf: "52998224725", nascimento: aniv(1992, 40), observacao: "Paga por Pix", origem: "site", aceita: true, profissional_id: "b1", proximo: hoje },
+  { id: "c2", nome: "Thiago Moura", telefone: "81999990002", cpf: null, nascimento: aniv(1990, 3), observacao: "", origem: "convite", aceita: true, profissional_id: "b1" },
+  { id: "c3", nome: "Felipe Andrade", telefone: "81999990003", cpf: null, nascimento: aniv(1995, 0), observacao: "", origem: "site", aceita: false, profissional_id: "b2" },
+  { id: "c4", nome: "Marcos Vinícius", telefone: "81999990004", cpf: null, nascimento: null, observacao: "", origem: "site", aceita: true, profissional_id: "b1" },
+  { id: "c5", nome: "Lucas Almeida", telefone: "81999990005", cpf: null, nascimento: null, observacao: "", origem: "convite", aceita: true, profissional_id: "b2" },
+  { id: "c6", nome: "Rafael Lima", telefone: "81999990006", cpf: null, nascimento: aniv(1985, 18), observacao: "", origem: "painel", aceita: true, profissional_id: "b2" },
+  { id: "c7", nome: "André Costa", telefone: "81999990007", cpf: null, nascimento: null, observacao: "", origem: "importacao", aceita: false, profissional_id: null },
+  { id: "c8", nome: "João Pedro", telefone: "81999990008", cpf: null, nascimento: null, observacao: "Corta a cada 15 dias", origem: "site", aceita: true, profissional_id: "b1" },
+  { id: "c9", nome: "Carlos Souza", telefone: "81999990009", cpf: "11144477735", nascimento: aniv(1980, 25), observacao: "", origem: "site", aceita: true, profissional_id: "b1" },
+  { id: "c10", nome: "Diego Ramos", telefone: "81999990010", cpf: null, nascimento: aniv(1999, 9), observacao: "", origem: "importacao", aceita: false, profissional_id: null },
+  { id: "c11", nome: "Gustavo Lima", telefone: null, cpf: null, nascimento: null, observacao: "", origem: "importacao", aceita: false, profissional_id: null, ultima_visita_externa: somaDias(hoje, -70) },
+  { id: "c12", nome: "Bruno Henrique", telefone: "81999990012", cpf: null, nascimento: null, observacao: "", origem: "site", aceita: false, profissional_id: "b2", saiu: true },
+  { id: "c13", nome: "Mateus Silva", telefone: "81999990013", cpf: null, nascimento: null, observacao: "", origem: "site", aceita: true, profissional_id: "b1" },
+  { id: "c14", nome: "Vinícius Rocha", telefone: "81999990014", cpf: null, nascimento: null, observacao: "", origem: "convite", aceita: true, profissional_id: "b1" },
+  { id: "c15", nome: "Henrique Alves", telefone: "81999990015", cpf: null, nascimento: aniv(1993, -5), observacao: "", origem: "site", aceita: true, profissional_id: "b2" },
+];
+let campanhasPrev = [{ id: "cp1", nome: "Chamar de volta · " + somaDias(hoje, -20).slice(8, 10) + "/" + somaDias(hoje, -20).slice(5, 7), segmento: "chamar", mensagem: "Olá, {nome}! ...", criado_em: somaDias(hoje, -20) + "T13:00:00Z", enviados: 9, voltaram: 4, faturou: 185 }];
+function visitasDe(id) {
+  return (VISITAS[id] || []).map((d, i) => ({ id: id + "-v" + i, dia: somaDias(hoje, -d), horario: "10:00", servico: SERVICOS_PREVIA[i % 4], profissional: i % 2 ? "Rafael" : "Bruno", profissional_id: i % 2 ? "b2" : "b1", status: "realizado", valor: [40, 35, 60, 25][i % 4] }));
+}
+function clientesPrevia() {
+  const soDele = papel === "barbeiro";
+  const mes = Number(hoje.slice(5, 7));
+  let lista = clientesPrev.map((c) => {
+    const vs = visitasDe(c.id);
+    const r = CL.retorno({ dias: vs.map((v) => v.dia), externa: c.ultima_visita_externa || null, proximo: c.proximo || null }, hoje);
+    const gasto = vs.reduce((t, v) => t + v.valor, 0);
+    const item = {
+      id: c.id, nome: c.nome, telefone: c.telefone || "", cpfMascarado: soDele ? "" : CL.mascararCpf(c.cpf), nascimento: soDele ? null : c.nascimento,
+      aniversario: CL.aniversario(c.nascimento, hoje), observacao: c.observacao, origem: c.origem, aceita: !!c.aceita && !c.saiu, saiu: !!c.saiu,
+      profissional_id: c.profissional_id, barbeiro: c.profissional_id === "b2" ? "Rafael" : c.profissional_id === "b1" ? "Bruno" : "",
+      ...r, gasto, ticket: vs.length ? Math.round((gasto / vs.length) * 100) / 100 : 0, criado_em: somaDias(hoje, -100) + "T12:00:00Z",
+    };
+    item.segmentos = CL.segmentosDe(item, mes);
+    return item;
+  });
+  if (soDele) lista = lista.filter((c) => c.profissional_id === "b1");
+  lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const conta = (seg) => lista.filter((c) => c.segmentos.includes(seg)).length;
+  return {
+    hoje, dono: !soDele, clientes: lista, equipe: [{ id: "b1", nome: "Bruno" }, { id: "b2", nome: "Rafael" }],
+    kpis: { total: lista.length, comWhats: lista.filter((c) => c.telefone).length, aceitam: lista.filter((c) => c.aceita).length, ativos: lista.filter((c) => ["novo", "em_dia", "agendado"].includes(c.status)).length, novosMes: 3, taxaSegundaVisita: soDele ? null : 62, baseSegundaVisita: 8 },
+    segmentos: { chamar: conta("chamar"), segunda: conta("segunda"), sumidos: conta("sumidos"), aniversario: conta("aniversario") },
+  };
+}
+const soNumeros = (v) => String(v || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+let convitesPrev = {};
+
 // Quem ainda precisa ser lembrado (o que a tela Hoje do dono recebe), com a mesma regra do servidor
 function lembretesPrevia() {
   return clubeAssinantes.map((a) => ({ nome: a.nome, v: vencimento(a, hoje) })).filter((x) => x.v && !x.v.lembrado).map((x) => ({ nome: x.nome, dias: x.v.dias })).sort((a, b) => a.dias - b.dias);
@@ -225,6 +280,71 @@ const servidor = http.createServer(async (req, res) => {
         if (metodo === "POST") return json(res, 200, { url: "/painel-dono.html#mais" });
         return json(res, 200, { configurado: true, assinatura: assinaturaPrevia, oferta: { promocao: true, vagasRestantes: 7, mensal: 39.9, normal: 89.9, implantacao: 120, diasAtePrimeiraCobranca: 60 } });
       }
+      if (q.area === "clientes") {
+        if (metodo === "GET" && q.id) {
+          const c = clientesPrev.find((x) => x.id === q.id);
+          if (!c) return json(res, 404, { message: "Cliente não encontrado." });
+          const dono = papel !== "barbeiro";
+          return json(res, 200, {
+            cliente: {
+              id: c.id, nome: c.nome, telefone: c.telefone || "", nascimento: dono ? c.nascimento : null, aniversario: c.nascimento ? c.nascimento.slice(8, 10) + "/" + c.nascimento.slice(5, 7) : "", observacao: c.observacao, cpf: dono ? c.cpf || "" : "", cpfMascarado: dono ? CL.mascararCpf(c.cpf) : "",
+              origem: c.origem, profissional_id: c.profissional_id, ultima_visita_externa: c.ultima_visita_externa || null, aceita: !!c.aceita && !c.saiu,
+              aceite_em: c.aceita ? somaDias(hoje, -30) + "T12:00:00Z" : null, aceite_origem: c.aceita ? c.origem : null, saiu_em: c.saiu ? somaDias(hoje, -10) + "T12:00:00Z" : null, criado_em: somaDias(hoje, -100) + "T12:00:00Z",
+            },
+            visitas: visitasDe(c.id).map(({ id, dia, horario, servico, profissional, status, valor }) => ({ id, dia, horario, servico, profissional, status, valor })),
+            campanhas: c.id === "c2" ? [{ nome: campanhasPrev[campanhasPrev.length - 1].nome, enviado_em: campanhasPrev[campanhasPrev.length - 1].criado_em }] : [],
+          });
+        }
+        if (metodo === "GET" && q.campanhas === "1") return json(res, 200, { campanhas: campanhasPrev });
+        if (metodo === "GET") return json(res, 200, clientesPrevia());
+        if (b.acao === "salvar") {
+          const zap = soNumeros(b.telefone);
+          if (String(b.nome || "").trim().length < 2) return json(res, 400, { message: "Informe o nome do cliente." });
+          if (zap && clientesPrev.some((x) => x.telefone === zap && x.id !== b.id)) return json(res, 409, { message: "Já existe um cliente com este WhatsApp." });
+          const nasc = CL.lerData(b.nascimento, { semAno: true });
+          if (nasc === null) return json(res, 400, { message: "Data de nascimento inválida. Use dia/mês/ano." });
+          if (b.cpf && !CL.cpfValido(b.cpf)) return json(res, 400, { message: "CPF inválido. Confira os números ou deixe em branco." });
+          const dadosC = { nome: String(b.nome).trim(), telefone: zap || null, nascimento: nasc || null, observacao: b.observacao || "" };
+          if (papel !== "barbeiro") Object.assign(dadosC, { cpf: b.cpf ? soNumeros(b.cpf) : null, aceita: b.aceita === true, profissional_id: b.profissional_id || null });
+          if (b.id) { Object.assign(clientesPrev.find((x) => x.id === b.id) || {}, dadosC); return json(res, 200, { cliente: { id: b.id } }); }
+          const novo = { id: "cn" + seq++, origem: "painel", profissional_id: papel === "barbeiro" ? "b1" : null, ...dadosC };
+          clientesPrev.push(novo);
+          if (b.pedidoId) { const pd = pedidos.find((x) => x.id === b.pedidoId); if (pd) { pd.cliente_id = novo.id; pd.clientes = { nome: novo.nome, telefone: novo.telefone }; } }
+          return json(res, 201, { cliente: { id: novo.id } });
+        }
+        if (b.acao === "apagar") { clientesPrev = clientesPrev.filter((x) => x.id !== b.id); return json(res, 200, { ok: true }); }
+        if (b.acao === "vincular") {
+          const pd = pedidos.find((x) => x.id === b.pedidoId), c = clientesPrev.find((x) => x.id === b.clienteId);
+          if (!pd || !c) return json(res, 404, { message: "Atendimento não encontrado." });
+          pd.cliente_id = c.id;
+          pd.clientes = { nome: c.nome, telefone: c.telefone };
+          return json(res, 200, { ok: true });
+        }
+        if (b.acao === "convite") {
+          const token = "previa" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+          const zap = soNumeros(b.telefone);
+          convitesPrev[token] = { nome: b.nome || "", telefone: zap, pedidoId: b.pedidoId || null };
+          return json(res, 201, { token, link: "http://localhost:" + PORTA + "/cadastro?c=" + token, expiraEm: new Date(Date.now() + 3 * 864e5).toISOString(), telefone: zap });
+        }
+        if (b.acao === "importar") {
+          const ignorados = [], novos = [];
+          (b.linhas || []).forEach((r, i) => {
+            const l = CL.lerLinha(r || {});
+            if (l.motivo) return ignorados.push({ linha: i + 1, nome: (r && r.nome) || "", motivo: l.motivo });
+            if (l.linha.telefone && clientesPrev.some((x) => x.telefone === l.linha.telefone)) return ignorados.push({ linha: i + 1, nome: l.linha.nome, motivo: "já cadastrado" });
+            novos.push(l.linha);
+          });
+          if (!b.simular) novos.forEach((x) => clientesPrev.push({ id: "cn" + seq++, origem: "importacao", aceita: b.aceitaram === true, profissional_id: null, ...x }));
+          return json(res, 200, { simulado: !!b.simular, inseridos: novos.length, atualizados: 0, ignorados, totalIgnorados: ignorados.length });
+        }
+        if (b.acao === "campanha-criar") {
+          const c = { id: "cp" + seq++, nome: b.nome, segmento: b.segmento, mensagem: b.mensagem, criado_em: new Date().toISOString(), enviados: 0, voltaram: 0, faturou: 0 };
+          campanhasPrev.unshift(c);
+          return json(res, 201, { campanha: { id: c.id } });
+        }
+        if (b.acao === "campanha-envio") { const c = campanhasPrev.find((x) => x.id === b.campanhaId); if (c) c.enviados++; return json(res, 200, { ok: true }); }
+        return json(res, 400, { message: "Ação desconhecida." });
+      }
       if (q.area === "clube") {
         if (metodo === "GET") return json(res, 200, clubePrevia());
         if (b.acao === "plano-salvar") {
@@ -290,7 +410,7 @@ const servidor = http.createServer(async (req, res) => {
       if (q.agenda === "1") return json(res, 200, { profissional: { id: q.profissionalId, nome: "Rafael", temLogin: false }, ...semana(q.de || hoje, q.dias) });
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));
       if (metodo === "GET") return json(res, 200, { profissionais: equipeGestao, convites });
-      if (b.acao === "convidar") { const token = "tok" + seq++; convites.unshift({ id: "c" + seq++, email: b.email, expira_em: new Date(Date.now() + 7 * 864e5).toISOString(), link: "http://localhost:" + PORTA + "/entrar.html?convite=" + token }); return json(res, 201, { link: convites[0].link }); }
+      if (b.acao === "convidar") { const token = "tok" + seq++; convites.unshift({ id: "cn" + seq++, email: b.email, expira_em: new Date(Date.now() + 7 * 864e5).toISOString(), link: "http://localhost:" + PORTA + "/entrar.html?convite=" + token }); return json(res, 201, { link: convites[0].link }); }
       if (b.acao === "cancelar-convite") { convites = convites.filter((c) => c.id !== b.id); return json(res, 200, { ok: true }); }
       if (b.acao === "remover") { equipeGestao = equipeGestao.filter((p) => p.id !== b.profissionalId); return json(res, 200, { ok: true }); }
       if (b.acao === "foto-remover") { const p = equipeGestao.find((x) => x.id === b.profissionalId); if (p) p.foto_url = null; return json(res, 200, { ok: true }); }
@@ -314,6 +434,25 @@ const servidor = http.createServer(async (req, res) => {
       return json(res, 200, { horarios: ["10:00", "10:30", "14:00", "15:30", "17:00"] });
     }
     if (u.pathname === "/api/pedido") {
+      // Cadastro do cliente pelo link de convite (página cadastro.html)
+      if (q.convite !== undefined) {
+        const cv = convitesPrev[q.convite];
+        if (!cv) return json(res, 404, { message: "Link de cadastro inválido. Peça um novo na barbearia." });
+        if (cv.usado) return json(res, 410, { message: "Este link já foi usado. Seu cadastro está feito." });
+        if (metodo === "GET") return json(res, 200, { barbearia: "GW Barbearia", slug: "gw-barbearia", nome: cv.nome, telefone: cv.telefone });
+        const zap = soNumeros(b.whatsapp);
+        if (String(b.nome || "").trim().length < 2) return json(res, 400, { message: "Informe seu nome." });
+        if (zap.length < 10) return json(res, 400, { message: "Informe seu WhatsApp com DDD." });
+        if (b.cpf && !CL.cpfValido(b.cpf)) return json(res, 400, { message: "CPF inválido. Confira os números ou deixe em branco." });
+        let c = clientesPrev.find((x) => x.telefone === zap);
+        if (!c) {
+          c = { id: "cn" + seq++, nome: String(b.nome).trim(), telefone: zap, cpf: b.cpf ? soNumeros(b.cpf) : null, nascimento: CL.lerData(b.nascimento, { semAno: true }) || null, observacao: "", origem: "convite", aceita: b.novidades === true, profissional_id: "b1" };
+          clientesPrev.push(c);
+        } else if (b.novidades === true) c.aceita = true;
+        if (cv.pedidoId) { const pd = pedidos.find((x) => x.id === cv.pedidoId); if (pd) { pd.cliente_id = c.id; pd.clientes = { nome: c.nome, telefone: c.telefone }; } }
+        cv.usado = true;
+        return json(res, 201, { ok: true });
+      }
       if (metodo === "GET" && q.painel === "1") return json(res, 200, painel(q.dia || hoje));
       if (metodo === "GET" && q.realizados === "1") return json(res, 200, { pedidos: pedidos.filter((p) => ["realizado", "nao_realizado"].includes(p.status)) });
       if (metodo === "GET") return json(res, 200, { pedidos: pedidos.filter((p) => p.dia === q.dia) });
@@ -333,6 +472,15 @@ const servidor = http.createServer(async (req, res) => {
           if (a.pago_ate && a.pago_ate < b.dia) return json(res, 422, { message: `A mensalidade do clube venceu em ${a.pago_ate.slice(8, 10)}/${a.pago_ate.slice(5, 7)}. Fale com a barbearia para renovar.`, clube: true });
         }
         const n = P({ servico: b.servico, cliente: b.cliente, dia: b.dia, horario: b.horario, status: "pendente", valor: a ? 0 : 40, comissao_valor: a ? 15 : null, clube_assinante_id: a ? a.id : null, clube_assinantes: a ? { nome: a.nome } : null });
+        // WhatsApp do cliente (opcional): liga o pedido ao cadastro (cria na primeira vez), como o servidor
+        const zapCli = soNumeros(b.whatsapp || b.clubeWhatsapp);
+        if (zapCli.length >= 10) {
+          let c = clientesPrev.find((x) => x.telefone === zapCli);
+          if (!c) { c = { id: "cn" + seq++, nome: b.cliente, telefone: zapCli, cpf: null, nascimento: null, observacao: "", origem: "site", aceita: b.novidades === true, profissional_id: null }; clientesPrev.push(c); }
+          else if (b.novidades === true) c.aceita = true;
+          n.cliente_id = c.id;
+          n.clientes = { nome: c.nome, telefone: c.telefone };
+        }
         pedidos.push(n);
         return json(res, 201, { codigo: n.codigo, profissional: b.profissional || "Bruno", verificado: true, clube: !!a });
       }

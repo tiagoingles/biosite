@@ -4,6 +4,9 @@
 // cliente envia junto na mensagem do WhatsApp.
 // Assinante do clube (clube: true, clubeWhatsapp): o WhatsApp identifica a assinatura e as regras do
 // plano são conferidas no banco; o pedido vai com valor 0 e a comissão fixa do plano.
+// WhatsApp do cliente (whatsapp, opcional; novidades: aceita receber promoções): o pedido fica ligado ao
+// cadastro do cliente na barbearia, criado na primeira vez (lib/clientes.js).
+// GET e POST ?convite=<token>: o cliente se cadastra pelo link que a barbearia mandou (lib/clientes.js).
 // GET, PATCH e POST com "acao": o painel lista e decide os pedidos (ver lib/pedidos-painel.js).
 // Usa a mesma função para não passar do limite de funções da Vercel no plano gratuito.
 const { rest } = require("../lib/supabase");
@@ -15,6 +18,7 @@ const { precoDoServico } = require("../lib/precos");
 const { dataValida, horaValida, hojeBr, somaDias } = require("../lib/horarios");
 const { origemDe, falha, corpoDe, UUID, bloqueadoPorTentativas, registrarErroDeSenha } = require("../lib/seguranca");
 const clube = require("../lib/clube");
+const clientes = require("../lib/clientes");
 
 const DIAS_A_FRENTE = 60; // até quantos dias à frente o cliente pode agendar
 // Limites contra abuso (robô ou pessoa enchendo a agenda de pedidos falsos)
@@ -28,6 +32,12 @@ function erro(res, status, message) {
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
+  // Cadastro do cliente pelo link de convite (público, sem login)
+  if (req.query && req.query.convite !== undefined) {
+    if (req.method === "GET") return clientes.conviteInfo(req, res);
+    if (req.method === "POST") return clientes.conviteSalvar(req, res);
+    return erro(res, 405, "Método não permitido.");
+  }
   if (req.method === "GET" || req.method === "PATCH") return painel(req, res);
   const b = corpoDe(req);
   // Ações do painel (atendimento espontâneo, remarcar...) exigem login
@@ -61,6 +71,10 @@ module.exports = async (req, res) => {
   if (!profissionalNome && !profissionalId && !qualquer) return erro(res, 400, "Escolha o profissional.");
   const peloClube = b.clube === true;
   if (peloClube && !clube.normalizarWhats(b.clubeWhatsapp)) return res.status(400).json({ message: "Informe o WhatsApp do clube com DDD.", clube: true });
+  // WhatsApp do cliente (opcional): liga o agendamento ao cadastro dele. Pelo clube, vale o número do clube.
+  const temZap = String(b.whatsapp || "").replace(/\D/g, "").length > 0;
+  const zapCliente = temZap ? clube.normalizarWhats(b.whatsapp) : peloClube ? clube.normalizarWhats(b.clubeWhatsapp) : "";
+  if (temZap && !zapCliente) return erro(res, 400, "Confira seu WhatsApp: DDD e número.");
 
   try {
     const barb = await rest(`barbearias?slug=eq.${slug}&select=id`);
@@ -147,6 +161,13 @@ module.exports = async (req, res) => {
       if (r && r.erro === "limite_barbearia") return erro(res, 429, "A barbearia recebeu muitos pedidos hoje. Fale com ela pelo WhatsApp.");
       if (r && r.erro === "clube") return res.status(422).json({ message: clube.mensagemDoClube(r), clube: true });
       if (!r || !r.id) throw new Error("Pedido não gravado: resposta inesperada do banco.");
+
+      // Liga o pedido ao cadastro do cliente pelo WhatsApp (cria na primeira vez); falha não derruba o pedido
+      if (zapCliente) {
+        await clientes.clienteDoAgendamento({ barbeariaId: barbearia_id, pedidoId: r.id, nome: cliente, telefone: zapCliente, novidades: b.novidades === true }).catch((e) =>
+          console.error("cliente do agendamento:", e.message)
+        );
+      }
 
       // Aviso no celular do dono e do barbeiro; se falhar, o pedido já foi gravado
       await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico: assinante ? servicoPedido + " · Clube" : servico, dia, horario }).catch((e) =>

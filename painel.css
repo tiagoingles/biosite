@@ -376,6 +376,34 @@ body.sem-abas { padding-bottom: 24px; }
 .estado-lembrete { display: flex; align-items: center; gap: 6px; }
 .assinante.lembrete.feito .estado-lembrete { color: var(--ok); font-weight: 700; }
 .estado-lembrete svg { width: 16px; height: 16px; flex: none; }
+/* ---------- clientes (painel-clientes.js) ---------- */
+.segmentos { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.segmentos::-webkit-scrollbar { display: none; }
+.segmentos .botao { flex: none; }
+.segmentos .n { margin-left: 6px; min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--neutro-fundo); color: var(--suave); font-size: 12px; font-weight: 800; }
+.segmentos .principal .n { background: rgba(255, 255, 255, 0.25); color: inherit; }
+.ferramentas .botao { flex: 0 1 auto; }
+.cliente, .campanha { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--linha); border-radius: 14px; background: var(--cartao-2); }
+.cliente .nome, .campanha .nome { font-weight: 800; font-size: 16px; }
+.cliente .det, .campanha .det { color: var(--suave); font-size: 13px; }
+.cliente .nota, .campanha .nota { margin: 0; }
+.opcao { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border-radius: 14px; background: var(--cartao); border: 1px solid var(--linha); color: var(--texto); font-weight: 700; cursor: pointer; text-align: left; }
+.opcao small { display: block; color: var(--suave); font-weight: 500; font-size: 13px; }
+.opcao svg { width: 22px; height: 22px; color: var(--acento); flex: none; }
+.qr-caixa { justify-self: center; width: min(260px, 72vw); padding: 10px; background: #fff; border-radius: 14px; border: 1px solid var(--linha); }
+.qr-caixa svg { display: block; width: 100%; height: auto; }
+.link-convite { word-break: break-all; font-size: 13px; }
+.ficha-dados { display: grid; gap: 6px; margin: 0; }
+.ficha-dados div { display: grid; grid-template-columns: 120px 1fr; gap: 10px; font-size: 14px; }
+.ficha-dados dt { color: var(--suave); font-weight: 700; }
+.ficha-dados dd { margin: 0; }
+.sub-titulo { margin: 4px 0 0; font-size: 15px; }
+.visitas li, .ignorados li { align-items: center; }
+.visitas li span { display: grid; gap: 2px; }
+.visitas small, .ignorados small { color: var(--suave); font-size: 12px; }
+.colar { width: 100%; min-height: 140px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--linha); background: var(--cartao-2); color: var(--texto); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
+.arquivo { position: relative; overflow: hidden; cursor: pointer; }
+.arquivo input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .pagamentos li { align-items: center; }
 .pagamentos li span { display: grid; gap: 2px; }
 .pagamentos small { color: var(--suave); font-size: 12px; }

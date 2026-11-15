@@ -33,7 +33,11 @@
       botao(primarias, "Não realizado", "", null, function (b) { naoRealizado(p, ctx, b); });
     }
     if (editavel) botao(secundarias, "Remarcar", "", "relogio", function () { remarcar(p, ctx); });
-    if (editavel && p.status !== "pendente") botao(secundarias, "Lembrete", "", "whats", function () { P.abrirWhats(P.mensagem("lembrete", p, ctx.barbearia)); });
+    if (editavel && p.status !== "pendente") botao(secundarias, "Lembrete", "", "whats", function () { P.abrirWhats(P.mensagem("lembrete", p, ctx.barbearia), telefoneDe(p)); });
+    // Atendimento sem cadastro do cliente: cadastrar (pelo celular dele, no painel ou ligando a um cadastro)
+    if (!p.cliente_id && !p.clube_assinante_id && ["confirmado", "avulso", "realizado"].indexOf(p.status) > -1 && window.Clientes) {
+      botao(secundarias, "Cadastrar", "", "clientes", function () { window.Clientes.cadastrarDoAtendimento(p, ctx); });
+    }
     if (p.status !== "recusado" && p.status !== "cancelado") botao(secundarias, "Valor", "", "dinheiro", function () { editarValor(p, ctx); });
     if (editavel) botao(secundarias, "Cancelar", "perigo", "x", function (b) { cancelar(p, ctx, b); });
     var acoes = h("div", { class: "acoes" }, [primarias.childNodes.length ? primarias : null, secundarias.childNodes.length ? secundarias : null]);
@@ -41,8 +45,11 @@
     // Assinante do clube: já pagou a mensalidade, não cobra no balcão; o barbeiro ganha a comissão fixa do plano
     var clube = !!p.clube_assinante_id;
     var nomeClube = clube && p.clube_assinantes && p.clube_assinantes.nome;
+    // Cliente cadastrado (pelo WhatsApp do agendamento ou no painel): mostra o nome do cadastro se for outro
+    var nomeCadastro = !nomeClube && p.cliente_id && p.clientes && p.clientes.nome;
+    function outro(n) { return n && n.toLowerCase() !== String(p.cliente || "").toLowerCase(); }
     var meta = [
-      h("span", { texto: p.cliente + (nomeClube && nomeClube.toLowerCase() !== String(p.cliente || "").toLowerCase() ? " (assinante: " + nomeClube + ")" : "") }),
+      h("span", { texto: p.cliente + (outro(nomeClube) ? " (assinante: " + nomeClube + ")" : outro(nomeCadastro) ? " (cadastro: " + nomeCadastro + ")" : "") }),
       opcoes.mostrarBarbeiro && p.profissional ? h("span", { texto: "com " + p.profissional }) : null,
       h("span", { texto: P.duracao(p.duracao_min || 30) }),
       h("span", { texto: clube ? (Number(p.valor) ? P.brl(p.valor) + " extra" : "pago no clube") : p.valor == null ? "sem preço" : P.brl(p.valor) }),
@@ -61,17 +68,19 @@
   }
 
   function erro(e) { P.toast(e.message || "Não foi possível concluir.", "erro"); }
+  // WhatsApp do cliente cadastrado ligado ao pedido (abre direto a conversa dele)
+  function telefoneDe(p) { return (p && p.clientes && p.clientes.telefone) || ""; }
 
   // Depois de decidir, oferece mandar a resposta ao cliente pelo WhatsApp (o número não é guardado)
   function oferecerWhats(tipo, p, ctx, titulo) {
     return P.janela({
       titulo: titulo,
       conteudo: h("div", { class: "grade" }, [
-        h("p", { class: "nota", texto: "Quer avisar o cliente pelo WhatsApp? A mensagem já vai pronta: é só escolher a conversa." }),
+        h("p", { class: "nota", texto: telefoneDe(p) ? "Quer avisar o cliente pelo WhatsApp? A mensagem já vai pronta para a conversa dele." : "Quer avisar o cliente pelo WhatsApp? A mensagem já vai pronta: é só escolher a conversa." }),
         h("p", { class: "obs", style: "white-space:pre-line", texto: P.mensagem(tipo, p, ctx.barbearia) }),
       ]),
       acoes: [{ texto: "Agora não", valor: "cancelar" }, { texto: "Abrir WhatsApp", classe: "whats", valor: "ok" }],
-    }).then(function (r) { if (r.valor === "ok") P.abrirWhats(P.mensagem(tipo, p, ctx.barbearia)); });
+    }).then(function (r) { if (r.valor === "ok") P.abrirWhats(P.mensagem(tipo, p, ctx.barbearia), telefoneDe(p)); });
   }
 
   function decidir(p, status, ctx, botao) {

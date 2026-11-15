@@ -22,6 +22,7 @@
 <nav class="abas" aria-label="Seções">
   <a href="#hoje" data-aba="hoje"></a>
   <a href="#agenda" data-aba="agenda"></a>
+  <a href="#clientes" data-aba="clientes"></a>
   <a href="#horarios" data-aba="horarios"></a>
   <a href="#mais" data-aba="mais"></a>
 </nav>
@@ -82,6 +83,9 @@
   </section>
 
   <!-- ===== Horários (o que aparece no site) ===== -->
+  <!-- ===== Meus clientes (painel-clientes.js) ===== -->
+  <section class="tela duas" data-tela="clientes" id="telaClientes" hidden></section>
+
   <section class="tela duas" data-tela="horarios" hidden>
     <section class="cartao">
       <div class="cartao-topo"><h2>Minha semana</h2></div>
@@ -136,6 +140,8 @@
 <script src="/avisos.js"></script>
 <script src="/painel-comum.js"></script>
 <script src="/painel-agenda.js"></script>
+<script src="/qr.js"></script>
+<script src="/painel-clientes.js"></script>
 <script>
 (function () {
   var P = window.Painel, h = P.h, $ = P.$;
@@ -143,7 +149,7 @@
   P.monitorar();
 
   // Ícones e rótulos fixos
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["horarios", "relogio", "Horários"], ["mais", "mais", "Mais"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["horarios", "relogio", "Horários"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
@@ -157,7 +163,7 @@
   P.trocar($("btnCsv"), [P.icone("baixar"), "Planilha"]);
   P.trocar($("trocarFoto"), [P.icone("foto"), "Enviar foto"]);
 
-  var eu = null, painel = null, dia = P.hoje(), diaDados = null, realizados = [], todos = false;
+  var eu = null, painel = null, dia = P.hoje(), diaDados = null, realizados = [], todos = false, clientesMontado = false;
   var ctx = { barbearia: "", equipe: [], servicos: [], dono: false, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#mais") carregarGanhos(); } };
 
   // Quem é: só barbeiro usa esta tela; dono e dono-barbeiro vão para o painel do dono
@@ -175,8 +181,10 @@
     mostrarFoto(prof);
     montarLink(d);
     montarMenu(d);
+    window.Clientes.configurar({ dono: false, barbearia: ctx.barbearia, site: d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "" });
     P.abas(function (aba) {
       if (aba === "agenda") carregarDia();
+      if (aba === "clientes") { if (!clientesMontado) { window.Clientes.montar($("telaClientes")); clientesMontado = true; } window.Clientes.carregar(); }
       if (aba === "horarios") abrirHorarios();
       if (aba === "mais") carregarGanhos();
     });

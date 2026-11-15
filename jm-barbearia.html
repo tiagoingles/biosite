@@ -213,6 +213,7 @@ a.ag-op{text-decoration:none}
 .plano-ag:hover{transform:translateY(-2px)}
 .campos .check{display:flex;align-items:center;gap:10px;cursor:pointer}
 .campos .check input[type=checkbox]{width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--cor)}
+.campos .check small{display:block;opacity:.7;font-size:12px}
 @media (min-width:640px){.planos{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 <script type="application/json" id="bio-config">{"modelo":"vitrine","nome":"JM BARBEARIA","cidade":"Abreu e Lima - PE","descricao":"Barbearia em Abreu e Lima - PE","whatsapp":"5581984926848","whatsMsg":"Olá! Vim pelo site.","instagram":"@jmbarbearia00","review":"https://search.google.com/local/writereview?placeid=ChIJe6y1DwAVqwcRGIeBjQ0zxeI","endereco":"Av. D, 2 - Caetés I, Abreu e Lima - PE, 53540-250","maps":"https://maps.google.com/?cid=16340522956285380376&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&hl=pt-BR&gl=br&source=apiv3","horario":"segunda-feira: Fechado\nterça-feira: 08:30 – 20:00\nquarta-feira: 08:30 – 20:00\nquinta-feira: 08:30 – 20:00\nsexta-feira: 08:30 – 21:00\nsábado: 08:30 – 21:00\ndomingo: Fechado","logo":"/img/jm-barbearia/logo-1tbfmms.jpg","capa":"/img/jm-barbearia/capa-4it9u2.jpg","nota":5,"totalAval":3,"mostrarNota":true,"extras":[],"catalogoTitulo":"Serviços","categorias":[],"produtos":[],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o barbeiro João"},"cor":"#0d0d0d","fundo":"#111111","texto":"#f5f5f5","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"jm-barbearia","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"pmw41wgoacf97","nome":"Corte social","duracao":"30 min","preco":"35,00","midia":[{"tipo":"video","url":"https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/jm-barbearia/pmw41wgoacf97/mw42f8uq01ab59.mp4","titulo":""}]},{"id":"pmw41wgoai1lc","nome":"Corte degradê","duracao":"40 min","preco":"40,00","midia":[]},{"id":"pmw41wgoavb1b","nome":"Corte na tesoura","duracao":"40 min","preco":"45,00","midia":[]},{"id":"pmw41wgoaxule","nome":"Corte infantil","duracao":"30 min","preco":"30,00","midia":[]},{"id":"pmw41wgoavgab","nome":"Barba tradicional","duracao":"20 min","preco":"25,00","midia":[]},{"id":"pmw41wgoa18to","nome":"Barba com toalha quente","duracao":"30 min","preco":"30,00","midia":[]},{"id":"pmw41wgoag4o4","nome":"Pezinho / acabamento","duracao":"10 min","preco":"10,00","midia":[]},{"id":"pmw41wgoadjfa","nome":"Corte + barba","duracao":"50 min","preco":"60,00","midia":[]},{"id":"pmw41wgoaz76n","nome":"Corte + barba + sobrancelha","duracao":"60 min","preco":"70,00","midia":[]},{"id":"pmw41wgoalv4b","nome":"Sobrancelha","duracao":"10 min","preco":"10,00","midia":[]},{"id":"pmw41wgoatvp6","nome":"Pigmentação","duracao":"40 min","preco":"25,00","midia":[]},{"id":"pmw41wgoaevb8","nome":"Hidratação capilar","duracao":"40 min","preco":"30,00","midia":[]},{"id":"pmw41wgoao9up","nome":"Luzes ou platinado","duracao":"120 min","preco":"120,00","midia":[]}],"profissionais":[{"id":"pmw41wgoarbp8","nome":"Dono barbeiro 1","servicos":["pmw41wgoacf97","pmw41wgoai1lc","pmw41wgoavb1b","pmw41wgoaxule","pmw41wgoavgab","pmw41wgoa18to","pmw41wgoag4o4","pmw41wgoadjfa","pmw41wgoaz76n","pmw41wgoalv4b","pmw41wgoatvp6","pmw41wgoaevb8","pmw41wgoao9up"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"}]},"tipo":"barbearia"}</script>
@@ -279,6 +280,8 @@ a.ag-op{text-decoration:none}
   function chave(t){return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase()}
   function noClube(s){return !!(clube&&s&&clube.some(function(pl){return (pl.servicos||[]).some(function(x){return chave(x)===chave(s.nome)})}))}
   function clubeSalvo(){try{return localStorage.getItem("bio-clube-"+C.slug)||""}catch(e){return ""}}
+  function salvo(k){try{return localStorage.getItem("bio-"+k+"-"+C.slug)||""}catch(e){return ""}}
+  function guardar(k,v){try{if(v)localStorage.setItem("bio-"+k+"-"+C.slug,v)}catch(e){}}
   // Seção do clube no site: cada plano com o botão que chama a barbearia no WhatsApp para assinar
   function desenharClube(){
     var sec=$("clube"),box=$("clubeLista");
@@ -392,9 +395,12 @@ a.ag-op{text-decoration:none}
       titulo="Seus dados";
       var com=sel.qualquer?"Qualquer barbeiro disponível":sel.prof.nome;
       h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
-      var zap=noClube(sel.servico)?clubeSalvo():null;
-      var blocoClube=zap===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(zap?" checked":"")+'>Sou assinante do clube</label><label id="agClubeW"'+(zap?"":" hidden")+'>WhatsApp do clube <small>(o número cadastrado na barbearia)</small><input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" value="'+esc(zap)+'"></label>';
-      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80"></label>'+blocoClube+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
+      var doClube=noClube(sel.servico)?clubeSalvo():null;
+      var zap=doClube||salvo("zap");
+      var blocoZap=semCadastro?"":'<label>Seu WhatsApp <small>(opcional, para a barbearia lembrar você do horário)</small><input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" value="'+esc(zap)+'"></label>';
+      var blocoClube=doClube===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(doClube?" checked":"")+'><span>Sou assinante do clube <small>(com o WhatsApp cadastrado no clube)</small></span></label>';
+      var blocoNovidades=semCadastro?"":'<label class="check"><input type="checkbox" id="agNovidades"><span>Quero receber promoções e novidades da '+esc(C.nome)+' pelo WhatsApp</span></label>';
+      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80" value="'+esc(salvo("nome"))+'"></label>'+blocoZap+blocoClube+blocoNovidades+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
     }else{
       titulo="Pedido enviado";
       var cal=linkCalendario();
@@ -436,8 +442,8 @@ a.ag-op{text-decoration:none}
   carregarEquipe(function(){desenharBarbeiros();desenharClube();if(dlg.open)render();else abrirDoLink()});
   // "Quero assinar": abre o WhatsApp da barbearia com o plano escolhido
   document.addEventListener("click",function(e){var c=e.target.closest("[data-plano]");if(!c)return;var pl=porId(clube||[],c.getAttribute("data-plano"));if(pl)abrirLink(linkWhats("Olá! Quero assinar o plano "+pl.nome+" do clube ("+brl(Number(pl.preco))+" por mês). Como faço?"))});
-  // Marcar "Sou assinante" mostra o campo do WhatsApp do clube
-  $("agSteps").addEventListener("change",function(e){if(e.target.id!=="agClube")return;var w=$("agClubeW");if(w)w.hidden=!e.target.checked;if(e.target.checked&&$("agWhats"))$("agWhats").focus()});
+  // Marcar "Sou assinante" (ou as novidades) leva ao campo do WhatsApp, se estiver vazio
+  $("agSteps").addEventListener("change",function(e){if(e.target.id!=="agClube"&&e.target.id!=="agNovidades")return;if(e.target.checked&&$("agWhats")&&!$("agWhats").value.trim())$("agWhats").focus()});
   dlg.querySelector("[data-close]").addEventListener("click",fechar);
   function cliqueWhats(){abrirLink(linkWhats("Olá! Quero agendar um horário"+(sel.servico?" para "+sel.servico.nome:"")+"."))}
   $("agSteps").addEventListener("click",function(e){
@@ -463,9 +469,13 @@ a.ag-op{text-decoration:none}
     var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
     if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
     var peloClube=!!($("agClube")&&$("agClube").checked),zap=$("agWhats")?$("agWhats").value.trim():"";
-    if(peloClube&&zap.replace(/\D/g,"").length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
+    var novidades=!!($("agNovidades")&&$("agNovidades").checked),digitos=zap.replace(/\D/g,"");
+    if(peloClube&&digitos.length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
+    if(digitos&&(digitos.length<10||digitos.length>13)){$("agErro").textContent="Confira seu WhatsApp: DDD e número.";return}
+    if(novidades&&!digitos){$("agErro").textContent="Para receber as novidades, informe seu WhatsApp.";return}
     if(semCadastro){concluir(nome,obs,{});return}
     var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
+    if(digitos){corpo.whatsapp=zap;corpo.novidades=novidades}
     if(peloClube){corpo.clube=true;corpo.clubeWhatsapp=zap}
     var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
     enviando=true;botao.disabled=true;if(rotulo)rotulo.textContent="Enviando…";
@@ -480,6 +490,7 @@ a.ag-op{text-decoration:none}
         return;
       }
       if(res.j&&res.j.clube){try{localStorage.setItem("bio-clube-"+C.slug,zap)}catch(e){}}
+      guardar("nome",nome);if(digitos)guardar("zap",zap);
       concluir(nome,obs,res.j||{});
     });
   });

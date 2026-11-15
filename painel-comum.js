@@ -71,6 +71,10 @@
     saude: "M3 12h4l2.5-6 4 12 2.5-6h5",
     clube: "M4 17.5L3 8.5l5 3.5 4-6 4 6 5-3.5-1 9zM5 20.5h14",
     lapis: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4",
+    clientes: "M4 5.5h16A1.5 1.5 0 0 1 21.5 7v10a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 17V7A1.5 1.5 0 0 1 4 5.5zM9 12a2.2 2.2 0 1 0 0-4.4A2.2 2.2 0 0 0 9 12zM5.5 16c.6-1.7 1.8-2.6 3.5-2.6s2.9.9 3.5 2.6M14.5 9.5h4M14.5 12.5h4",
+    qr: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 20h2.5M20 14v2.5M6.5 6.5h1v1h-1zM16.5 6.5h1v1h-1zM6.5 16.5h1v1h-1z",
+    enviar: "M12 15.5V4M7.5 8.5L12 4l4.5 4.5M4.5 14.5v4A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5v-4",
+    raio: "M13 3L5 13.5h6L10 21l8-10.5h-6z",
   };
   P.icone = function (nome) {
     var NS = "http://www.w3.org/2000/svg";
@@ -211,8 +215,12 @@
     }).then(function (r) { return r.valor === "ok"; });
   };
 
-  // ---------- WhatsApp (sem número: o WhatsApp pergunta para quem enviar) ----------
-  P.whats = function (texto) { return "https://wa.me/?text=" + encodeURIComponent(texto); };
+  // ---------- WhatsApp (sem o número do cliente, o WhatsApp pergunta para quem enviar) ----------
+  // Com o telefone do cliente (só números, com DDD), abre direto a conversa dele; sem, o WhatsApp pergunta para quem
+  P.whats = function (texto, telefone) {
+    var t = String(telefone || "").replace(/D/g, "");
+    return "https://wa.me/" + (t.length === 10 || t.length === 11 ? "55" + t : "") + "?text=" + encodeURIComponent(texto);
+  };
   P.mensagem = function (tipo, p, barbearia) {
     var nome = P.primeiroNome(p.cliente);
     var quando = P.dataLonga(p.dia).replace(/^Hoje, /, "hoje, ").replace(/^Amanhã, /, "amanhã, ") + " às " + P.hm(p.horario);
@@ -225,8 +233,8 @@
     if (tipo === "cancelado") return "Olá, " + nome + ". Seu horário na " + casa + " (" + quando + ") foi cancelado. Se quiser, escolha outro horário.";
     return "Olá, " + nome + "! Lembrete do seu horário na " + casa + ": " + p.servico + com + ", " + quando + "." + cod;
   };
-  P.abrirWhats = function (texto) {
-    var a = h("a", { href: P.whats(texto), target: "_blank", rel: "noopener" });
+  P.abrirWhats = function (texto, telefone) {
+    var a = h("a", { href: P.whats(texto, telefone), target: "_blank", rel: "noopener" });
     document.body.appendChild(a);
     a.click();
     a.remove();

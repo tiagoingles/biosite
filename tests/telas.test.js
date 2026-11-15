@@ -46,7 +46,7 @@ test("painéis: toda aba tem a sua tela", () => {
     for (const a of abas) assert.ok(telas.includes(a), `${p}: aba ${a} sem tela`);
   }
   const barbeiro = ler("painel-barbeiro.html");
-  assert.deepEqual([...barbeiro.matchAll(/data-aba="([a-z]+)"/g)].map((m) => m[1]), ["hoje", "agenda", "horarios", "mais"], "mesma estrutura do painel do dono");
+  assert.deepEqual([...barbeiro.matchAll(/data-aba="([a-z]+)"/g)].map((m) => m[1]), ["hoje", "agenda", "clientes", "horarios", "mais"], "mesma estrutura do painel do dono");
   assert.match(barbeiro, /"\?barbeiro=" \+ encodeURIComponent\(d\.profissional\.id\)/, "barbeiro tem link pessoal de agendamento");
 });
 

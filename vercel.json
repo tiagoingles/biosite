@@ -34,7 +34,7 @@
       ]
     },
     {
-      "source": "/(entrar|app|painel|painel-dono|painel-barbeiro|financeiro|redefinir|criador)(\\.html)?",
+      "source": "/(entrar|app|painel|painel-dono|painel-barbeiro|financeiro|redefinir|criador|cadastro)(\\.html)?",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
         { "key": "Cache-Control", "value": "no-cache" }

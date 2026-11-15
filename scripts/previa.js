@@ -7,6 +7,7 @@ const path = require("path");
 const { calcularFinanceiro } = require("../lib/financeiro-calculo");
 const { vencimento } = require("../lib/clube");
 const CL = require("../lib/clientes");
+const AUTO = require("../lib/automacoes");
 
 const PORTA = Number(process.argv[2] || 4321);
 const RAIZ = path.join(__dirname, "..");
@@ -27,6 +28,9 @@ let pedidos = [
   P({ dia: somaDias(hoje, -1), horario: "17:00", horario_fim: "17:30", duracao_min: 30, cliente: "Diego Ramos", status: "confirmado", valor: 35 }),
   // Assinante do clube: não paga no balcão, comissão fixa
   P({ horario: "16:30", horario_fim: "17:10", cliente: "Pedrinho", status: "confirmado", valor: 0, comissao_valor: 15, clube_assinante_id: "a1", clube_assinantes: { nome: "Pedro Henrique" } }),
+  P({ dia: somaDias(hoje, 1), horario: "10:00", cliente: "Mateus Silva", status: "confirmado", cliente_id: "c13", clientes: { nome: "Mateus Silva", telefone: "81999990013" } }),
+  P({ dia: somaDias(hoje, 2), horario: "15:30", horario_fim: "16:00", duracao_min: 30, servico: "Corte social", cliente: "João Pedro", status: "confirmado", valor: 35, cliente_id: "c8", clientes: { nome: "João Pedro", telefone: "81999990008" } }),
+  P({ dia: somaDias(hoje, 3), horario: "18:00", cliente: "Vinícius Rocha", status: "confirmado", profissional: "Rafael", profissional_id: "b2", cliente_id: "c14", clientes: { nome: "Vinícius Rocha", telefone: "81999990014" } }),
 ];
 
 // Clube de assinatura (prévia): planos, assinantes e uso
@@ -126,6 +130,18 @@ function clientesPrevia() {
 }
 const soNumeros = (v) => String(v || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
 let convitesPrev = {};
+// WhatsApp automático (Premium) da prévia: o que o dono ligou, desligou ou reescreveu
+let automacoesPrev = [];
+function premiumPrevia() {
+  const automacoes = AUTO.configuracao(automacoesPrev);
+  const pedidosSemana = pedidos.filter((x) => x.dia >= hoje && x.dia <= somaDias(hoje, 7));
+  const assinantes = clubeAssinantes.filter((a) => a.status === "ativo").map((a) => ({ nome: a.nome, whatsapp: a.whatsapp, pago_ate: a.pago_ate, clube_planos: { nome: (clubePlanos.find((x) => x.id === a.plano_id) || {}).nome || "" } }));
+  return {
+    modo: "teste", precos: AUTO.PRECO,
+    automacoes: automacoes.map((a) => ({ tipo: a.tipo, nome: a.nome, categoria: a.categoria, quando: a.quando, ativa: a.ativa, texto: a.texto, config: a.config, pendencia: a.pendencia, padrao: AUTO.AUTOMACOES.find((x) => x.tipo === a.tipo).texto })),
+    previa: AUTO.previa({ hoje, automacoes, clientes: clientesPrevia().clientes, pedidos: pedidosSemana, assinantes, contatos: new Map(), barbearia: "GW Barbearia", site: "http://localhost:" + PORTA + "/gw-barbearia" }),
+  };
+}
 
 // Quem ainda precisa ser lembrado (o que a tela Hoje do dono recebe), com a mesma regra do servidor
 function lembretesPrevia() {
@@ -296,6 +312,19 @@ const servidor = http.createServer(async (req, res) => {
           });
         }
         if (metodo === "GET" && q.campanhas === "1") return json(res, 200, { campanhas: campanhasPrev });
+        if (metodo === "GET" && q.premium === "1") return json(res, papel === "barbeiro" ? 403 : 200, papel === "barbeiro" ? { message: "Só o dono cuida do WhatsApp automático." } : premiumPrevia());
+        if (b.acao === "automacao-salvar") {
+          const def = AUTO.AUTOMACOES.find((x) => x.tipo === b.tipo);
+          if (!def) return json(res, 400, { message: "Automação desconhecida." });
+          if (b.texto !== undefined && (String(b.texto).trim().length < 10 || String(b.texto).length > 700)) return json(res, 400, { message: "A mensagem precisa ter de 10 a 700 caracteres." });
+          if (b.config && b.config.avaliacao && !/^https:\/\/\S{6,}$/.test(b.config.avaliacao)) return json(res, 400, { message: "Cole o link de avaliação completo, começando com https://" });
+          let a = automacoesPrev.find((x) => x.tipo === b.tipo);
+          if (!a) { a = { tipo: b.tipo, ativa: true, texto: def.texto, config: { ...(def.config || {}) } }; automacoesPrev.push(a); }
+          if (typeof b.ativa === "boolean") a.ativa = b.ativa;
+          if (b.texto !== undefined) a.texto = String(b.texto).trim();
+          if (b.config) a.config = { ...a.config, ...b.config };
+          return json(res, 200, { ok: true });
+        }
         if (metodo === "GET") return json(res, 200, clientesPrevia());
         if (b.acao === "salvar") {
           const zap = soNumeros(b.telefone);

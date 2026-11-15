@@ -183,6 +183,7 @@
 <script src="/painel-agenda.js"></script>
 <script src="/qr.js"></script>
 <script src="/painel-clientes.js"></script>
+<script src="/painel-premium.js"></script>
 <script>
 (function () {
   var P = window.Painel, h = P.h, $ = P.$;
@@ -215,10 +216,12 @@
     $("sub").textContent = d.visaoAdmin ? "Visão da plataforma" : d.perfil.papel === "dono_barbeiro" ? "Você administra e atende" : "Você administra a barbearia";
     $("logo").textContent = P.iniciais(ctx.barbearia);
     montarMenu(d);
-    window.Clientes.configurar({ dono: true, barbearia: ctx.barbearia, site: d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "" });
+    var siteBarbearia = d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "";
+    window.Premium.configurar({ barbearia: ctx.barbearia, site: siteBarbearia });
+    window.Clientes.configurar({ dono: true, barbearia: ctx.barbearia, site: siteBarbearia, extra: window.Premium.cartao() });
     P.abas(function (aba) {
       if (aba === "agenda") carregarDia();
-      if (aba === "clientes") { if (!clientesMontado) { window.Clientes.montar($("telaClientes")); clientesMontado = true; } window.Clientes.carregar(); }
+      if (aba === "clientes") { if (!clientesMontado) { window.Clientes.montar($("telaClientes")); clientesMontado = true; } window.Clientes.carregar(); window.Premium.carregar(); }
       if (aba === "equipe") carregarEquipe();
       if (aba === "clube") carregarClube();
       if (aba === "mais") { carregarSaude(); carregarAssinatura(); }

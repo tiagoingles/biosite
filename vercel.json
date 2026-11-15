@@ -5,7 +5,9 @@
     { "path": "/api/config?lembretes=clube", "schedule": "0 12 * * *" }
   ],
   "redirects": [
-    { "source": "/lib/:caminho*", "destination": "/404", "permanent": false }
+    { "source": "/lib/:caminho*", "destination": "/404", "permanent": false },
+    { "source": "/(aviv-graos|central-descartaveis|genesis-farma)(-avaliar)?(\\.html)?", "destination": "/404", "permanent": false },
+    { "source": "/img/(aviv-graos|central-descartaveis|genesis-farma)/:arquivo*", "destination": "/404", "permanent": false }
   ],
   "headers": [
     {

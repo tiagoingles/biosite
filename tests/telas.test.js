@@ -141,3 +141,11 @@ test("equipe: remover barbeiro tira o perfil de barbeiro, nunca o do dono", asyn
   r = await A.chamar(equipe, { metodo: "POST", corpo: { acao: "remover", profissionalId: UUIDS.estranho }, token: "token-dono" });
   assert.equal(r.statusCode, 404);
 });
+
+test("lojas (catálogos) fora do ar; barbearias e página de vendas continuam no ar", () => {
+  const v = JSON.parse(ler("vercel.json"));
+  const fora = v.redirects.filter((r) => r.destination === "/404").map((r) => new RegExp("^" + r.source.replace(/:\w+\*/g, ".*") + "$"));
+  const bloqueado = (p) => fora.some((re) => re.test(p));
+  for (const p of ["/aviv-graos", "/aviv-graos.html", "/central-descartaveis", "/central-descartaveis-avaliar", "/genesis-farma", "/img/genesis-farma/d-1.jpg"]) assert.ok(bloqueado(p), p + " fora do ar");
+  for (const p of ["/", "/gw-barbearia", "/jm-barbearia", "/gw-barbearia-avaliar", "/img/gw-barbearia/logo.jpg", "/cadastro"]) assert.ok(!bloqueado(p), p + " continua no ar");
+});

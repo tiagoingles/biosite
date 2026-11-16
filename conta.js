@@ -76,6 +76,13 @@
     return auth("PUT", "/user", { password: novaSenha }, s.access_token);
   }
 
+  // Formas de login ativadas no Supabase (ex.: { google: true }). Se não der para saber, nenhuma extra.
+  function provedores() {
+    return auth("GET", "/settings").then(function (j) {
+      return (j && j.external) || {};
+    }, function () { return {}; });
+  }
+
   function entrarComGoogle(redirecionar) {
     config().then(function (c) {
       window.location.href = c.url + "/auth/v1/authorize?provider=google&redirect_to=" + encodeURIComponent(redirecionar);
@@ -141,6 +148,7 @@
     criarConta: criarConta,
     esqueciSenha: esqueciSenha,
     trocarSenha: trocarSenha,
+    provedores: provedores,
     entrarComGoogle: entrarComGoogle,
     capturarSessaoDaUrl: capturarSessaoDaUrl,
     api: api,

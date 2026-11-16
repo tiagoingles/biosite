@@ -43,7 +43,7 @@ button.link{border:0;background:none;color:var(--cor);padding:6px 0}
     <label>Senha<input type="password" id="senha" required minlength="6" autocomplete="current-password"></label>
     <button class="main" type="submit" id="enviar">Entrar</button>
   </form>
-  <button type="button" id="google">Entrar com Google</button>
+  <button type="button" id="google" hidden>Entrar com Google</button>
   <button type="button" class="link" id="esqueci">Esqueci minha senha</button>
   <p class="msg" id="msg" role="status"></p>
 </main>
@@ -100,6 +100,8 @@ button.link{border:0;background:none;color:var(--cor);padding:6px 0}
   $("google").onclick = function () {
     Conta.entrarComGoogle(location.origin + "/entrar.html" + (convite ? "?convite=" + encodeURIComponent(convite) : ""));
   };
+  // O botão só aparece quando o login com Google estiver ativado no Supabase
+  Conta.provedores().then(function (p) { if (p.google === true) $("google").hidden = false; });
 
   $("esqueci").onclick = function () {
     var email = $("email").value.trim();

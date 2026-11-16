@@ -29,6 +29,45 @@ test("depois do login, cada conta vai direto para o seu painel", () => {
   assert.doesNotMatch(app, /formConvite|listaConvites/, "convites ficam no painel do dono");
 });
 
+test("login: o botão do Google só aparece quando o Google está ativado no Supabase", async () => {
+  const entrar = ler("entrar.html");
+  assert.match(entrar, /<button type="button" id="google" hidden>/, "o botão começa escondido");
+  assert.match(entrar, /Conta\.provedores\(\)\.then\(function \(p\) \{ if \(p\.google === true\) \$\("google"\)\.hidden = false; \}\)/, "só aparece com o Google ativado");
+
+  const vm = require("vm");
+  async function provedoresCom(respostaDoSupabase) {
+    const chamadas = [];
+    const ctx = {
+      localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+      fetch: async (url, opcoes = {}) => {
+        chamadas.push({ url, opcoes });
+        if (url === "/api/config") return { ok: true, json: async () => ({ url: "https://exemplo.supabase.co", anon: "chave-anon" }) };
+        return respostaDoSupabase(url);
+      },
+    };
+    ctx.window = ctx;
+    vm.runInNewContext(ler("conta.js"), ctx, { filename: "conta.js" });
+    return { p: await ctx.Conta.provedores(), chamadas };
+  }
+  const responde = (corpo) => async () => ({ ok: true, json: async () => corpo });
+
+  let r = await provedoresCom(responde({ external: { email: true, google: true } }));
+  assert.equal(r.p.google, true, "Google ativado: botão aparece");
+  const pedido = r.chamadas.find((c) => c.url.endsWith("/auth/v1/settings"));
+  assert.equal(pedido.url, "https://exemplo.supabase.co/auth/v1/settings");
+  assert.equal(pedido.opcoes.method, "GET");
+  assert.equal(pedido.opcoes.headers.apikey, "chave-anon");
+
+  r = await provedoresCom(responde({ external: { email: true, google: false } }));
+  assert.equal(r.p.google, false, "Google desligado: botão fica escondido");
+
+  r = await provedoresCom(async () => ({ ok: false, json: async () => ({ msg: "erro" }) }));
+  assert.equal(Object.keys(r.p).length, 0, "erro do Supabase: nenhum login extra");
+
+  r = await provedoresCom(async () => { throw new Error("sem rede"); });
+  assert.equal(Object.keys(r.p).length, 0, "sem rede: nenhum login extra");
+});
+
 test("painel do dono gerencia a equipe sem voltar para a página antiga", () => {
   const dono = ler("painel-dono.html");
   assert.doesNotMatch(dono, /href="app\.html"|link\("app\.html"\)/, "nenhum link do painel do dono leva para app.html");

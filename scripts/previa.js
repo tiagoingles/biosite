@@ -16,6 +16,7 @@ const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 const hoje = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
 const somaDias = (iso, n) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 let papel = "dono";
+let googleAtivo = false; // como em produção: login com Google desligado no Supabase (/__google?ativo=1 liga)
 let seq = 1;
 const P = (extra) => ({ id: "p" + seq++, codigo: "K" + (100 + seq), servico: "Corte degradê", profissional: "Bruno", profissional_id: "b1", dia: hoje, horario: "10:00", horario_fim: "10:40", duracao_min: 40, cliente: "Carlos Souza", observacao: "", status: "confirmado", motivo: null, valor: 40, comissao_pct: null, simulado: false, ...extra });
 let pedidos = [
@@ -257,6 +258,8 @@ const servidor = http.createServer(async (req, res) => {
 <script>function ir(p,pag){localStorage.setItem("bio_sessao",JSON.stringify({access_token:"previa",refresh_token:"previa",expira:Date.now()+864e5}));fetch("/__papel?p="+p).then(function(){location.href="/"+(pag||"painel-"+p+".html")})}</script>`);
   }
   if (u.pathname === "/__papel") { papel = ["barbeiro", "admin", "novo"].includes(q.p) ? q.p : "dono"; return json(res, 200, { papel }); }
+  if (u.pathname === "/__google") { googleAtivo = q.ativo === "1"; return json(res, 200, { googleAtivo }); }
+  if (u.pathname === "/falso/auth/v1/settings") return json(res, 200, { external: { email: true, google: googleAtivo }, disable_signup: false });
   if (u.pathname.startsWith("/api/")) {
     const metodo = req.method;
     const b = metodo === "GET" ? {} : await corpoDe(req);

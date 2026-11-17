@@ -5,12 +5,16 @@
 //   GET  /api/config?saude=1&resumo=1  resumo das últimas 24 h (erros, Web Vitals). Só a conta da plataforma.
 //   POST /api/config { tipo: "vital" | "erro", ... }  eventos do navegador (Web Vitals e erros de JavaScript).
 //   POST /api/config { tipo: "lead", nome, barbearia, whatsapp, ... }  contato da página de vendas.
+//   GET  /api/config?formulario=TOKEN   formulário inicial da implantação (lib/formulario.js);
+//   POST /api/config { tipo: "formulario", token, dados, enviar } salva (e envia) as respostas;
+//   POST /api/config { tipo: "formulario-midia", token, tipoArquivo, tamanho } link para enviar foto ou vídeo.
 //   POST /api/config?stripe=webhook   avisos do Stripe sobre a assinatura das barbearias (lib/assinatura.js).
 //   GET  /api/config?lembretes=clube  aviso diário do clube no celular do dono (agendado no vercel.json,
 //                                      lib/avisos.js). Só o agendador da Vercel chama.
 // Variáveis na Vercel: SUPABASE_URL e SUPABASE_ANON_KEY.
 const { rest } = require("../lib/supabase");
 const { registrar, origemDe, contarTentativas, corpoDe, falha } = require("../lib/seguranca");
+const formulario = require("../lib/formulario");
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 
 const { VERSAO: GERADOR_VERSAO } = require("../lib/gerador");
@@ -110,10 +114,18 @@ module.exports = async (req, res) => {
   if (req.query && req.query.stripe === "webhook") return assinatura.webhook(req, res);
   if (req.method === "POST") {
     const b = corpoDe(req);
+    if (b.tipo === "formulario" || b.tipo === "formulario-midia") {
+      res.setHeader("Cache-Control", "no-store");
+      return (b.tipo === "formulario" ? formulario.salvarPublico(req, res, b) : formulario.midiaPublica(req, res, b)).catch((e) => falha(res, e, "POST /api/config (formulario)"));
+    }
     return b.tipo === "lead" ? interessado(req, res, b) : evento(req, res);
   }
   if (req.method !== "GET") return res.status(405).json({ message: "Método não permitido." });
   if (req.query && req.query.saude === "1") return saude(req, res);
+  if (req.query && req.query.formulario) {
+    res.setHeader("Cache-Control", "no-store");
+    return formulario.lerPublico(req, res, String(req.query.formulario)).catch((e) => falha(res, e, "GET /api/config (formulario)"));
+  }
   // O aviso diário é a única tarefa agendada do projeto: a chamada do agendador da Vercel roda o aviso
   // mesmo se chegar sem o "?lembretes=clube" do vercel.json
   if ((req.query && req.query.lembretes === "clube") || chamadaDoAgendador(req)) return avisoDiarioDoClube(req, res);

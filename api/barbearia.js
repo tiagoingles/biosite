@@ -2,10 +2,13 @@
 // POST acao "publicar": liga o site a uma barbearia, cria o usuário de teste e, se informado, o convite do dono.
 // POST acao "redefinir-teste": gera nova senha para o usuário de teste de um site.
 // POST acao "link-senha" { slug, userId }: link para uma conta do site (ex.: o dono) criar uma senha nova.
+// POST acao "formulario-criar" { nome, whatsapp, leadId } / "formulario-ler" { id } / "formulario-arquivar" { id }
+//      "formulario-criador" { id } (rascunho do Criador) / "formulario-aplicar" { id, slug } (convites e insumos).
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
 const { publicar, redefinirTeste, criarTesteBarbeiro, redefinirTesteBarbeiro, linkNovaSenha } = require("../lib/publicar");
 const { rest } = require("../lib/supabase");
+const formulario = require("../lib/formulario");
 const { falha, corpoDe, UUID } = require("../lib/seguranca");
 
 function origemDo(req) {
@@ -49,6 +52,12 @@ module.exports = async (req, res) => {
       const r = await linkNovaSenha(userId, origemDo(req));
       return res.status(200).json({ link: r.link, nome: perfil.nome });
     }
+
+    if (b.acao === "formulario-criar") return res.status(201).json(await formulario.criar({ nome: b.nome, whatsapp: b.whatsapp, leadId: b.leadId }, origemDo(req)));
+    if (b.acao === "formulario-ler") return res.status(200).json(await formulario.ler(b.id, origemDo(req)));
+    if (b.acao === "formulario-arquivar") return res.status(200).json(await formulario.arquivar(b.id));
+    if (b.acao === "formulario-criador") return res.status(200).json(formulario.paraCriador(await formulario.ler(b.id, origemDo(req))));
+    if (b.acao === "formulario-aplicar") return res.status(200).json(await formulario.aplicar({ id: b.id, slug }, origemDo(req)));
 
     return res.status(400).json({ message: "Ação desconhecida." });
   } catch (e) {

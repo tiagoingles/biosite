@@ -185,6 +185,9 @@ let equipeGestao = [
   { id: "b1", nome: "Bruno", ativo: true, perfil_user_id: "u2", foto_url: null, comissao_pct: 40, atendimentos: { total: 148, ultimos30: 41, servicos: [{ nome: "Corte degradê", quantidade: 77 }, { nome: "Corte social", quantidade: 39 }, { nome: "Barba tradicional", quantidade: 32 }] } },
   { id: "b2", nome: "Rafael", ativo: true, perfil_user_id: null, foto_url: null, comissao_pct: 45, atendimentos: { total: 64, ultimos30: 22, servicos: [{ nome: "Corte + barba", quantidade: 40 }, { nome: "Corte social", quantidade: 24 }] } },
 ];
+// Formulário inicial falso: começa vazio, como o dono recebe
+const formVazio = () => ({ barbearia: { nome: "", cidade: "", endereco: "", whatsapp: "", instagram: "", horario: "" }, dono: { nome: "", email: "", whatsapp: "", atende: false }, servicos: [], produtos: [], insumos: [], barbeiros: [], fotos: { logo: "", capa: "", ambiente: [] }, preferencias: { confirmacao: "", sinal: false, pixChave: "", pixNome: "" }, observacoes: "" });
+let formPrev = { token: "ab".repeat(24), nome: "", status: "aberto", dados: formVazio() };
 let leads = [
   { id: "00000000-0000-4000-8000-000000000001", criado_em: new Date(Date.now() - 2 * 36e5).toISOString(), nome: "Marcos Lima", barbearia: "Barbearia do Marcos", cidade: "Olinda", whatsapp: "81988887777", barbeiros: "2-3", plano: "Barbearia", pagina: "/?utm_source=instagram", status: "novo" },
   { id: "00000000-0000-4000-8000-000000000002", criado_em: new Date(Date.now() - 30 * 36e5).toISOString(), nome: "Ana Souza", barbearia: "Studio Navalha", cidade: "Recife", whatsapp: "5581977776666", barbeiros: "1", plano: "Solo", pagina: "/", status: "contatado" },
@@ -261,6 +264,8 @@ const servidor = http.createServer(async (req, res) => {
   if (u.pathname === "/__google") { googleAtivo = q.ativo === "1"; return json(res, 200, { googleAtivo }); }
   if (u.pathname === "/falso/auth/v1/settings") return json(res, 200, { external: { email: true, google: googleAtivo }, disable_signup: false });
   // Login falso da prévia (entrar com e-mail e senha depois de criar a conta pelo convite)
+  // Envio falso de arquivo do formulário (aceita qualquer PUT)
+  if (u.pathname === "/falso/upload") { res.writeHead(200); return res.end(); }
   if (u.pathname === "/falso/auth/v1/token") return json(res, 200, { access_token: "previa", refresh_token: "previa", expires_in: 3600, user: { id: "u9", email: "novo@exemplo.com" } });
   if (u.pathname.startsWith("/api/")) {
     const metodo = req.method;
@@ -271,6 +276,21 @@ const servidor = http.createServer(async (req, res) => {
         leads.unshift({ id: "00000000-0000-4000-8000-" + String(100000000000 + seq++), criado_em: new Date().toISOString(), nome: b.nome, barbearia: b.barbearia, cidade: b.cidade || "", whatsapp: String(b.whatsapp).replace(/[^0-9]/g, ""), barbeiros: b.barbeiros || "", plano: b.plano || "", pagina: b.pagina || "", status: "novo" });
         return json(res, 201, { ok: true });
       }
+      // Formulário inicial (lib/formulario.js): /formulario?f=<48 hex> abre o formulário falso abaixo
+      if (metodo === "GET" && q.formulario) return formPrev.token === q.formulario ? json(res, 200, { nome: formPrev.nome, status: formPrev.status, editavel: formPrev.status !== "importado", dados: formPrev.dados }) : json(res, 404, { message: "Este link não vale mais. Peça um novo ao Bio Site." });
+      if (metodo === "POST" && b.tipo === "formulario") {
+        formPrev.dados = b.dados;
+        if (b.enviar) {
+          const falta = [];
+          if (!b.dados.barbearia || !b.dados.barbearia.nome) falta.push("Nome da barbearia");
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((b.dados.dono || {}).email || "")) falta.push("Seu e-mail (para criar o seu login)");
+          if (!(b.dados.servicos || []).some((s) => s.nome && s.preco)) falta.push("Pelo menos um serviço com preço");
+          if (falta.length) return json(res, 400, { message: "Falta preencher: " + falta.join(", ") + ".", falta });
+          formPrev.status = "enviado";
+        }
+        return json(res, 200, { ok: true, status: formPrev.status, salvoEm: new Date().toISOString() });
+      }
+      if (metodo === "POST" && b.tipo === "formulario-midia") return json(res, 200, { uploadUrl: "http://localhost:" + PORTA + "/falso/upload", publicUrl: "/img/gw-barbearia/capa-jawd4x.jpg", tipo: String(b.tipoArquivo).startsWith("video") ? "video" : "foto" });
       if (metodo === "POST") { res.writeHead(204); return res.end(); }
       if (q.saude === "1") return json(res, papel === "dono" && q.resumo === "1" ? 403 : 200, { ok: true, gerador: 3, msBanco: 42 });
       return json(res, 200, { url: "http://localhost:" + PORTA + "/falso", anon: "x", vapidPublic: "" });
@@ -278,7 +298,7 @@ const servidor = http.createServer(async (req, res) => {
     if (u.pathname === "/api/eu") {
       if (metodo === "GET" && (q.semana === "1" || q.agenda === "1")) return json(res, 200, semana(q.de || q.dia || hoje, q.dias));
       if (metodo === "GET" && papel === "admin") {
-        return json(res, 200, { usuario: { id: "u0", email: "tiago@exemplo.com" }, perfil: null, admin: true, leads, barbearias: [
+        return json(res, 200, { usuario: { id: "u0", email: "tiago@exemplo.com" }, perfil: null, admin: true, leads, formularios: [{ id: "ff000000-0000-4000-8000-000000000001", token: formPrev.token, nome: (formPrev.dados.barbearia && formPrev.dados.barbearia.nome) || "Dom Manolo Barbearia", whatsapp: "81999990000", status: formPrev.status, criado_em: new Date().toISOString(), enviado_em: formPrev.status === "enviado" ? new Date().toISOString() : null, resumo: { servicos: (formPrev.dados.servicos || []).filter((s) => s.nome).length, produtos: (formPrev.dados.produtos || []).filter((s) => s.nome).length, insumos: 0, barbeiros: (formPrev.dados.barbeiros || []).filter((s) => s.nome).length, fotos: 0, email: (formPrev.dados.dono || {}).email || "" } }], barbearias: [
           { id: "x", slug: "gw-barbearia", nome: "GW Barbearia", temTeste: true, equipe: [{ id: "b1", nome: "Bruno (teste)", temAcesso: true }, { id: "b2", nome: "Rafael (teste)", temAcesso: false }] },
           { id: "y", slug: "barbearia-do-ze", nome: "Barbearia do Zé", temTeste: false, equipe: [] },
         ] });
@@ -468,6 +488,10 @@ const servidor = http.createServer(async (req, res) => {
       papel = "barbeiro";
       return json(res, 200, { ok: true });
     }
+    if (u.pathname === "/api/barbearia" && b.acao === "formulario-criar") return json(res, 201, { id: "ff000000-0000-4000-8000-000000000002", link: "http://localhost:" + PORTA + "/formulario?f=" + formPrev.token });
+    if (u.pathname === "/api/barbearia" && b.acao === "formulario-ler") return json(res, 200, { id: b.id, token: formPrev.token, status: formPrev.status, dados: formPrev.dados, pendencias: [] });
+    if (u.pathname === "/api/barbearia" && b.acao === "formulario-aplicar") return json(res, 200, { barbearia: "GW Barbearia", insumos: 2, convites: [{ nome: "Carlos", email: "carlos@exemplo.com", whatsapp: "81999990000", papel: "dono", jaEntrou: false, link: "http://localhost:" + PORTA + "/entrar.html?convite=dono123" }, { nome: "Rafael", email: "rafael@exemplo.com", whatsapp: "", papel: "barbeiro", comissao: 45, jaEntrou: false, link: "http://localhost:" + PORTA + "/entrar.html?convite=abc123" }] });
+    if (u.pathname === "/api/barbearia" && /^formulario-/.test(b.acao || "")) return json(res, 200, { ok: true });
     if (u.pathname === "/api/barbearia") return json(res, 200, { email: "bruno.teste@exemplo.com", senha: "Previa-1234" });
     // Site público (agendamento): equipe e horários fictícios
     // Site sem cadastro no sistema (como a JM): a API não conhece a barbearia

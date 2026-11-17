@@ -20,7 +20,7 @@ function caminhoPermitido(c) {
 const RESERVADOS = new Set([
   "app", "entrar", "redefinir", "financeiro", "criador", "index", "vendas", "planos", "precos", "privacidade", "termos",
   "sobre", "contato", "ajuda", "suporte", "status", "login", "cadastro", "blog", "previa", "404", "sw", "conta", "avisos",
-  "api", "lib", "img", "admin", "docs", "tests", "scripts", "supabase", "planilha",
+  "api", "lib", "img", "admin", "docs", "tests", "scripts", "supabase", "planilha", "formulario",
 ]);
 function slugDeSite(s) {
   return /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/.test(s) && !RESERVADOS.has(s) && !s.startsWith("painel");

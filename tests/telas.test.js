@@ -188,3 +188,16 @@ test("lojas (catálogos) fora do ar; barbearias e página de vendas continuam no
   for (const p of ["/aviv-graos", "/aviv-graos.html", "/central-descartaveis", "/central-descartaveis-avaliar", "/genesis-farma", "/img/genesis-farma/d-1.jpg"]) assert.ok(bloqueado(p), p + " fora do ar");
   for (const p of ["/", "/gw-barbearia", "/jm-barbearia", "/gw-barbearia-avaliar", "/img/gw-barbearia/logo.jpg", "/cadastro"]) assert.ok(!bloqueado(p), p + " continua no ar");
 });
+
+// Edições feitas pelo terminal já apagaram a barra invertida de expressões regulares (\D virou D).
+// Este teste procura os sinais desse defeito nas páginas e scripts do navegador e do servidor.
+test("nenhuma expressão regular perdeu a barra invertida", () => {
+  const pastas = [".", "api", "lib"];
+  const suspeitos = [/\.replace\(\/D\/g/, /\.replace\(\/d\/g/, /\.test\(\/d\//, /\/\^d\+\$\//, /\.split\(\/s\+\//];
+  for (const pasta of pastas) {
+    for (const f of fs.readdirSync(path.join(raiz, pasta)).filter((n) => /\.(js|html)$/.test(n))) {
+      const t = fs.readFileSync(path.join(raiz, pasta, f), "utf8");
+      for (const s of suspeitos) assert.ok(!s.test(t), `${pasta}/${f} tem ${s}`);
+    }
+  }
+});

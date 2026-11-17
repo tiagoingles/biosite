@@ -15,7 +15,7 @@ const MAX_ERROS_HORA = 20;
 
 async function conviteValido(token) {
   if (!TOKEN.test(token)) return null;
-  const linhas = await rest(`convites?token=eq.${token}&aceito_em=is.null&select=id,barbearia_id,email,expira_em,papel`);
+  const linhas = await rest(`convites?token=eq.${token}&aceito_em=is.null&select=id,barbearia_id,email,expira_em,papel,comissao_pct`);
   const c = linhas[0];
   if (!c || new Date(c.expira_em) < new Date()) return null;
   return c;
@@ -46,7 +46,10 @@ async function ligarConta(c, userId, nome) {
   await rest("perfis", { metodo: "POST", prefer: "return=minimal", corpo: { user_id: userId, barbearia_id: c.barbearia_id, papel: dono ? "dono" : "barbeiro", nome } });
   if (dono) return;
   try {
-    await rest("profissionais", { metodo: "POST", prefer: "return=minimal", corpo: { barbearia_id: c.barbearia_id, perfil_user_id: userId, nome } });
+    const corpo = { barbearia_id: c.barbearia_id, perfil_user_id: userId, nome };
+    // Comissão combinada no formulário da implantação; sem ela, vale o padrão do banco
+    if (c.comissao_pct != null) corpo.comissao_pct = Number(c.comissao_pct);
+    await rest("profissionais", { metodo: "POST", prefer: "return=minimal", corpo });
   } catch (e) {
     await rest(`perfis?user_id=eq.${userId}`, { metodo: "DELETE", prefer: "return=minimal" }).catch(() => {});
     throw e;

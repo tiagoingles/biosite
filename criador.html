@@ -2172,10 +2172,29 @@ async function publicar(forcar,precosOk){
 function admAtualizar(){const logado=!!Conta.ler();$("admLogado").hidden=!logado;$("admLogin").hidden=logado}
 $("admEntrar").onclick=async()=>{
   $("admEntrar").disabled=true;$("admMsg").textContent="Entrando…";
-  try{await Conta.entrar($("admUser").value.trim(),$("admSenha").value);$("admSenha").value="";$("admMsg").textContent=""}
+  try{await Conta.entrar($("admUser").value.trim(),$("admSenha").value);$("admSenha").value="";$("admMsg").textContent="";carregarFormulario()}
   catch(e){$("admMsg").textContent=e.message||"Não consegui entrar."}
   finally{$("admEntrar").disabled=false;admAtualizar()}
 };
+
+/* ---------- Formulário da implantação: /criador?formulario=ID abre as respostas do dono como rascunho ---------- */
+let formularioPendente=new URLSearchParams(location.search).get("formulario")||"";
+async function carregarFormulario(){
+  if(!/^[0-9a-f-]{36}$/i.test(formularioPendente)) return;
+  if(!Conta.ler()){toast("Entre com a conta de admin (em Publicar) para carregar as respostas do formulário.");return}
+  try{
+    const j=await Conta.api("/api/barbearia",{corpo:{acao:"formulario-criador",id:formularioPendente}});
+    const email=j._emailDono||"";delete j._emailDono;
+    if(!confirm(`Carregar as respostas de "${j.nome||"barbearia"}" no Criador? O rascunho atual será substituído (use Salvar cliente .json antes, se precisar dele).`)) return;
+    formularioPendente="";
+    s=normalizar(j);delete s._publicado;save("bio_rascunho",s);
+    if(email) $("emailDono").value=email;
+    toForm();render();clearPub();
+    history.replaceState(null,"",location.pathname);
+    window.scrollTo({top:0,behavior:"smooth"});
+    toast("Respostas carregadas. Confira, complete com o Google (avaliações e mapa) e publique.");
+  }catch(e){toast("Não consegui abrir o formulário: "+e.message)}
+}
 $("admSair").onclick=()=>{Conta.sair();admAtualizar()};
 admAtualizar();
 $("btnPublicar").onclick=()=>publicar(false);
@@ -2229,6 +2248,7 @@ $("btnNovo").onclick=()=>{s=normalizar({...DEFAULT,nome:"",cidade:"",descricao:"
 if(s.capa&&/googleapis\.com|key=/.test(s.capa)) s.capa="";
 fillFonts(); fillPresets(); ghFill(); toForm(); render();
 if(ghReady()) listar(); else $("ghDetails").open=true;
+carregarFormulario();
 </script>
 </body>
 </html>

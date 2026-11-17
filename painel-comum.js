@@ -218,7 +218,7 @@
   // ---------- WhatsApp (sem o número do cliente, o WhatsApp pergunta para quem enviar) ----------
   // Com o telefone do cliente (só números, com DDD), abre direto a conversa dele; sem, o WhatsApp pergunta para quem
   P.whats = function (texto, telefone) {
-    var t = String(telefone || "").replace(/D/g, "");
+    var t = String(telefone || "").replace(/\D/g, "");
     return "https://wa.me/" + (t.length === 10 || t.length === 11 ? "55" + t : "") + "?text=" + encodeURIComponent(texto);
   };
   P.mensagem = function (tipo, p, barbearia) {

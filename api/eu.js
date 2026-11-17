@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
       }
       if (!perfil && (await ehAdminDaPlataforma(u.id))) {
         // Administrador da plataforma: vê todos os sites
-        const [barbearias, equipe, leads, assinaturas, donos] = await Promise.all([
+        const [barbearias, equipe, leads, assinaturas, donos, formularios] = await Promise.all([
           rest("barbearias?select=id,slug,nome,teste_user_id&order=criado_em.desc"),
           rest("profissionais?ativo=eq.true&select=id,nome,barbearia_id,perfil_user_id&order=criado_em.asc"),
           // Interessados da página de vendas (se a tabela ainda não existir, a lista vem vazia)
@@ -71,12 +71,15 @@ module.exports = async (req, res) => {
           rest("assinaturas?select=barbearia_id,status,plano,valor_mensal,primeira_cobranca_em,proxima_cobranca_em").catch(() => []),
           // Donos de cada site (fora o usuário de teste), para o admin gerar o link de nova senha
           rest("perfis?papel=eq.dono&select=user_id,nome,barbearia_id").catch(() => []),
+          // Formulários iniciais da implantação (lib/formulario.js)
+          require("../lib/formulario").listar(),
         ]);
         return res.status(200).json({
           usuario: { id: u.id, email: u.email },
           perfil: null,
           admin: true,
           leads,
+          formularios,
           barbearias: barbearias.map((b) => ({
             id: b.id,
             slug: b.slug,

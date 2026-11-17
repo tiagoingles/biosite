@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1c1917">
+<title>Cadastro da barbearia | Bio Site</title>
+<style>
+:root{--cor:#a16207;--cor-forte:#854d0e;--fundo:#f5f5f4;--cartao:#ffffff;--texto:#1c1917;--suave:#57534e;--linha:#e7e5e4;--campo:#fafaf9;--erro:#b91c1c;--ok:#15803d;--sombra:0 18px 36px -26px rgba(0,0,0,.35)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#0f0d0c;--cartao:#1c1917;--texto:#f5f5f4;--suave:#a8a29e;--linha:#2f2b28;--campo:#141210;--sombra:none}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--fundo);color:var(--texto);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.topo{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:var(--cartao);border-bottom:1px solid var(--linha)}
+.topo b{font-size:15px}
+.estado{font-size:13px;color:var(--suave);text-align:right}
+.estado.erro{color:var(--erro)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 64px;display:grid;gap:16px}
+h1{font-size:24px;line-height:1.2;margin:0 0 6px}
+.intro p{margin:0;color:var(--suave)}
+.cartao{background:var(--cartao);border:1px solid var(--linha);border-radius:16px;padding:18px;margin:0;display:grid;gap:12px;box-shadow:var(--sombra);min-width:0}
+legend{font-weight:700;font-size:17px;padding:0;float:left;width:100%;margin-bottom:2px}
+legend+*{clear:both}
+.nota{margin:0;font-size:14px;color:var(--suave)}
+label{display:grid;gap:5px;font-size:14px;font-weight:600;min-width:0}
+input,textarea,select{font:inherit;font-weight:400;width:100%;padding:11px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--campo);color:var(--texto);min-width:0}
+input:focus,textarea:focus{outline:2px solid var(--cor);outline-offset:1px;border-color:transparent}
+textarea{resize:vertical}
+.duas{display:grid;gap:12px}
+@media (min-width:560px){.duas{grid-template-columns:1fr 1fr}.tres{grid-template-columns:1.6fr 1fr 1fr}}
+.tres{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.tres>label:first-child{grid-column:1/-1}
+@media (min-width:560px){.tres>label:first-child{grid-column:auto}}
+.check{display:flex;align-items:center;gap:10px;font-weight:500}
+.check input{width:20px;height:20px;flex:none;accent-color:var(--cor)}
+.opcoes{display:grid;gap:8px}
+.opcao{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--linha);border-radius:12px;font-weight:500;cursor:pointer}
+.opcao input{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--cor)}
+.opcao small{display:block;color:var(--suave);font-weight:400}
+.item{border:1px solid var(--linha);border-radius:12px;padding:12px;display:grid;gap:10px;background:var(--campo)}
+.item-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--suave);font-weight:600}
+.itens{display:grid;gap:10px}
+.botao{font:inherit;font-weight:600;padding:11px 14px;border-radius:10px;border:1px solid var(--linha);background:var(--cartao);color:var(--texto);cursor:pointer;min-height:44px}
+.botao:hover{border-color:var(--cor)}
+.botao.principal{background:var(--cor);border-color:var(--cor);color:#fff;width:100%;font-size:17px;padding:14px}
+.botao.principal:hover{background:var(--cor-forte)}
+.botao.mini{min-height:36px;padding:6px 10px;font-size:13px}
+.botao.tirar{border:0;background:none;color:var(--erro);padding:6px 4px;min-height:36px}
+.botao:disabled{opacity:.6;cursor:wait}
+.midias{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.miniatura{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;background:var(--linha);flex:none}
+.miniatura img,.miniatura video{width:100%;height:100%;object-fit:cover;display:block}
+.miniatura .x{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:15px;line-height:24px;padding:0;cursor:pointer}
+.miniatura .play{position:absolute;left:4px;bottom:3px;color:#fff;font-size:12px;text-shadow:0 1px 3px #000}
+.envio{font-size:13px;color:var(--suave)}
+.erro{color:var(--erro);margin:0;font-size:14px}
+.final{text-align:center}
+.final .grande{font-size:44px;line-height:1}
+.aviso{background:var(--campo);border:1px solid var(--linha);border-radius:12px;padding:12px;margin:0;font-size:14px}
+.privacidade{font-size:12px;color:var(--suave);text-align:center;margin:0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header class="topo"><b>Bio Site</b><span class="estado" id="estado" role="status">Abrindo…</span></header>
+<main>
+  <section class="intro">
+    <h1 id="titulo">Cadastro da sua barbearia</h1>
+    <p id="introTexto">Preencha com calma: tudo é salvo sozinho. Pode parar e continuar depois por este mesmo link.</p>
+  </section>
+
+  <p class="aviso" id="avisoTopo" hidden></p>
+
+  <form id="form" novalidate hidden>
+    <fieldset class="cartao">
+      <legend>1. Sua barbearia</legend>
+      <label>Nome da barbearia *<input data-campo="barbearia.nome" maxlength="80" autocomplete="organization" required></label>
+      <div class="duas">
+        <label>Cidade<input data-campo="barbearia.cidade" maxlength="80" placeholder="Ex.: Recife - PE"></label>
+        <label>WhatsApp da barbearia<input data-campo="barbearia.whatsapp" inputmode="tel" maxlength="20" placeholder="(81) 99999-9999"></label>
+      </div>
+      <label>Endereço<input data-campo="barbearia.endereco" maxlength="160" autocomplete="street-address"></label>
+      <label>Instagram<input data-campo="barbearia.instagram" maxlength="120" placeholder="@suabarbearia"></label>
+      <label>Horário de funcionamento<textarea data-campo="barbearia.horario" rows="3" maxlength="400" placeholder="Seg a Sex: 9h às 19h&#10;Sáb: 8h às 14h"></textarea></label>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>2. Seu acesso ao painel</legend>
+      <p class="nota">Com este e-mail a gente cria o seu login. O convite chega pelo WhatsApp.</p>
+      <label>Seu nome<input data-campo="dono.nome" maxlength="80" autocomplete="name"></label>
+      <div class="duas">
+        <label>Seu e-mail *<input type="email" data-campo="dono.email" maxlength="120" autocomplete="email" required></label>
+        <label>Seu WhatsApp<input data-campo="dono.whatsapp" inputmode="tel" maxlength="20" autocomplete="tel"></label>
+      </div>
+      <label class="check"><input type="checkbox" data-campo="dono.atende"> Eu também atendo clientes</label>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>3. Serviços e preços *</legend>
+      <p class="nota">Coloque o preço e quanto tempo leva cada um. Fotos e vídeos dos cortes ajudam o cliente a escolher.</p>
+      <div class="itens" id="lista-servicos"></div>
+      <button type="button" class="botao" data-add="servicos">+ Adicionar serviço</button>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>4. Produtos que você vende</legend>
+      <p class="nota">Com o preço de compra e o de venda, cada venda entra no financeiro já com o lucro. A quantidade vira o estoque inicial.</p>
+      <div class="itens" id="lista-produtos"></div>
+      <button type="button" class="botao" data-add="produtos">+ Adicionar produto</button>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>5. Insumos do dia a dia</legend>
+      <p class="nota">O que a barbearia usa e não vende: lâmina, pomada de uso, toalha descartável, álcool...</p>
+      <div class="itens" id="lista-insumos"></div>
+      <button type="button" class="botao" data-add="insumos">+ Adicionar insumo</button>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>6. Equipe</legend>
+      <p class="nota">Com o e-mail, o barbeiro recebe o convite para o painel dele. Sem e-mail, você cuida da agenda dele pelo seu painel.</p>
+      <div class="itens" id="lista-barbeiros"></div>
+      <button type="button" class="botao" data-add="barbeiros">+ Adicionar barbeiro</button>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>7. Fotos da barbearia</legend>
+      <div class="duas">
+        <div class="item"><div class="item-topo">Logo</div><div class="midias" data-foto="logo"></div></div>
+        <div class="item"><div class="item-topo">Foto de capa (fachada ou ambiente)</div><div class="midias" data-foto="capa"></div></div>
+      </div>
+      <div class="item"><div class="item-topo">Mais fotos do ambiente (até 12)</div><div class="midias" data-foto="ambiente"></div></div>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>8. Agendamentos e sinal</legend>
+      <div class="opcoes" role="radiogroup" aria-label="Confirmação dos agendamentos">
+        <label class="opcao"><input type="radio" name="confirmacao" value="automatica"><span>Os agendamentos já entram confirmados<small>O cliente marca pelo site e o horário já fica garantido.</small></span></label>
+        <label class="opcao"><input type="radio" name="confirmacao" value="manual"><span>Eu confirmo cada agendamento<small>O pedido chega no painel e você confirma ou recusa.</small></span></label>
+      </div>
+      <label class="check"><input type="checkbox" data-campo="preferencias.sinal"> Quero cobrar um sinal no Pix para garantir o horário</label>
+      <div class="duas" id="camposPix" hidden>
+        <label>Chave Pix<input data-campo="preferencias.pixChave" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"></label>
+        <label>Nome de quem recebe<input data-campo="preferencias.pixNome" maxlength="80"></label>
+      </div>
+    </fieldset>
+
+    <fieldset class="cartao">
+      <legend>9. Algo mais?</legend>
+      <label>Observações<textarea data-campo="observacoes" rows="3" maxlength="1000" placeholder="Ex.: fazemos prótese capilar, atendemos só com hora marcada, temos estacionamento..."></textarea></label>
+    </fieldset>
+
+    <div class="cartao">
+      <p class="erro" id="falta" hidden></p>
+      <button type="submit" class="botao principal" id="btnEnviar">Enviar para o Bio Site</button>
+      <p class="nota" id="notaEnvio">Depois de enviar, ainda dá para corrigir até o seu site ficar pronto.</p>
+    </div>
+    <p class="privacidade">Os dados ficam só com o Bio Site e servem para montar o seu site e o seu painel.</p>
+  </form>
+
+  <section class="cartao final" id="fim" hidden>
+    <div class="grande">✅</div>
+    <h2 style="margin:0">Recebemos!</h2>
+    <p class="nota">Agora a gente monta o seu site e o seu painel e te chama no WhatsApp. Se lembrar de algo, é só abrir este link de novo e corrigir.</p>
+    <button type="button" class="botao" id="btnCorrigir">Ver ou corrigir as respostas</button>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  var token = new URLSearchParams(location.search).get("f") || "";
+  var d = null, editavel = false, status = "aberto";
+  var $ = function (id) { return document.getElementById(id); };
+  var PADRAO = {
+    servicos: function () { return { nome: "", preco: "", duracao: 30, protese: false, midia: [] }; },
+    produtos: function () { return { nome: "", custo: "", preco: "", estoque: "", midia: [] }; },
+    insumos: function () { return { nome: "", unidade: "un", custo: "", estoque: "" }; },
+    barbeiros: function () { return { nome: "", email: "", whatsapp: "", comissao: 40 }; },
+  };
+  var SUGESTOES = [["Corte", 30], ["Barba", 20], ["Corte + barba", 50], ["Sobrancelha", 10], ["Pigmentação", 30]];
+
+  function estado(t, erro) { var e = $("estado"); e.textContent = t; e.className = "estado" + (erro ? " erro" : ""); }
+  function el(tag, attrs, filhos) {
+    var n = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === "texto") n.textContent = attrs[k];
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] === true) n.setAttribute(k, "");
+      else if (attrs[k] !== false && attrs[k] != null) n.setAttribute(k, attrs[k]);
+    });
+    (filhos || []).forEach(function (f) { if (f) n.appendChild(typeof f === "string" ? document.createTextNode(f) : f); });
+    return n;
+  }
+  function ler(caminho) { return caminho.split(".").reduce(function (o, k) { return o ? o[k] : undefined; }, d); }
+  function gravar(caminho, valor) { var p = caminho.split("."), o = d; for (var i = 0; i < p.length - 1; i++) o = o[p[i]] = o[p[i]] || {}; o[p[p.length - 1]] = valor; }
+
+  // ---------- salvar sozinho ----------
+  var timer = null, salvando = false, deNovo = false;
+  function salvarCalado() { salvar().catch(function () {}); }
+  function mudou() { if (!editavel) return; estado("Salvando…"); clearTimeout(timer); timer = setTimeout(salvarCalado, 1200); }
+  function salvar(enviar) {
+    if (salvando && !enviar) { deNovo = true; return Promise.resolve(); }
+    salvando = true;
+    return fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tipo: "formulario", token: token, dados: d, enviar: enviar === true }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.message || "Não consegui salvar."); e.falta = j.falta; throw e; } return j; }); })
+      .then(function (j) {
+        status = j.status || status;
+        var h = new Date(j.salvoEm || Date.now());
+        estado("Tudo salvo às " + String(h.getHours()).padStart(2, "0") + ":" + String(h.getMinutes()).padStart(2, "0"));
+        return j;
+      })
+      .catch(function (e) { estado(e.falta ? "Salvo, mas falta preencher algo" : e.message + " Tentando de novo…", !e.falta); if (!e.falta && !enviar) { clearTimeout(timer); timer = setTimeout(salvarCalado, 5000); } throw e; })
+      .finally(function () { salvando = false; if (deNovo) { deNovo = false; mudou(); } });
+  }
+  window.addEventListener("beforeunload", function (ev) { if (salvando || timer && $("estado").textContent === "Salvando…") { ev.preventDefault(); ev.returnValue = ""; } });
+
+  // ---------- campos simples ----------
+  function ligarCampos() {
+    document.querySelectorAll("[data-campo]").forEach(function (inp) {
+      var c = inp.getAttribute("data-campo");
+      if (inp.type === "checkbox") { inp.checked = !!ler(c); inp.onchange = function () { gravar(c, inp.checked); atualizarPix(); mudou(); }; }
+      else { inp.value = ler(c) == null ? "" : ler(c); inp.oninput = function () { gravar(c, inp.value); if (c === "barbearia.nome") titulo(); mudou(); }; }
+      inp.disabled = !editavel;
+    });
+    document.querySelectorAll("input[name=confirmacao]").forEach(function (r) {
+      r.checked = d.preferencias.confirmacao === r.value;
+      r.disabled = !editavel;
+      r.onchange = function () { d.preferencias.confirmacao = r.value; mudou(); };
+    });
+    atualizarPix();
+  }
+  function atualizarPix() { $("camposPix").hidden = !d.preferencias.sinal; }
+  function titulo() { $("titulo").textContent = d.barbearia.nome ? "Cadastro da " + d.barbearia.nome : "Cadastro da sua barbearia"; }
+
+  // ---------- fotos e vídeos ----------
+  function enviarArquivo(arq) {
+    return fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tipo: "formulario-midia", token: token, tipoArquivo: arq.type, tamanho: arq.size }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.message || "Não consegui preparar o envio."); return j; }); })
+      .then(function (j) {
+        return fetch(j.uploadUrl, { method: "PUT", headers: { "Content-Type": arq.type }, body: arq }).then(function (r) {
+          if (!r.ok) throw new Error("O envio de " + arq.name + " falhou. Tente de novo.");
+          return { tipo: j.tipo, url: j.publicUrl };
+        });
+      });
+  }
+  // lista: array de {tipo,url}; max: quanto cabe; aceita: "image/*" ou "image/*,video/*"
+  function caixaMidias(caixa, lista, max, aceita, aoMudar) {
+    caixa.innerHTML = "";
+    lista.forEach(function (m, i) {
+      var mostra = m.tipo === "video" ? el("video", { src: m.url, muted: true, playsinline: true, preload: "metadata" }) : el("img", { src: m.url, alt: "", loading: "lazy" });
+      caixa.appendChild(el("div", { class: "miniatura" }, [mostra, m.tipo === "video" ? el("span", { class: "play", texto: "▶ vídeo" }) : null,
+        editavel ? el("button", { type: "button", class: "x", "aria-label": "Tirar arquivo", texto: "×", onclick: function () { lista.splice(i, 1); aoMudar(); } }) : null]));
+    });
+    if (!editavel || lista.length >= max) return;
+    var input = el("input", { type: "file", accept: aceita, multiple: max - lista.length > 1, hidden: true });
+    var info = el("span", { class: "envio" });
+    var botao = el("button", { type: "button", class: "botao mini", texto: aceita.indexOf("video") > -1 ? "+ Foto ou vídeo" : "+ Foto", onclick: function () { input.click(); } });
+    input.onchange = function () {
+      var arqs = Array.prototype.slice.call(input.files, 0, max - lista.length);
+      if (!arqs.length) return;
+      botao.disabled = true;
+      var feitos = 0;
+      info.textContent = "Enviando 1 de " + arqs.length + "…";
+      arqs.reduce(function (p, arq) {
+        return p.then(function () {
+          return enviarArquivo(arq).then(function (m) { lista.push(m); feitos++; info.textContent = feitos < arqs.length ? "Enviando " + (feitos + 1) + " de " + arqs.length + "…" : ""; });
+        });
+      }, Promise.resolve()).catch(function (e) { info.textContent = ""; estado(e.message, true); alert(e.message); }).finally(function () { aoMudar(); });
+    };
+    caixa.appendChild(botao);
+    caixa.appendChild(info);
+    caixa.appendChild(input);
+  }
+  function desenharFotos() {
+    ["logo", "capa"].forEach(function (k) {
+      var lista = d.fotos[k] ? [{ tipo: "foto", url: d.fotos[k] }] : [];
+      caixaMidias(document.querySelector('[data-foto="' + k + '"]'), lista, 1, "image/jpeg,image/png,image/webp", function () { d.fotos[k] = lista.length ? lista[0].url : ""; desenharFotos(); mudou(); });
+    });
+    var amb = d.fotos.ambiente.map(function (u) { return { tipo: "foto", url: u }; });
+    caixaMidias(document.querySelector('[data-foto="ambiente"]'), amb, 12, "image/jpeg,image/png,image/webp", function () { d.fotos.ambiente = amb.map(function (m) { return m.url; }); desenharFotos(); mudou(); });
+  }
+
+  // ---------- listas (serviços, produtos, insumos, equipe) ----------
+  function campo(rotulo, item, chave, extra) {
+    var inp = el("input", Object.assign({ "aria-label": rotulo }, extra || {}));
+    inp.value = item[chave] == null ? "" : item[chave];
+    inp.disabled = !editavel;
+    inp.oninput = function () { item[chave] = inp.value; mudou(); };
+    return el("label", null, [rotulo, inp]);
+  }
+  var TITULOS = { servicos: "Serviço", produtos: "Produto", insumos: "Insumo", barbeiros: "Barbeiro" };
+  function desenharLista(tipo) {
+    var caixa = $("lista-" + tipo);
+    caixa.innerHTML = "";
+    d[tipo].forEach(function (item, i) {
+      var corpo = [];
+      if (tipo === "servicos") {
+        corpo.push(el("div", { class: "tres" }, [
+          campo("Nome do serviço", item, "nome", { maxlength: 80, placeholder: "Ex.: Corte degradê" }),
+          campo("Preço (R$)", item, "preco", { inputmode: "decimal", placeholder: "0,00", maxlength: 12 }),
+          campo("Duração (min)", item, "duracao", { inputmode: "numeric", type: "number", min: 5, max: 480, step: 5 }),
+        ]));
+        var prot = el("input", { type: "checkbox" }); prot.checked = !!item.protese; prot.disabled = !editavel;
+        prot.onchange = function () { item.protese = prot.checked; mudou(); };
+        corpo.push(el("label", { class: "check" }, [prot, "É serviço de prótese capilar"]));
+        var cx = el("div", { class: "midias" });
+        corpo.push(cx);
+        caixaMidias(cx, item.midia, 4, "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime", function () { desenharLista(tipo); mudou(); });
+      } else if (tipo === "produtos") {
+        corpo.push(campo("Nome do produto", item, "nome", { maxlength: 80, placeholder: "Ex.: Pomada modeladora 120 g" }));
+        corpo.push(el("div", { class: "tres" }, [
+          campo("Preço de compra (R$)", item, "custo", { inputmode: "decimal", placeholder: "0,00", maxlength: 12 }),
+          campo("Preço de venda (R$)", item, "preco", { inputmode: "decimal", placeholder: "0,00", maxlength: 12 }),
+          campo("Quantidade em estoque", item, "estoque", { inputmode: "numeric", type: "number", min: 0, max: 99999 }),
+        ]));
+        var cp = el("div", { class: "midias" });
+        corpo.push(cp);
+        caixaMidias(cp, item.midia, 2, "image/jpeg,image/png,image/webp", function () { desenharLista(tipo); mudou(); });
+      } else if (tipo === "insumos") {
+        corpo.push(campo("Nome do insumo", item, "nome", { maxlength: 80, placeholder: "Ex.: Lâmina descartável" }));
+        corpo.push(el("div", { class: "tres" }, [
+          campo("Unidade", item, "unidade", { maxlength: 12, placeholder: "un, caixa, ml" }),
+          campo("Custo por unidade (R$)", item, "custo", { inputmode: "decimal", placeholder: "0,00", maxlength: 12 }),
+          campo("Quantidade", item, "estoque", { inputmode: "numeric", type: "number", min: 0, max: 99999 }),
+        ]));
+      } else {
+        corpo.push(el("div", { class: "duas" }, [
+          campo("Nome do barbeiro", item, "nome", { maxlength: 80 }),
+          campo("Comissão (%)", item, "comissao", { inputmode: "numeric", type: "number", min: 0, max: 100 }),
+        ]));
+        corpo.push(el("div", { class: "duas" }, [
+          campo("E-mail (para o login dele)", item, "email", { type: "email", maxlength: 120 }),
+          campo("WhatsApp", item, "whatsapp", { inputmode: "tel", maxlength: 20 }),
+        ]));
+      }
+      caixa.appendChild(el("div", { class: "item" }, [
+        el("div", { class: "item-topo" }, [el("span", { texto: TITULOS[tipo] + " " + (i + 1) }),
+          editavel ? el("button", { type: "button", class: "botao tirar", texto: "Remover", onclick: function () { d[tipo].splice(i, 1); desenharLista(tipo); mudou(); } }) : null]),
+      ].concat(corpo)));
+    });
+    var add = document.querySelector('[data-add="' + tipo + '"]');
+    add.hidden = !editavel;
+  }
+  document.querySelectorAll("[data-add]").forEach(function (b) {
+    b.onclick = function () {
+      var tipo = b.getAttribute("data-add");
+      d[tipo].push(PADRAO[tipo]());
+      desenharLista(tipo);
+      var caixa = $("lista-" + tipo), ultimo = caixa.lastElementChild;
+      if (ultimo) { var i = ultimo.querySelector("input"); if (i) i.focus(); }
+      mudou();
+    };
+  });
+
+  function desenharTudo() {
+    titulo();
+    ligarCampos();
+    ["servicos", "produtos", "insumos", "barbeiros"].forEach(desenharLista);
+    desenharFotos();
+    $("btnEnviar").hidden = !editavel;
+    $("btnEnviar").textContent = status === "enviado" ? "Enviar as correções" : "Enviar para o Bio Site";
+    $("notaEnvio").hidden = !editavel;
+  }
+
+  $("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    clearTimeout(timer);
+    $("falta").hidden = true;
+    $("btnEnviar").disabled = true;
+    salvar(true).then(function () {
+      $("form").hidden = true;
+      $("fim").hidden = false;
+      window.scrollTo(0, 0);
+    }).catch(function (err) {
+      $("falta").textContent = err.message;
+      $("falta").hidden = false;
+    }).finally(function () { $("btnEnviar").disabled = false; });
+  });
+  $("btnCorrigir").onclick = function () { $("fim").hidden = true; $("form").hidden = false; desenharTudo(); window.scrollTo(0, 0); };
+
+  // ---------- abrir ----------
+  if (!/^[0-9a-f]{48}$/.test(token)) { estado(""); $("avisoTopo").textContent = "Link incompleto. Abra de novo o link que o Bio Site mandou para você."; $("avisoTopo").hidden = false; return; }
+  fetch("/api/config?formulario=" + encodeURIComponent(token)).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.message || "Não consegui abrir o formulário."); return j; });
+  }).then(function (j) {
+    d = j.dados; editavel = !!j.editavel; status = j.status;
+    // Formulário novo: já vem com os serviços mais comuns para o dono só colocar o preço
+    if (editavel && !d.barbearia.nome && !d.servicos.length) d.servicos = SUGESTOES.map(function (s) { var x = PADRAO.servicos(); x.nome = s[0]; x.duracao = s[1]; return x; });
+    if (!editavel) {
+      $("avisoTopo").textContent = j.status === "importado" ? "Seu site já foi montado com estas respostas. Para mudar algo, fale com o Bio Site no WhatsApp." : "Este formulário está encerrado.";
+      $("avisoTopo").hidden = false;
+      $("introTexto").hidden = true;
+    }
+    estado(j.status === "enviado" ? "Enviado. Ainda dá para corrigir." : editavel ? "Tudo salvo" : "Somente leitura");
+    $("form").hidden = false;
+    desenharTudo();
+  }).catch(function (e) {
+    estado("");
+    $("avisoTopo").textContent = e.message;
+    $("avisoTopo").hidden = false;
+  });
+})();
+</script>
+</body>
+</html>

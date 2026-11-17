@@ -51,6 +51,11 @@
   <!-- Plataforma: todos os sites -->
   <section class="tela" id="telaAdmin" hidden>
     <div class="ola"><div><h1>Sites da plataforma</h1><p id="resumoAdmin"></p></div></div>
+    <section class="cartao" id="secFormularios">
+      <div class="cartao-topo"><h2>Formulários de implantação <span class="contador" id="qtdFormularios">0</span></h2><button type="button" class="botao p principal" id="novoFormulario">+ Novo formulário</button></div>
+      <p class="nota p">Mande o link para o dono da barbearia preencher pelo celular: dados da loja, e-mail do login, serviços e preços, produtos, insumos, equipe com comissão e fotos. As respostas chegam aqui, prontas para o Criador.</p>
+      <div class="lista" id="listaFormularios"></div>
+    </section>
     <section class="cartao" id="secLeads" hidden>
       <div class="cartao-topo"><h2>Interessados <span class="contador" id="qtdLeads">0</span></h2><span class="nota p">Página de vendas</span></div>
       <div class="lista" id="listaLeads"></div>
@@ -130,7 +135,166 @@
     var equipe = d.barbearias.reduce(function (t, b) { return t + (b.equipe || []).length; }, 0);
     $("resumoAdmin").textContent = d.barbearias.length + " site(s) · " + equipe + " barbeiro(s) ativo(s)";
     P.trocar($("listaSites"), d.barbearias.length ? d.barbearias.map(cartaoSite) : P.vazio("🌐", "Nenhum site ainda."));
+    sitesAdmin = d.barbearias;
     mostrarLeads(d.leads || []);
+    mostrarFormularios(d.formularios || []);
+  }
+
+  // ---------- formulários de implantação (lib/formulario.js) ----------
+  var sitesAdmin = [];
+  var SIT_FORM = { aberto: ["Aguardando o dono", "alerta"], enviado: ["Respondido", "info"], importado: ["Aplicado no painel", "ok"] };
+  function numeroWhats(n) { n = String(n || "").replace(/\D/g, ""); return n.length === 10 || n.length === 11 ? "55" + n : n; }
+  function textoFormulario(nome, barbearia, link) {
+    return "Olá" + (nome ? ", " + P.primeiroNome(nome) : "") + "! Para montar o site e o painel" + (barbearia ? " da " + barbearia : " da sua barbearia") + " no Bio Site, preencha este formulário pelo celular. Ele salva sozinho e dá para continuar depois:\n" + link;
+  }
+  function enviarFormulario(link, whatsapp, nome, barbearia) {
+    var texto = textoFormulario(nome, barbearia, link);
+    var n = numeroWhats(whatsapp);
+    if (n) { window.open("https://wa.me/" + n + "?text=" + encodeURIComponent(texto), "_blank", "noopener"); return; }
+    P.abrirWhats(texto);
+  }
+  function linkFormulario(f) { return location.origin + "/formulario?f=" + f.token; }
+  function slugDe(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40); }
+
+  function mostrarFormularios(lista) {
+    $("qtdFormularios").textContent = lista.filter(function (f) { return f.status === "enviado"; }).length;
+    if (!lista.length) { P.trocar($("listaFormularios"), P.vazio("📝", "Nenhum formulário ainda. Toque em \"Novo formulário\" depois da apresentação.")); return; }
+    P.trocar($("listaFormularios"), lista.map(function (f) {
+      var sit = f.vencido && f.status === "aberto" ? ["Link vencido", "neutro"] : (SIT_FORM[f.status] || SIT_FORM.aberto);
+      var r = f.resumo || {};
+      var partes = [r.servicos + " serviço(s)", r.produtos + " produto(s)", r.barbeiros + " barbeiro(s)", r.fotos + " foto(s)"];
+      if (r.email) partes.push(r.email);
+      var quando = f.enviado_em ? "respondido em " + new Date(f.enviado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "criado em " + new Date(f.criado_em).toLocaleDateString("pt-BR");
+      var acoes = [
+        h("button", { type: "button", class: "botao p whats", onclick: function () { enviarFormulario(linkFormulario(f), f.whatsapp, "", f.nome); } }, [P.icone("whats"), "Enviar link"]),
+        h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(linkFormulario(f), "Link do formulário copiado."); } }, [P.icone("copiar"), "Copiar link"]),
+        h("button", { type: "button", class: "botao p", onclick: function (ev) { verFormulario(f, ev.currentTarget); } }, [P.icone("perfil"), "Ver respostas"]),
+      ];
+      if (f.status !== "aberto") {
+        acoes.push(h("a", { class: "botao p principal", href: "/criador?formulario=" + encodeURIComponent(f.id), target: "_blank", rel: "noopener" }, [P.icone("site"), "Abrir no Criador"]));
+        acoes.push(h("button", { type: "button", class: "botao p", onclick: function (ev) { aplicarFormulario(f, ev.currentTarget); } }, [P.icone("mais_um"), f.status === "importado" ? "Aplicar de novo" : "Aplicar no painel"]));
+      }
+      acoes.push(h("button", { type: "button", class: "botao p fantasma", onclick: function (ev) { arquivarFormulario(f, ev.currentTarget); } }, [P.icone("lixo"), "Arquivar"]));
+      return h("div", { class: "membro cartao-membro" }, [
+        h("div", { class: "membro-topo" }, [
+          h("span", { class: "avatar", texto: P.iniciais(f.nome || "?") }),
+          h("div", { class: "cresce" }, [
+            h("div", { class: "nome", texto: f.nome || "Barbearia sem nome ainda" }),
+            h("div", { class: "det", texto: partes.join(" · ") + " · " + quando }),
+            h("span", { class: "selo selo-" + sit[1], texto: sit[0] }),
+          ]),
+        ]),
+        h("div", { class: "linha", style: "flex-wrap:wrap" }, acoes),
+      ]);
+    }));
+  }
+
+  function novoFormulario(dados) {
+    dados = dados || {};
+    var nome = h("input", { type: "text", maxlength: 120, placeholder: "Ex.: Dom Manolo Barbearia", value: dados.nome || "" });
+    var zap = h("input", { type: "tel", maxlength: 20, placeholder: "(81) 99999-9999", value: dados.whatsapp || "" });
+    P.janela({
+      titulo: "Novo formulário",
+      conteudo: h("div", { class: "grade" }, [
+        h("label", { class: "campo" }, ["Barbearia (opcional)", nome]),
+        h("label", { class: "campo" }, ["WhatsApp do dono (opcional, para enviar direto)", zap]),
+      ]),
+      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Criar link", classe: "principal", valor: "ok" }],
+    }).then(function (r) {
+      if (r.valor !== "ok") return;
+      P.api("/api/barbearia", { corpo: { acao: "formulario-criar", nome: nome.value, whatsapp: zap.value, leadId: dados.leadId || null } }).then(function (j) {
+        mostrarLinkFormulario(j.link, zap.value, dados.contato || "", nome.value);
+        carregar();
+      }).catch(function (e) { P.toast(e.message, "erro"); });
+    });
+  }
+  function mostrarLinkFormulario(link, whatsapp, contato, barbearia) {
+    P.janela({
+      titulo: "Link do formulário",
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "copiavel", texto: link }),
+        h("p", { class: "nota p", texto: "O link vale por 60 dias. O dono pode parar e continuar depois pelo mesmo link." }),
+        h("div", { class: "linha" }, [
+          h("button", { type: "button", class: "botao whats", onclick: function () { enviarFormulario(link, whatsapp, contato, barbearia); } }, [P.icone("whats"), "Enviar pelo WhatsApp"]),
+          h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(link, "Link copiado."); } }, [P.icone("copiar"), "Copiar"]),
+        ]),
+      ]),
+      acoes: [{ texto: "Fechar", valor: "cancelar" }],
+    });
+  }
+  if ($("novoFormulario")) $("novoFormulario").onclick = function () { novoFormulario(); };
+
+  function linhaDado(rotulo, valor) { return valor ? h("li", null, [h("span", { texto: rotulo }), h("b", { texto: String(valor) })]) : null; }
+  function margem(custo, preco) {
+    var c = parseFloat(String(custo || "").replace(/\./g, "").replace(",", ".")), p = parseFloat(String(preco || "").replace(/\./g, "").replace(",", "."));
+    return isFinite(c) && isFinite(p) && p > 0 ? " · lucro R$ " + (p - c).toFixed(2).replace(".", ",") : "";
+  }
+  function verFormulario(f, botao) {
+    P.acao(botao, P.api("/api/barbearia", { corpo: { acao: "formulario-ler", id: f.id } }).then(function (x) {
+      var d = x.dados;
+      var blocos = [];
+      if (x.pendencias && x.pendencias.length) blocos.push(h("p", { class: "aviso-faixa alerta", texto: "Falta: " + x.pendencias.join(", ") + "." }));
+      blocos.push(h("h3", { texto: "Barbearia" }), h("ul", { class: "mini-lista" }, [linhaDado("Nome", d.barbearia.nome), linhaDado("Cidade", d.barbearia.cidade), linhaDado("Endereço", d.barbearia.endereco), linhaDado("WhatsApp", d.barbearia.whatsapp), linhaDado("Instagram", d.barbearia.instagram)]));
+      if (d.barbearia.horario) blocos.push(h("p", { class: "nota p", style: "white-space:pre-line", texto: d.barbearia.horario }));
+      blocos.push(h("h3", { texto: "Dono" }), h("ul", { class: "mini-lista" }, [linhaDado("Nome", d.dono.nome), linhaDado("E-mail do login", d.dono.email), linhaDado("WhatsApp", d.dono.whatsapp), linhaDado("Também atende", d.dono.atende ? "sim" : "")]));
+      var serv = d.servicos.filter(function (s) { return s.nome; });
+      if (serv.length) blocos.push(h("h3", { texto: "Serviços (" + serv.length + ")" }), h("ul", { class: "mini-lista" }, serv.map(function (s) { return h("li", null, [h("span", { texto: s.nome + (s.protese ? " · prótese" : "") + (s.midia.length ? " · " + s.midia.length + " mídia(s)" : "") }), h("b", { texto: (s.preco ? "R$ " + s.preco : "sem preço") + " · " + (s.duracao || 30) + " min" })]); })));
+      var prod = d.produtos.filter(function (p) { return p.nome; });
+      if (prod.length) blocos.push(h("h3", { texto: "Produtos (" + prod.length + ")" }), h("ul", { class: "mini-lista" }, prod.map(function (p) { return h("li", null, [h("span", { texto: p.nome + (p.estoque != null ? " · estoque " + p.estoque : "") }), h("b", { texto: "compra R$ " + (p.custo || "?") + " · venda R$ " + (p.preco || "?") + margem(p.custo, p.preco) })]); })));
+      var ins = d.insumos.filter(function (i) { return i.nome; });
+      if (ins.length) blocos.push(h("h3", { texto: "Insumos (" + ins.length + ")" }), h("ul", { class: "mini-lista" }, ins.map(function (i) { return h("li", null, [h("span", { texto: i.nome }), h("b", { texto: (i.estoque != null ? i.estoque + " " + (i.unidade || "un") : "") + (i.custo ? " · R$ " + i.custo + "/un" : "") })]); })));
+      var eq = d.barbeiros.filter(function (b) { return b.nome; });
+      if (eq.length) blocos.push(h("h3", { texto: "Equipe (" + eq.length + ")" }), h("ul", { class: "mini-lista" }, eq.map(function (b) { return h("li", null, [h("span", { texto: b.nome + (b.email ? " · " + b.email : " · sem login") }), h("b", { texto: (b.comissao != null ? b.comissao + "%" : "comissão ?") })]); })));
+      var fotos = [d.fotos.logo, d.fotos.capa].concat(d.fotos.ambiente).filter(Boolean);
+      if (fotos.length) blocos.push(h("h3", { texto: "Fotos (" + fotos.length + ")" }), h("div", { class: "linha", style: "flex-wrap:wrap" }, fotos.map(function (u) { return h("a", { href: u, target: "_blank", rel: "noopener" }, [h("img", { src: u, alt: "", loading: "lazy", style: "width:64px;height:64px;object-fit:cover;border-radius:10px" })]); })));
+      var pref = d.preferencias;
+      blocos.push(h("h3", { texto: "Agendamentos" }), h("ul", { class: "mini-lista" }, [linhaDado("Confirmação", pref.confirmacao === "automatica" ? "automática" : pref.confirmacao === "manual" ? "o dono confirma" : "não respondeu"), linhaDado("Sinal no Pix", pref.sinal ? "sim" : "não"), linhaDado("Chave Pix", pref.pixChave), linhaDado("Recebedor", pref.pixNome)]));
+      if (d.observacoes) blocos.push(h("h3", { texto: "Observações" }), h("p", { class: "nota p", style: "white-space:pre-line", texto: d.observacoes }));
+      P.janela({ titulo: d.barbearia.nome || "Respostas", conteudo: h("div", { class: "grade" }, blocos), acoes: [{ texto: "Fechar", valor: "cancelar" }] });
+    }).catch(function (e) { P.toast(e.message, "erro"); }));
+  }
+
+  function aplicarFormulario(f, botao) {
+    if (!sitesAdmin.length) { P.toast("Publique o site pelo Criador antes de aplicar.", "erro"); return; }
+    var alvo = slugDe(f.nome);
+    var sel = h("select", null, sitesAdmin.map(function (b) { var o = h("option", { value: b.slug, texto: b.nome + " (/" + b.slug + ")" }); if (b.slug === alvo) o.selected = true; return o; }));
+    P.janela({
+      titulo: "Aplicar no painel",
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "nota", texto: "Cria os convites do dono e da equipe (com a comissão combinada) e os insumos com o estoque inicial. Publique o site pelo Criador antes." }),
+        h("label", { class: "campo" }, ["Site da barbearia", sel]),
+      ]),
+      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Aplicar", classe: "principal", valor: "ok" }],
+    }).then(function (r) {
+      if (r.valor !== "ok") return;
+      P.acao(botao, P.api("/api/barbearia", { corpo: { acao: "formulario-aplicar", id: f.id, slug: sel.value } }).then(function (j) {
+        var itens = j.convites.map(function (c) {
+          var papel = c.papel === "dono" ? "administrar o site da " : "trabalhar na ";
+          var texto = "Olá, " + P.primeiroNome(c.nome) + "! Você foi convidado para " + papel + j.barbearia + " pelo Bio Site. Abra o link, digite seu nome e crie sua senha:\n" + c.link;
+          return h("div", { class: "membro", style: "flex-wrap:wrap" }, [
+            P.avatar({ nome: c.nome }),
+            h("div", { class: "cresce" }, [h("div", { class: "nome", texto: c.nome + (c.papel === "dono" ? " (dono)" : "") }), h("div", { class: "det", texto: c.jaEntrou ? "já está no painel" : c.email + (c.comissao != null ? " · comissão " + c.comissao + "%" : "") })]),
+            c.jaEntrou ? null : h("button", { type: "button", class: "botao p whats", onclick: function () { var n = numeroWhats(c.whatsapp); if (n) window.open("https://wa.me/" + n + "?text=" + encodeURIComponent(texto), "_blank", "noopener"); else P.abrirWhats(texto); } }, [P.icone("whats"), "Enviar convite"]),
+          ]);
+        });
+        P.janela({
+          titulo: "Aplicado em " + j.barbearia,
+          conteudo: h("div", { class: "grade" }, [
+            h("p", { class: "nota p", texto: (j.insumos ? j.insumos + " insumo(s) criado(s) com o estoque inicial. " : "") + "Mande cada convite pelo WhatsApp: a pessoa digita o nome, cria a senha e entra." }),
+            itens.length ? h("div", { class: "equipe" }, itens) : h("p", { class: "nota p", texto: "Ninguém com e-mail no formulário." }),
+          ]),
+          acoes: [{ texto: "Pronto", classe: "principal", valor: "ok" }],
+        });
+        carregar();
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
+  }
+
+  function arquivarFormulario(f, botao) {
+    P.confirmar("Arquivar formulário?", "O link para de funcionar e o formulário sai da lista. As respostas continuam guardadas.", "Arquivar", true).then(function (ok) {
+      if (!ok) return;
+      P.acao(botao, P.api("/api/barbearia", { corpo: { acao: "formulario-arquivar", id: f.id } }).then(function () { P.toast("Formulário arquivado.", "ok"); carregar(); }).catch(function (e) { P.toast(e.message, "erro"); }));
+    });
   }
 
   // ---------- interessados da página de vendas ----------
@@ -158,6 +322,7 @@
         ]),
         h("div", { class: "linha" }, [
           h("a", { class: "botao p whats", href: "https://wa.me/" + numero + "?text=" + encodeURIComponent(texto), target: "_blank", rel: "noopener" }, [P.icone("whats"), "Chamar no WhatsApp"]),
+          h("button", { type: "button", class: "botao p", onclick: function () { novoFormulario({ nome: l.barbearia, whatsapp: l.whatsapp, leadId: l.id, contato: l.nome }); } }, [P.icone("mais_um"), "Mandar formulário"]),
           h("label", { class: "campo", style: "min-width:160px" }, situacao),
         ]),
       ]);

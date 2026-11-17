@@ -425,12 +425,36 @@
         h("p", { class: "copiavel", texto: link }),
         h("div", { class: "linha" }, [h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(link, "Link copiado."); } }, [P.icone("copiar"), "Copiar link"])]),
       ]) : null,
+      m.temLogin && !m.souEu ? h("div", { class: "link-pessoal" }, [
+        h("h3", { texto: "Esqueceu a senha?" }),
+        h("p", { class: "nota p", texto: "Gere um link para " + P.primeiroNome(m.nome) + " criar uma senha nova e mande pelo WhatsApp." }),
+        h("div", { class: "linha" }, [h("button", { type: "button", class: "botao p", onclick: function (ev) { linkNovaSenha(m, ev.currentTarget); } }, [P.icone("trava"), "Link de nova senha"])]),
+      ]) : null,
       m.souEu ? null : h("div", { class: "zona-perigo" }, [
         h("button", { type: "button", class: "botao perigo", onclick: function (ev) { remover(m, ev.currentTarget); } }, [P.icone("lixo"), "Remover da equipe"]),
         h("p", { class: "nota p", texto: "Os atendimentos já registrados continuam no financeiro." }),
       ]),
     ]);
     P.janela({ titulo: "Perfil de " + P.primeiroNome(m.nome), conteudo: conteudo, acoes: [{ texto: "Fechar", valor: "cancelar" }] });
+  }
+
+  // Sem e-mail no Supabase: o dono gera o link de nova senha e manda pelo WhatsApp
+  function linkNovaSenha(m, botao) {
+    P.acao(botao, P.api("/api/equipe", { corpo: { acao: "link-senha", profissionalId: m.id } }).then(function (j) {
+      var nome = P.primeiroNome(m.nome);
+      var texto = "Oi, " + nome + "! Para criar uma senha nova do painel da " + (ctx.barbearia || "barbearia") + ", abra este link: " + j.link + "\n\nO link vale por pouco tempo e funciona uma vez só.";
+      P.janela({
+        titulo: "Link de nova senha",
+        conteudo: h("div", { class: "grade" }, [
+          h("p", { class: "nota p", texto: "Mande agora para " + nome + ". O link vale por pouco tempo e funciona uma vez só." }),
+          h("div", { class: "linha" }, [
+            h("button", { type: "button", class: "botao whats", onclick: function () { P.abrirWhats(texto); } }, [P.icone("whats"), "Enviar pelo WhatsApp"]),
+            h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(texto, "Mensagem copiada."); } }, [P.icone("copiar"), "Copiar"]),
+          ]),
+        ]),
+        acoes: [{ texto: "Fechar", valor: "cancelar" }],
+      });
+    }).catch(function (e) { P.toast(e.message, "erro"); }));
   }
 
   // A foto vai direto ao Storage por um link assinado; depois o servidor grava o endereço
@@ -460,8 +484,8 @@
 
   // ---------- convites ----------
   function textoConvite(link, email) {
-    return "Olá! Você foi convidado para trabalhar na " + (ctx.barbearia || "barbearia") + " pelo Bio Site. Abra este link para aceitar o convite: " + link +
-      "\n\nO convite vale por 7 dias e só funciona com o e-mail " + email + ".";
+    return "Olá! Você foi convidado para trabalhar na " + (ctx.barbearia || "barbearia") + " pelo Bio Site. Abra este link, digite seu nome e crie sua senha: " + link +
+      "\n\nO convite vale por 7 dias e é para o e-mail " + email + ".";
   }
   function desenharConvites() {
     var lista = gestao ? gestao.convites : [];

@@ -62,13 +62,15 @@ module.exports = async (req, res) => {
       }
       if (!perfil && (await ehAdminDaPlataforma(u.id))) {
         // Administrador da plataforma: vê todos os sites
-        const [barbearias, equipe, leads, assinaturas] = await Promise.all([
+        const [barbearias, equipe, leads, assinaturas, donos] = await Promise.all([
           rest("barbearias?select=id,slug,nome,teste_user_id&order=criado_em.desc"),
           rest("profissionais?ativo=eq.true&select=id,nome,barbearia_id,perfil_user_id&order=criado_em.asc"),
           // Interessados da página de vendas (se a tabela ainda não existir, a lista vem vazia)
           rest("leads?select=id,criado_em,nome,barbearia,cidade,whatsapp,barbeiros,plano,pagina,status&order=criado_em.desc&limit=100").catch(() => []),
           // Assinatura do Bio Site de cada barbearia (Stripe)
           rest("assinaturas?select=barbearia_id,status,plano,valor_mensal,primeira_cobranca_em,proxima_cobranca_em").catch(() => []),
+          // Donos de cada site (fora o usuário de teste), para o admin gerar o link de nova senha
+          rest("perfis?papel=eq.dono&select=user_id,nome,barbearia_id").catch(() => []),
         ]);
         return res.status(200).json({
           usuario: { id: u.id, email: u.email },
@@ -82,6 +84,7 @@ module.exports = async (req, res) => {
             temTeste: !!b.teste_user_id,
             assinatura: assinaturas.find((a) => a.barbearia_id === b.id) || null,
             equipe: equipe.filter((p) => p.barbearia_id === b.id).map((p) => ({ id: p.id, nome: p.nome, temAcesso: !!p.perfil_user_id })),
+            donos: donos.filter((d) => d.barbearia_id === b.id && d.user_id !== b.teste_user_id).map((d) => ({ userId: d.user_id, nome: d.nome })),
           })),
         });
       }

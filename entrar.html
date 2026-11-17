@@ -27,24 +27,33 @@ button.link{border:0;background:none;color:var(--cor);padding:6px 0}
 .msg.ok{color:var(--ok)}
 .aviso{margin:0;font-size:14px;background:var(--fundo);padding:10px 12px;border-radius:10px}
 [hidden]{display:none!important}
+input[readonly]{opacity:.75}
+.nota{margin:0;font-size:13px;opacity:.8}
+.whats{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;border-radius:10px;background:#15803d;color:#fff;font-weight:600;text-decoration:none}
 </style>
 <script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 <body>
 <main class="card">
-  <h1>Acesse sua conta</h1>
+  <h1 id="titulo">Acesse sua conta</h1>
   <p class="aviso" id="convite" hidden></p>
-  <div class="abas">
+  <div class="abas" id="abas" hidden>
     <button type="button" id="abaEntrar" aria-pressed="true">Entrar</button>
     <button type="button" id="abaCriar" aria-pressed="false">Criar conta</button>
   </div>
   <form id="form" class="card" style="padding:0;border:0;box-shadow:none;animation:none">
+    <label id="rotuloNome" hidden>Seu nome<input type="text" id="nome" maxlength="80" autocomplete="name"></label>
     <label>E-mail<input type="email" id="email" required autocomplete="email"></label>
-    <label>Senha<input type="password" id="senha" required minlength="6" autocomplete="current-password"></label>
+    <label><span id="rotuloSenha">Senha</span><input type="password" id="senha" required minlength="6" autocomplete="current-password"></label>
     <button class="main" type="submit" id="enviar">Entrar</button>
   </form>
   <button type="button" id="google" hidden>Entrar com Google</button>
   <button type="button" class="link" id="esqueci">Esqueci minha senha</button>
+  <div class="aviso" id="ajudaSenha" hidden style="display:grid;gap:10px">
+    <span>Para criar uma senha nova, peça o link pelo WhatsApp. Se você é barbeiro, peça ao dono da barbearia: no painel dele, em Equipe, tem o botão "Link de nova senha". Se você é o dono, fale com o suporte do Bio Site.</span>
+    <a class="whats" href="https://wa.me/5581997977699?text=Ol%C3%A1!%20Esqueci%20minha%20senha%20do%20Bio%20Site." target="_blank" rel="noopener">Falar com o suporte no WhatsApp</a>
+  </div>
+  <p class="nota" id="semConvite">Ainda não tem conta? Abra o link de convite que a barbearia mandou para você.</p>
   <p class="msg" id="msg" role="status"></p>
 </main>
 <script src="/conta.js"></script>
@@ -54,6 +63,7 @@ button.link{border:0;background:none;color:var(--cor);padding:6px 0}
   var p = new URLSearchParams(location.search);
   var convite = p.get("convite") || "";
   var modo = "entrar";
+  var conviteOk = false;
 
   function destino() { return "app.html" + (convite ? "?convite=" + encodeURIComponent(convite) : ""); }
   function msg(t, tipo) { $("msg").textContent = t; $("msg").className = "msg " + (tipo || ""); }
@@ -61,38 +71,66 @@ button.link{border:0;background:none;color:var(--cor);padding:6px 0}
   Conta.capturarSessaoDaUrl();
   if (Conta.ler()) { location.replace(destino()); return; }
 
-  if (convite) {
-    fetch("/api/convite?token=" + encodeURIComponent(convite)).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
-      if (!j) { msg("Este convite não é válido ou já venceu.", "erro"); return; }
-      $("convite").textContent = "Você foi convidado para trabalhar em " + j.barbearia + ". Entre com o e-mail " + j.email + " para aceitar.";
-      $("convite").hidden = false;
-      $("email").value = j.email;
-    });
-  }
-
   function trocaModo(m) {
     modo = m;
     $("abaEntrar").setAttribute("aria-pressed", m === "entrar");
     $("abaCriar").setAttribute("aria-pressed", m === "criar");
-    $("enviar").textContent = m === "entrar" ? "Entrar" : "Criar conta";
+    $("enviar").textContent = m === "entrar" ? "Entrar" : "Criar conta e entrar";
+    $("rotuloSenha").textContent = m === "entrar" ? "Senha" : "Crie uma senha (8 ou mais, com letras e números)";
     $("senha").autocomplete = m === "entrar" ? "current-password" : "new-password";
     $("senha").minLength = m === "entrar" ? 6 : 8;
+    $("rotuloNome").hidden = m !== "criar";
+    $("nome").required = m === "criar";
+    $("esqueci").hidden = m === "criar";
     msg("");
   }
   $("abaEntrar").onclick = function () { trocaModo("entrar"); };
   $("abaCriar").onclick = function () { trocaModo("criar"); };
 
+  // Convite: o e-mail vem do convite. Quem ainda não tem conta cria aqui mesmo, já confirmada.
+  if (convite) {
+    $("semConvite").hidden = true;
+    fetch("/api/convite?token=" + encodeURIComponent(convite)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (j) {
+      if (!j) { msg("Este convite não é válido ou já venceu. Peça um novo link a quem convidou você.", "erro"); return; }
+      conviteOk = true;
+      var papel = j.papel === "dono" ? "administrar o site de " : "trabalhar em ";
+      $("titulo").textContent = j.temConta ? "Entre para aceitar" : "Crie sua conta";
+      $("convite").textContent = "Você foi convidado para " + papel + j.barbearia + ". " + (j.temConta ? "Entre com a sua senha para aceitar." : "Digite seu nome e crie uma senha.");
+      $("convite").hidden = false;
+      $("email").value = j.email;
+      $("email").readOnly = true;
+      $("abas").hidden = false;
+      trocaModo(j.temConta ? "entrar" : "criar");
+      (j.temConta ? $("senha") : $("nome")).focus();
+    });
+  }
+
+  function criarPeloConvite(email, senha) {
+    return fetch("/api/convite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: convite, nome: $("nome").value.trim(), senha: senha }),
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (r.ok) return Conta.entrar(email, senha).then(function () { location.href = "app.html"; });
+        if (j.temConta) trocaModo("entrar");
+        throw new Error(j.message || "Não foi possível criar a conta. Tente de novo.");
+      });
+    });
+  }
+
   $("form").addEventListener("submit", function (e) {
     e.preventDefault();
     var email = $("email").value.trim(), senha = $("senha").value;
-    if (modo === "criar" && (senha.length < 8 || !/[a-zA-Z]/.test(senha) || !/\d/.test(senha))) { msg("Crie uma senha com pelo menos 8 caracteres, com letras e números.", "erro"); return; }
+    if (modo === "criar" && !$("nome").value.trim()) { msg("Digite seu nome.", "erro"); return; }
+    if (modo === "criar" && (senha.length < 8 || !/[a-zA-Z]/.test(senha) || !/[0-9]/.test(senha))) { msg("Crie uma senha com pelo menos 8 caracteres, com letras e números.", "erro"); return; }
     $("enviar").disabled = true;
     msg(modo === "entrar" ? "Entrando…" : "Criando sua conta…");
-    var op = modo === "entrar" ? Conta.entrar(email, senha) : Conta.criarConta(email, senha);
-    op.then(function () {
-      if (Conta.ler()) { location.href = destino(); return; }
-      msg("Enviamos um link de confirmação para " + email + ". Confirme e depois entre aqui.", "ok");
-    }).catch(function (err) {
+    var op;
+    if (modo === "criar" && conviteOk) op = criarPeloConvite(email, senha);
+    else if (modo === "criar") op = Promise.reject(new Error("Para criar a conta, abra o link de convite que a barbearia mandou."));
+    else op = Conta.entrar(email, senha).then(function () { location.href = destino(); });
+    op.catch(function (err) {
       msg(err.message, "erro");
     }).finally(function () { $("enviar").disabled = false; });
   });
@@ -103,13 +141,8 @@ button.link{border:0;background:none;color:var(--cor);padding:6px 0}
   // O botão só aparece quando o login com Google estiver ativado no Supabase
   Conta.provedores().then(function (p) { if (p.google === true) $("google").hidden = false; });
 
-  $("esqueci").onclick = function () {
-    var email = $("email").value.trim();
-    if (!email) { msg("Digite seu e-mail no campo acima.", "erro"); return; }
-    Conta.esqueciSenha(email, location.origin + "/redefinir.html").then(function () {
-      msg("Se o e-mail estiver cadastrado, enviamos o link para redefinir a senha.", "ok");
-    }).catch(function (err) { msg(err.message, "erro"); });
-  };
+  // Sem e-mail configurado no Supabase, a senha nova vem por um link mandado pelo WhatsApp
+  $("esqueci").onclick = function () { $("ajudaSenha").hidden = !$("ajudaSenha").hidden; msg(""); };
 })();
 </script>
 </body>

@@ -194,9 +194,20 @@
         botao,
       ]);
     });
+    // Donos com login: o link de nova senha vai pelo WhatsApp (o Supabase não manda e-mail)
+    var donos = (b.donos || []).map(function (d) {
+      var botao = h("button", { type: "button", class: "botao p" }, [P.icone("trava"), "Link de nova senha"]);
+      botao.onclick = function () { linkSenhaDono(b, d, botao); };
+      return h("div", { class: "membro", style: "flex-wrap:wrap" }, [
+        P.avatar({ nome: d.nome }),
+        h("div", { class: "cresce" }, [h("div", { class: "nome", texto: d.nome }), h("div", { class: "det", texto: "Dono · tem login" })]),
+        botao,
+      ]);
+    });
     return h("section", { class: "cartao site-admin" }, [
       h("div", { class: "perfil-topo" }, [h("span", { class: "avatar", texto: P.iniciais(b.nome) }), h("div", { class: "cresce" }, [h("div", { class: "nome", texto: b.nome }), h("div", { class: "nota p", texto: location.host + "/" + b.slug })]), seloAssinatura(b.assinatura)]),
       h("div", { class: "acoes-site" }, acoes),
+      donos.length ? h("div", { class: "equipe" }, donos) : null,
       equipe.length ? h("div", { class: "equipe" }, equipe) : h("p", { class: "nota p", texto: "Nenhum barbeiro ativo." }),
     ]);
   }
@@ -226,6 +237,24 @@
         carregar();
       }).catch(function (e) { P.toast(e.message, "erro"); }));
     });
+  }
+
+  function linkSenhaDono(b, d, botao) {
+    P.acao(botao, P.api("/api/barbearia", { corpo: { acao: "link-senha", slug: b.slug, userId: d.userId } }).then(function (j) {
+      var nome = P.primeiroNome(d.nome);
+      var texto = "Olá, " + nome + "! Para criar uma senha nova do painel da " + b.nome + " no Bio Site, abra este link: " + j.link + "\n\nO link vale por pouco tempo e funciona uma vez só.";
+      P.janela({
+        titulo: "Link de nova senha de " + nome,
+        conteudo: h("div", { class: "grade" }, [
+          h("p", { class: "nota p", texto: "Mande agora. O link vale por pouco tempo e funciona uma vez só." }),
+          h("div", { class: "linha" }, [
+            h("button", { type: "button", class: "botao whats", onclick: function () { P.abrirWhats(texto); } }, [P.icone("whats"), "Enviar pelo WhatsApp"]),
+            h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(texto, "Mensagem copiada."); } }, [P.icone("copiar"), "Copiar"]),
+          ]),
+        ]),
+        acoes: [{ texto: "Fechar", valor: "cancelar" }],
+      });
+    }).catch(function (e) { P.toast(e.message, "erro"); }));
   }
 
   function novaSenhaTeste(b) {

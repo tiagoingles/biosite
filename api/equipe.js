@@ -4,6 +4,7 @@
 // POST acao:
 //   "convidar" { email }               cria um convite (válido por 7 dias) e devolve o link;
 //   "cancelar-convite" { id } / "remover" { profissionalId };
+//   "link-senha" { profissionalId }      link para o barbeiro criar uma senha nova (vai pelo WhatsApp);
 //   "foto-link" / "foto-salvar" / "foto-remover"  foto do barbeiro;
 //   "agenda-semana-salvar" { profissionalId, dias, confirmar }  publica dias da agenda de um barbeiro;
 //   "bloqueio-criar" / "bloqueio-remover" { profissionalId, ... }.
@@ -15,6 +16,7 @@ const { texto } = require("../lib/agenda");
 const { dataValida, hojeBr, somaDias } = require("../lib/horarios");
 const { agendaDaSemana, salvarSemana, criarBloqueio, removerBloqueio } = require("../lib/agenda-dia");
 const { falha, corpoDe, UUID } = require("../lib/seguranca");
+const { linkNovaSenha } = require("../lib/publicar");
 const financeiro = require("../lib/financeiro");
 const assinatura = require("../lib/assinatura");
 const clube = require("../lib/clube");
@@ -106,6 +108,14 @@ module.exports = async (req, res) => {
       if (!UUID.test(String(b.id || ""))) return res.status(400).json({ message: "Convite inválido." });
       await rest(`convites?id=eq.${b.id}&barbearia_id=eq.${perfil.barbearia_id}`, { metodo: "DELETE", prefer: "return=minimal" });
       return res.status(200).json({ ok: true });
+    }
+
+    if (b.acao === "link-senha") {
+      const alvo = await profissionalDaBarbearia(b.profissionalId, perfil.barbearia_id);
+      if (!alvo) return res.status(404).json({ message: "Profissional não encontrado." });
+      if (!alvo.perfil_user_id) return res.status(409).json({ message: "Este barbeiro ainda não tem login. Mande o convite." });
+      const r = await linkNovaSenha(alvo.perfil_user_id, enderecoDoSite(req));
+      return res.status(200).json({ link: r.link, nome: alvo.nome });
     }
 
     if (b.acao === "remover") {

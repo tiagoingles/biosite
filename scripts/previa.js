@@ -260,6 +260,8 @@ const servidor = http.createServer(async (req, res) => {
   if (u.pathname === "/__papel") { papel = ["barbeiro", "admin", "novo"].includes(q.p) ? q.p : "dono"; return json(res, 200, { papel }); }
   if (u.pathname === "/__google") { googleAtivo = q.ativo === "1"; return json(res, 200, { googleAtivo }); }
   if (u.pathname === "/falso/auth/v1/settings") return json(res, 200, { external: { email: true, google: googleAtivo }, disable_signup: false });
+  // Login falso da prévia (entrar com e-mail e senha depois de criar a conta pelo convite)
+  if (u.pathname === "/falso/auth/v1/token") return json(res, 200, { access_token: "previa", refresh_token: "previa", expires_in: 3600, user: { id: "u9", email: "novo@exemplo.com" } });
   if (u.pathname.startsWith("/api/")) {
     const metodo = req.method;
     const b = metodo === "GET" ? {} : await corpoDe(req);
@@ -449,7 +451,20 @@ const servidor = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
     if (u.pathname === "/api/convite") {
-      if (metodo === "GET") return q.token === "abc123" ? json(res, 200, { barbearia: "GW Barbearia", email: "novo@exemplo.com" }) : json(res, 404, { message: "Convite inválido." });
+      // abc123: e-mail sem conta (cria aqui mesmo); tem-conta: e-mail que já tem conta (entra com a senha); dono123: convite de dono
+      const convitesFalsos = {
+        abc123: { barbearia: "GW Barbearia", email: "novo@exemplo.com", papel: "barbeiro", temConta: false },
+        "tem-conta": { barbearia: "GW Barbearia", email: "bruno@exemplo.com", papel: "barbeiro", temConta: true },
+        dono123: { barbearia: "Barbearia do Zé", email: "ze@exemplo.com", papel: "dono", temConta: false },
+      };
+      if (metodo === "GET") return convitesFalsos[q.token] ? json(res, 200, convitesFalsos[q.token]) : json(res, 404, { message: "Convite inválido." });
+      const c = convitesFalsos[b.token];
+      if (b.senha !== undefined) {
+        if (!c) return json(res, 404, { message: "Convite inválido ou vencido. Peça um novo link a quem convidou você." });
+        if (c.temConta) return json(res, 409, { message: "O e-mail " + c.email + " já tem conta. Entre com a sua senha para aceitar o convite.", temConta: true });
+        papel = c.papel === "dono" ? "dono" : "barbeiro";
+        return json(res, 201, { barbearia: c.barbearia, email: c.email });
+      }
       papel = "barbeiro";
       return json(res, 200, { ok: true });
     }

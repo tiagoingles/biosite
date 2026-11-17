@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dom Manolo Barbearia | Abreu e Lima - PE</title>
+<meta name="description" content="Barbearia em Abreu e Lima - PE">
+<meta property="og:title" content="Dom Manolo Barbearia | Abreu e Lima - PE">
+<meta property="og:description" content="Barbearia em Abreu e Lima - PE">
+<meta name="theme-color" content="#b08d57">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=DM+Sans:wght@400;600;700&display=swap">
+<script defer src="/_vercel/speed-insights/script.js"></script>
+<style>
+:root{--cor:#b08d57;--sobre:#ffffff;--acento:#b08d57;--sobre-acento:#ffffff;--fundo:#121212;--texto:#f2efe9;--ft:"Oswald",Georgia,serif;--fb:"DM Sans",system-ui,sans-serif;
+--linha:color-mix(in srgb,var(--texto) 14%,transparent);--suave:color-mix(in srgb,var(--texto) 6%,var(--fundo))}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--fundo);color:var(--texto);font:16px/1.5 var(--fb);min-height:100vh}
+body.tem-cat{padding-bottom:96px}
+.pg{max-width:560px;margin:0 auto;padding:0 16px 40px}
+svg{width:20px;height:20px;flex:none}
+a{color:inherit}
+.capa{height:150px;margin:0 -16px;background:var(--cor) center/cover no-repeat}
+.topo{display:grid;justify-items:center;text-align:center;padding-top:28px}
+.logo{width:92px;height:92px;border-radius:50%;object-fit:cover;background:var(--cor);color:var(--sobre);display:grid;place-items:center;font:700 30px var(--ft);border:4px solid var(--fundo)}
+h1{font:700 28px/1.15 var(--ft);margin:10px 0 4px;text-wrap:balance}
+.sub{margin:0 0 8px;opacity:.8;max-width:42ch}
+.nota{display:inline-flex;align-items:center;gap:6px;margin:2px 0 0;font-size:13px;text-decoration:none;background:var(--suave);padding:4px 12px;border-radius:999px}
+.nota svg{color:#f5b301;width:16px;height:16px}
+.acoes{display:flex;justify-content:center;gap:20px;margin:18px 0 4px;flex-wrap:wrap}
+.acao{display:grid;justify-items:center;gap:5px;text-decoration:none;font-size:12px;font-weight:600}
+.acao .ic{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--suave);color:var(--acento);border:1px solid var(--linha)}
+.sec{font:700 22px var(--ft);margin:26px 0 12px}
+.chips{position:sticky;top:0;z-index:5;display:flex;gap:8px;overflow-x:auto;padding:12px 16px;margin:18px -16px 0;background:var(--fundo);scrollbar-width:none;border-bottom:1px solid var(--linha)}
+.chips::-webkit-scrollbar{display:none}
+.busca{margin:18px 0 0}
+.busca input{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--linha);border-radius:12px;font:inherit;background:var(--fundo);color:inherit}
+.busca-vazio{padding:20px 0;text-align:center;opacity:.7}
+.pmeta{display:block;font-size:13px;opacity:.7;margin:2px 0}
+.ende-t{font-weight:700;margin:4px 0 0}
+.cobertura{font-size:14px;background:var(--suave);border-radius:10px;padding:10px 12px;margin:0}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.campos [hidden]{display:none!important}
+.prod[hidden],.cat[hidden],.chips[hidden],.busca-vazio[hidden]{display:none!important}
+.chips a{white-space:nowrap;text-decoration:none;border:1px solid var(--linha);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}
+.cat{scroll-margin-top:64px;margin-top:20px}
+.cat h2{font:700 20px var(--ft);margin:0 0 10px}
+.prods{display:grid;gap:10px}
+.prod{display:flex;gap:12px;background:var(--suave);border-radius:14px;padding:10px;min-width:0}
+.pimg{width:96px;height:96px;object-fit:cover;border-radius:10px;order:2;flex:none;background:var(--linha)}
+.pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pinfo h3{margin:0;font:700 16px/1.3 var(--fb)}
+.pinfo p{margin:0;font-size:13px;opacity:.72;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prow{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:8px}
+.preco{font-size:15px;font-variant-numeric:tabular-nums}
+.add{width:34px;height:34px;border-radius:50%;border:0;background:var(--cor);color:var(--sobre);font:600 22px/1 var(--fb);cursor:pointer;flex:none}
+.step{display:inline-flex;align-items:center;gap:6px;background:var(--cor);color:var(--sobre);border-radius:999px;padding:2px}
+.step b{min-width:16px;text-align:center;font-variant-numeric:tabular-nums}
+.step button{width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:inherit;font:600 20px/1 var(--fb);cursor:pointer}
+.off .pimg,.off h3,.off .preco{opacity:.5}.esg{font-style:normal;font-size:12px;font-weight:700;opacity:.7}
+.bloco{margin-top:24px}
+.mais h2,.infos h2{font:700 18px var(--ft);margin:0 0 8px}
+.mais a{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--linha);text-decoration:none;font-weight:600}
+.mais a span{flex:1}.mais a em{font-style:normal;opacity:.5}
+.avaliar{display:flex;gap:14px;align-items:center;margin-top:26px;padding:16px 18px;border-radius:16px;background:var(--cor);color:var(--sobre);text-decoration:none;font-weight:700}
+.avaliar svg{width:28px;height:28px;color:#f5b301}
+.avaliar span{display:grid}.avaliar small{font-weight:500;opacity:.85}
+.info summary{cursor:pointer;font-weight:600}
+.end{display:flex;gap:8px;align-items:flex-start;font-size:14px;opacity:.85;margin:14px 0 0}
+.end svg{width:18px;height:18px;margin-top:2px}
+.infos{border-top:1px solid var(--linha);padding-top:16px}
+footer{margin-top:28px;font-size:12px;opacity:.5;text-align:center}
+/* Botões grandes (quando não há produtos) */
+.links{display:grid;gap:12px;margin-top:22px}
+.btn{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:600;padding:15px 18px;background:var(--cor);color:var(--sobre);border-radius:999px}
+.btn span{flex:1}.btn em{font-style:normal;opacity:.6}
+.btn.destaque{font-size:17px;padding:18px 20px;box-shadow:0 6px 18px color-mix(in srgb,var(--cor) 40%,transparent)}
+/* Carrinho */
+.cartbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(528px,calc(100% - 24px));display:flex;align-items:center;gap:10px;padding:14px 18px;border:0;border-radius:14px;background:var(--cor);color:var(--sobre);font:700 15px var(--fb);box-shadow:0 10px 30px rgba(0,0,0,.25);cursor:pointer;z-index:20}
+.cartbar #cbQtd{opacity:.85;font-weight:500}.cartbar b{flex:1;text-align:center}
+.cartbar[hidden]{display:none}
+dialog{border:0;padding:0;width:100%;max-width:560px;max-height:92vh;margin:auto auto 0;border-radius:20px 20px 0 0;background:var(--fundo);color:var(--texto)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.sheet{padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+.sh-top{display:flex;justify-content:space-between;align-items:center}
+.sh-top h2{margin:0;font:700 22px var(--ft)}
+.x{width:36px;height:36px;border-radius:50%;border:0;background:var(--suave);color:inherit;font-size:22px;cursor:pointer}
+.it{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--linha)}
+.it-n{display:grid;min-width:0}.it-n small{opacity:.7;font-variant-numeric:tabular-nums}
+.campos{display:grid;gap:10px}
+.campos label{display:grid;gap:4px;font-size:14px;font-weight:600}
+.campos input:not([type=radio]),.campos textarea,.campos select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;background:var(--suave);color:var(--texto);width:100%}
+.campos [hidden]{display:none}
+.tipos{display:flex;gap:8px}
+.tipos label{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--linha);border-radius:10px;padding:10px 12px;cursor:pointer}
+.pix{margin:0;font-size:14px;background:var(--suave);padding:10px 12px;border-radius:10px;word-break:break-all}
+.tot{display:grid;gap:4px;font-variant-numeric:tabular-nums}
+.tot div{display:flex;justify-content:space-between}.tot .final{font-size:18px;font-weight:800;margin-top:4px}
+.erro{color:#c0392b;margin:0;font-size:14px;font-weight:600;min-height:0}
+.erro:empty{display:none}
+.enviar{display:flex;align-items:center;justify-content:center;gap:10px;background:#25d366;color:#08311a;border:0;border-radius:12px;padding:15px;font:800 16px var(--fb);cursor:pointer}
+.enviar[hidden]{display:none!important}
+button:focus-visible,a:focus-visible{outline:2px solid var(--cor);outline-offset:2px}
+/* Modelo Vitrine: capa e produtos em grade */
+.t-vitrine .topo{margin-top:-46px;padding-top:0}
+.t-vitrine .prods{grid-template-columns:repeat(2,minmax(0,1fr))}
+.t-vitrine .prod{flex-direction:column;padding:0;overflow:hidden;background:var(--fundo);border:1px solid var(--linha);gap:0}
+.t-vitrine .pimg{order:0;width:100%;height:auto;aspect-ratio:1;border-radius:0}
+.t-vitrine .pinfo{padding:10px 10px 12px}
+.t-vitrine .prow{flex-wrap:wrap;row-gap:6px}
+.t-vitrine .step button{width:28px;height:28px}
+/* Modelo Cartão: fundo na cor da marca e blocos claros */
+.t-cartao{background:var(--cor)}
+.t-cartao .pg{padding-top:20px}
+.t-cartao .topo,.t-cartao .bloco,.t-cartao .catalogo{background:var(--fundo);border-radius:22px;padding:22px 16px}
+.t-cartao .acoes{margin-bottom:0}
+.t-cartao .catalogo{margin-top:16px;padding-top:6px}
+.t-cartao .bloco{margin-top:16px}
+.t-cartao .chips{margin:12px -16px 0;border-radius:0}
+.t-cartao .prod{background:var(--suave)}
+.t-cartao .avaliar{background:var(--fundo);color:var(--texto);border:2px solid var(--fundo)}
+.t-cartao footer{color:var(--sobre);opacity:.75}
+.t-cartao .infos{border-top:0}
+/* Modelo Minimal: lista com linhas finas */
+.t-minimal .topo{justify-items:start;text-align:left;padding-top:36px}
+.t-minimal .logo{width:68px;height:68px;border-radius:16px;border:0}
+.t-minimal h1{font-size:34px;margin-top:14px}
+.t-minimal .acoes{justify-content:flex-start}
+.t-minimal .prods{gap:0}
+.t-minimal .prod{background:transparent;border-radius:0;padding:14px 0;border-bottom:1px solid var(--linha)}
+.t-minimal .btn{background:transparent;color:var(--texto);border:1.5px solid var(--texto);border-radius:4px}
+.t-minimal .btn.destaque{background:var(--texto);color:var(--fundo);box-shadow:none}
+.t-minimal .avaliar{border-radius:6px}
+/* Acabamento: profundidade, transições suaves e movimento */
+:root{--ease:cubic-bezier(.2,.7,.2,1);--sombra:0 1px 2px rgba(0,0,0,.04),0 12px 28px -12px color-mix(in srgb,var(--texto) 30%,transparent)}
+body{background:radial-gradient(90% 420px at 50% -80px,color-mix(in srgb,var(--cor) 22%,transparent),transparent 70%),var(--fundo)}
+h1{letter-spacing:-.02em}
+.capa{position:relative;overflow:hidden;height:170px}
+.capa::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--fundo) 100%)}
+.logo{box-shadow:0 0 0 6px color-mix(in srgb,var(--cor) 16%,transparent),0 16px 32px -12px color-mix(in srgb,var(--cor) 70%,transparent);transition:transform .6s var(--ease)}
+.logo:hover{transform:scale(1.05) rotate(-2deg)}
+.chips a,.acao .ic,.add,.step button,.x{transition:background .3s,color .3s,transform .35s var(--ease),box-shadow .35s var(--ease)}
+.chips a:hover{transform:translateY(-1px);background:var(--suave)}
+.acao .ic{box-shadow:var(--sombra)}
+.acao:hover .ic{transform:translateY(-3px);box-shadow:0 14px 26px -10px color-mix(in srgb,var(--cor) 70%,transparent)}
+.prod{transition:transform .5s var(--ease),box-shadow .5s var(--ease),background .3s}
+.prod:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+.pimg{transition:transform .9s var(--ease)}
+.t-vitrine .prod:hover .pimg{transform:scale(1.07)}
+.add:hover{box-shadow:0 8px 18px -6px color-mix(in srgb,var(--cor) 80%,transparent)}
+.add:active,.step button:active{transform:scale(.88)}
+.btn,.avaliar{transition:transform .4s var(--ease),box-shadow .4s var(--ease),filter .3s}
+.btn:hover,.avaliar:hover{transform:translateY(-2px);filter:brightness(1.06)}
+.btn:active,.avaliar:active{transform:scale(.98)}
+.btn.destaque{box-shadow:0 14px 30px -10px color-mix(in srgb,var(--cor) 65%,transparent)}
+.cartbar{background:color-mix(in srgb,var(--cor) 93%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);transition:transform .5s var(--ease),background .3s}
+.cartbar:not([hidden]){animation:cartSobe .7s var(--ease) both}
+.cartbar:active{transform:translateX(-50%) scale(.98)}
+@keyframes cartSobe{from{opacity:0;translate:0 30px}to{opacity:1;translate:0 0}}
+dialog[open]{animation:dialogSobe .55s var(--ease) both}
+dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3px)}
+@keyframes dialogSobe{from{opacity:0;translate:0 40px}to{opacity:1;translate:0 0}}
+@keyframes dialogFade{from{opacity:0}to{opacity:1}}
+@keyframes entra{from{opacity:0;translate:0 18px;filter:blur(6px)}to{opacity:1;translate:0 0;filter:blur(0)}}
+.topo>*{animation:entra 1s var(--ease) both}
+.topo>*:nth-child(2){animation-delay:.08s}.topo>*:nth-child(3){animation-delay:.16s}.topo>*:nth-child(4){animation-delay:.24s}.topo>*:nth-child(5){animation-delay:.32s}
+.links .btn{animation:entra .9s var(--ease) both}
+.links .btn:nth-child(2){animation-delay:.1s}.links .btn:nth-child(3){animation-delay:.2s}.links .btn:nth-child(4){animation-delay:.3s}
+@supports (animation-timeline:view()){
+  .cat h2,.bloco,.avaliar,.infos{animation:entra linear both;animation-timeline:view();animation-range:entry 0% entry 40%}
+  .prod{animation:entra linear both;animation-timeline:view();animation-range:entry 0% entry 55%}
+}
+.t-minimal .prod:hover{box-shadow:none;transform:translateX(4px)}
+.t-minimal .btn:hover,.t-minimal .avaliar:hover{box-shadow:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* Agendamento de serviços */
+.ag-op{display:grid;gap:2px;width:100%;text-align:left;padding:13px 14px;border:1px solid var(--linha);border-radius:12px;background:var(--fundo);color:inherit;font:inherit;cursor:pointer;transition:background .3s,transform .35s var(--ease),box-shadow .35s var(--ease)}
+.ag-op:hover{background:var(--suave);transform:translateY(-2px);box-shadow:var(--sombra)}
+.ag-op small{opacity:.7;font-size:13px}
+a.ag-op{text-decoration:none}
+.erro .ag-op{margin-top:8px;color:var(--texto);font-weight:600}
+.ag-steps{display:grid;gap:12px}
+.ag-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ag-chips button{border:1px solid var(--linha);background:var(--fundo);color:inherit;border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;transition:background .3s,color .3s,transform .3s var(--ease)}
+.ag-chips button:hover{transform:translateY(-1px)}
+.ag-chips button[aria-pressed=true]{background:var(--acento);color:var(--sobre-acento);border-color:var(--acento)}
+.ag-voltar{justify-self:start;background:none;border:0;padding:0;color:inherit;opacity:.7;font:inherit;cursor:pointer}
+.ag-sub{margin:4px 0 0;font-weight:700;font-size:14px}
+/* Serviços com fotos e vídeos */
+.svc-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.barbeiros{margin-top:14px}.barbs{display:flex;flex-wrap:wrap;gap:8px}
+.barb{display:inline-flex;align-items:center;gap:8px;padding:4px 14px 4px 4px;background:var(--suave);border:1px solid var(--linha);border-radius:999px;color:var(--texto);font:inherit;cursor:pointer;transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
+.barb:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px var(--cor)}
+.barb-foto{width:36px;height:36px;border-radius:50%;overflow:hidden;background:var(--cor);color:var(--sobre);display:flex;align-items:center;justify-content:center;font:800 13px/1 var(--fb)}
+.barb-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.barb b{font-size:14px}
+.svc{margin:0;min-width:0;background:var(--suave);border:1px solid var(--linha);border-radius:14px;overflow:hidden;transition:transform .4s var(--ease),box-shadow .4s var(--ease)}
+.svc:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+.svc-midia{aspect-ratio:4/5;background:var(--linha)}
+.svc-midia img,.svc-midia video{width:100%;height:100%;object-fit:cover;display:block}
+.svc-t{display:grid;gap:2px;padding:10px 12px}
+.svc-t small{opacity:.7;font-size:13px}
+.svc-mais{display:flex;gap:6px;padding:0 10px 10px;overflow-x:auto}
+.svc-mais img,.svc-mais video{width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none}
+.svc[data-agendar]{cursor:pointer}.svc-ag{margin-top:4px;color:var(--acento);font-weight:700;font-size:14px}
+.svc-vazio{display:grid;place-items:center;background:linear-gradient(160deg,var(--suave),var(--linha));color:var(--acento)}
+.svc-vazio svg{width:30%;height:auto;opacity:.6}
+.svc-lista.compacta{grid-template-columns:1fr;gap:8px}
+.compacta .svc{display:flex;align-items:center;gap:12px;padding:8px}
+.compacta .svc-midia{flex:none;width:56px;height:56px;aspect-ratio:auto;border-radius:10px;overflow:hidden}
+.compacta .svc-vazio svg{width:50%}
+.compacta .svc-t{flex:1;min-width:0;padding:0 6px 0 0;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px}
+.compacta .svc-t b,.compacta .svc-t small{grid-column:1}
+.compacta .svc-ag{grid-column:2;grid-row:1/span 2;margin:0}
+@media (min-width:640px){.svc-lista{grid-template-columns:repeat(3,minmax(0,1fr))}.svc-lista.compacta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Clube de assinatura */
+.clube-sub{margin:-4px 0 12px;opacity:.75;font-size:14px}
+.planos{display:grid;gap:12px}
+.plano{display:grid;gap:6px;padding:16px;background:var(--suave);border:1px solid var(--linha);border-radius:14px}
+.plano h3{margin:0;font:700 17px/1.25 var(--ft)}
+.plano-preco{font:800 26px/1.1 var(--fb);font-variant-numeric:tabular-nums}.plano-preco small{font-size:14px;font-weight:600;opacity:.7}
+.plano p{margin:0;font-size:14px;opacity:.85}.plano .plano-regras{font-size:13px;opacity:.7}
+.plano-ag{justify-self:start;margin-top:6px;font:inherit;font-weight:700;padding:10px 18px;border-radius:999px;border:0;background:var(--cor);color:var(--sobre);cursor:pointer;transition:transform .3s var(--ease)}
+.plano-ag:hover{transform:translateY(-2px)}
+.campos .check{display:flex;align-items:center;gap:10px;cursor:pointer}
+.campos .check input[type=checkbox]{width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--acento)}
+.campos .check small{display:block;opacity:.7;font-size:12px}
+@media (min-width:640px){.planos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<script type="application/json" id="bio-config">{"modelo":"vitrine","nome":"Dom Manolo Barbearia","cidade":"Abreu e Lima - PE","descricao":"Barbearia em Abreu e Lima - PE","whatsapp":"5581999254342","whatsMsg":"Olá! Vim pelo site.","instagram":"https://www.instagram.com/dom_manolo?utm_source=ig_web_button_share_sheet&exln=ZDNlZDc0MzIxNw==","review":"https://search.google.com/local/writereview?placeid=ChIJl75zDB8UqwcRnZFIZuEeg5M","endereco":"Av. D, 2600-2648 - Caetés I, Abreu e Lima - PE, 53540-250","maps":"https://maps.google.com/?cid=10629373498957009309&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&hl=pt-BR&gl=br&source=apiv3","horario":"segunda-feira: 10:00 – 19:00\nterça-feira: 10:00 – 19:00\nquarta-feira: 10:00 – 19:00\nquinta-feira: 10:00 – 19:00\nsexta-feira: 10:00 – 19:00\nsábado: 10:00 – 19:00\ndomingo: Fechado","logo":"/img/dom-manolo-barbearia/logo-gmw7s7.jpg","capa":"/img/dom-manolo-barbearia/capa-b2ljuy.jpg","nota":4.7,"totalAval":196,"mostrarNota":true,"extras":[],"catalogoTitulo":"Serviços","categorias":[],"produtos":[],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o barbeiro João"},"cor":"#b08d57","fundo":"#121212","texto":"#f2efe9","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"dom-manolo-barbearia","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"pmwl2xgx3r8gb","nome":"Corte social","duracao":"30 min","preco":"35,00","midia":[{"tipo":"video","url":"https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/dom-manolo-barbearia/pmwl2xgx3r8gb/mwl2xtzofe725a.mp4","titulo":""}]},{"id":"pmwl2xgx3aphi","nome":"Corte degradê","duracao":"40 min","preco":"40,00","midia":[]},{"id":"pmwl2xgx3rx98","nome":"Corte na tesoura","duracao":"40 min","preco":"45,00","midia":[]},{"id":"pmwl2xgx3li1k","nome":"Corte infantil","duracao":"30 min","preco":"30,00","midia":[]},{"id":"pmwl2xgx3kge4","nome":"Barba tradicional","duracao":"20 min","preco":"25,00","midia":[{"tipo":"video","url":"https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/dom-manolo-barbearia/pmwl2xgx3kge4/mwl2yade03b5d3.mp4","titulo":""}]},{"id":"pmwl2xgx3txz0","nome":"Barba com toalha quente","duracao":"30 min","preco":"30,00","midia":[]},{"id":"pmwl2xgx3qcos","nome":"Pezinho / acabamento","duracao":"10 min","preco":"10,00","midia":[]},{"id":"pmwl2xgx363o5","nome":"Corte + barba","duracao":"50 min","preco":"60,00","midia":[]},{"id":"pmwl2xgx3fs5h","nome":"Corte + barba + sobrancelha","duracao":"60 min","preco":"70,00","midia":[]},{"id":"pmwl2xgx3wfem","nome":"Sobrancelha","duracao":"10 min","preco":"10,00","midia":[]},{"id":"pmwl2xgx3e9tm","nome":"Pigmentação","duracao":"40 min","preco":"25,00","midia":[]},{"id":"pmwl2xgx3qeht","nome":"Hidratação capilar","duracao":"40 min","preco":"30,00","midia":[]},{"id":"pmwl2xgx3es7b","nome":"Luzes ou platinado","duracao":"120 min","preco":"120,00","midia":[]}],"profissionais":[{"id":"pmwl2xgx3h5cz","nome":"Barbeiro 1","servicos":["pmwl2xgx3r8gb","pmwl2xgx3aphi","pmwl2xgx3rx98","pmwl2xgx3li1k","pmwl2xgx3kge4","pmwl2xgx3txz0","pmwl2xgx3qcos","pmwl2xgx363o5","pmwl2xgx3fs5h","pmwl2xgx3wfem","pmwl2xgx3e9tm","pmwl2xgx3qeht","pmwl2xgx3es7b"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"pmwl2xgx3esjg","nome":"Barbeiro 2","servicos":["pmwl2xgx3r8gb","pmwl2xgx3aphi","pmwl2xgx3rx98","pmwl2xgx3li1k","pmwl2xgx3kge4","pmwl2xgx3txz0","pmwl2xgx3qcos","pmwl2xgx363o5","pmwl2xgx3fs5h","pmwl2xgx3wfem","pmwl2xgx3e9tm","pmwl2xgx3qeht","pmwl2xgx3es7b"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"pmwl2xgx3doj8","nome":"Dono 1","servicos":["pmwl2xgx3r8gb","pmwl2xgx3aphi","pmwl2xgx3rx98","pmwl2xgx3li1k","pmwl2xgx3kge4","pmwl2xgx3txz0","pmwl2xgx3qcos","pmwl2xgx363o5","pmwl2xgx3fs5h","pmwl2xgx3wfem","pmwl2xgx3e9tm","pmwl2xgx3qeht","pmwl2xgx3es7b"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"pmwl2xgx3vy9o","nome":"Dono barbeiro 1","servicos":["pmwl2xgx3r8gb","pmwl2xgx3aphi","pmwl2xgx3rx98","pmwl2xgx3li1k","pmwl2xgx3kge4","pmwl2xgx3txz0","pmwl2xgx3qcos","pmwl2xgx363o5","pmwl2xgx3fs5h","pmwl2xgx3wfem","pmwl2xgx3e9tm","pmwl2xgx3qeht","pmwl2xgx3es7b"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"}]},"tipo":"barbearia"}</script>
+</head>
+<body class="t-vitrine"><div class="pg">
+<div class="capa" style="background-image:url('/img/dom-manolo-barbearia/capa-b2ljuy.jpg')"></div>
+<header class="topo">
+<img class="logo" src="/img/dom-manolo-barbearia/logo-gmw7s7.jpg" alt="Logo Dom Manolo Barbearia">
+<h1>Dom Manolo Barbearia</h1>
+<p class="sub">Barbearia em Abreu e Lima - PE</p>
+<a class="nota" href="https://search.google.com/local/writereview?placeid=ChIJl75zDB8UqwcRnZFIZuEeg5M" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg><b>4,7</b> · 196 avaliações no Google</a>
+
+</header>
+<nav class="links"><button type="button" class="btn destaque" id="abrirAgenda"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Agendar um horário</span><em aria-hidden="true">→</em></button></nav>
+<section class="barbeiros" id="barbeiros" hidden><div class="barbs" id="barbsLista"></div></section>
+<section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista compacta"><article class="svc" data-agendar="pmwl2xgx3r8gb" role="button" tabindex="0" aria-label="Agendar Corte social"><div class="svc-midia"><video src="https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/dom-manolo-barbearia/pmwl2xgx3r8gb/mwl2xtzofe725a.mp4" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video></div><div class="svc-t"><b>Corte social</b><small>30 min · R$ 35,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3aphi" role="button" tabindex="0" aria-label="Agendar Corte degradê"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Corte degradê</b><small>40 min · R$ 40,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3rx98" role="button" tabindex="0" aria-label="Agendar Corte na tesoura"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Corte na tesoura</b><small>40 min · R$ 45,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3li1k" role="button" tabindex="0" aria-label="Agendar Corte infantil"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Corte infantil</b><small>30 min · R$ 30,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3kge4" role="button" tabindex="0" aria-label="Agendar Barba tradicional"><div class="svc-midia"><video src="https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/dom-manolo-barbearia/pmwl2xgx3kge4/mwl2yade03b5d3.mp4" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video></div><div class="svc-t"><b>Barba tradicional</b><small>20 min · R$ 25,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3txz0" role="button" tabindex="0" aria-label="Agendar Barba com toalha quente"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Barba com toalha quente</b><small>30 min · R$ 30,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3qcos" role="button" tabindex="0" aria-label="Agendar Pezinho / acabamento"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Pezinho / acabamento</b><small>10 min · R$ 10,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx363o5" role="button" tabindex="0" aria-label="Agendar Corte + barba"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Corte + barba</b><small>50 min · R$ 60,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3fs5h" role="button" tabindex="0" aria-label="Agendar Corte + barba + sobrancelha"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Corte + barba + sobrancelha</b><small>60 min · R$ 70,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3wfem" role="button" tabindex="0" aria-label="Agendar Sobrancelha"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Sobrancelha</b><small>10 min · R$ 10,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3e9tm" role="button" tabindex="0" aria-label="Agendar Pigmentação"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Pigmentação</b><small>40 min · R$ 25,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3qeht" role="button" tabindex="0" aria-label="Agendar Hidratação capilar"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Hidratação capilar</b><small>40 min · R$ 30,00</small><span class="svc-ag">Agendar →</span></div></article><article class="svc" data-agendar="pmwl2xgx3es7b" role="button" tabindex="0" aria-label="Agendar Luzes ou platinado"><div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div><div class="svc-t"><b>Luzes ou platinado</b><small>120 min · R$ 120,00</small><span class="svc-ag">Agendar →</span></div></article></div></section>
+<section class="bloco clube" id="clube" hidden><h2>Clube de assinatura</h2><p class="clube-sub">Pague por mês e marque seus horários sem pagar a cada visita.</p><div class="planos" id="clubeLista"></div></section>
+<nav class="links"><a class="btn destaque" href="https://search.google.com/local/writereview?placeid=ChIJl75zDB8UqwcRnZFIZuEeg5M" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg><span>Avalie a gente no Google</span><em aria-hidden="true">→</em></a><a class="btn" href="https://wa.me/5581999254342?text=Ol%C3%A1!%20Vim%20pelo%20site." target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Fale no WhatsApp</span><em aria-hidden="true">→</em></a><a class="btn" href="https://instagram.com/dom_manolo?utm_source=ig_web_button_share_sheet&amp;exln=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M7.5 3h9A4.5 4.5 0 0 1 21 7.5v9a4.5 4.5 0 0 1-4.5 4.5h-9A4.5 4.5 0 0 1 3 16.5v-9A4.5 4.5 0 0 1 7.5 3zm0 1.8A2.7 2.7 0 0 0 4.8 7.5v9a2.7 2.7 0 0 0 2.7 2.7h9a2.7 2.7 0 0 0 2.7-2.7v-9a2.7 2.7 0 0 0-2.7-2.7zM12 7.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8zm0 1.8a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2zm4.7-2.3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg><span>Siga no Instagram</span><em aria-hidden="true">→</em></a><a class="btn" href="https://maps.google.com/?cid=10629373498957009309&amp;g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&amp;hl=pt-BR&amp;gl=br&amp;source=apiv3" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 7 12 7 12s7-6.9 7-12a7 7 0 0 0-7-7zm0 4.3a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z"/></svg><span>Como chegar</span><em aria-hidden="true">→</em></a></nav>
+
+
+
+<section class="bloco infos"><details class="info"><summary>Horário de funcionamento</summary><p>segunda-feira: 10:00 – 19:00<br>terça-feira: 10:00 – 19:00<br>quarta-feira: 10:00 – 19:00<br>quinta-feira: 10:00 – 19:00<br>sexta-feira: 10:00 – 19:00<br>sábado: 10:00 – 19:00<br>domingo: Fechado</p></details><p class="end"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 7 12 7 12s7-6.9 7-12a7 7 0 0 0-7-7zm0 4.3a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z"/></svg><span>Av. D, 2600-2648 - Caetés I, Abreu e Lima - PE, 53540-250</span></p></section>
+<footer>Dom Manolo Barbearia · Abreu e Lima - PE</footer>
+</div>
+
+<dialog id="agenda" aria-labelledby="agTitulo"><div class="sheet"><div class="sh-top"><h2 id="agTitulo">Agendar</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div><div id="agSteps" class="ag-steps"></div><p class="erro" id="agErro" role="alert"></p><button type="button" class="enviar" id="agEnviar" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Enviar pedido pelo WhatsApp</span></button></div></dialog>
+
+<script>(function agendaRuntime(){
+  var C=JSON.parse(document.getElementById("bio-config").textContent);
+  var AG=C.agenda||{};
+  var dlg=document.getElementById("agenda");
+  if(!dlg)return;
+  function $(id){return document.getElementById(id)}
+  function num(v){var t=String(v==null?"":v).replace(/[^\d,.]/g,"");if(!t)return NaN;if(t.indexOf(",")>-1)t=t.replace(/\./g,"").replace(",",".");return parseFloat(t)}
+  function brl(n){return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+  function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function pad(n){return n<10?"0"+n:""+n}
+  var DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  var MSG_PADRAO="Olá! Quero agendar:\n*{servico}*\nCom: {profissional}\nDia: {dia} às {horario}\nNome: {nome}{obs}";
+  // Etapas: servico -> pref (tem preferência de barbeiro?) -> prof (só se sim) -> dia -> dados -> ok
+  var etapa="servico",pilha=[],sel={},dias=[],enviando=false,ultimo=null;
+  var equipe=null,cacheHoras={},cacheDias={};
+  // Planos do clube de assinatura (vêm da API junto com a equipe; null quando a barbearia não tem clube)
+  var clube=null;
+  // Barbearia sem cadastro no sistema (só o site): o pedido vai direto pelo WhatsApp, sem registro
+  var semCadastro=false;
+  function carregarEquipe(cb){
+    fetch("/api/profissionais?slug="+encodeURIComponent(C.slug)).then(function(r){if(r.status===404)semCadastro=true;return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
+      var lista=j&&j.profissionais?j.profissionais:[];
+      // Preço cadastrado no financeiro vale no site (é o que vai para o pedido)
+      var precos=j&&j.precos||{};
+      (AG.servicos||[]).forEach(function(s){
+        var v=precos[s.nome];if(typeof v!=="number"||!isFinite(v))return;
+        s.preco=v.toFixed(2).replace(".",",");
+        var card=document.querySelector('[data-agendar="'+String(s.id).replace(/["\\]/g,"")+'"] .svc-t small');
+        if(card)card.textContent=[s.duracao,brl(v)].filter(Boolean).join(" · ");
+      });
+      clube=j&&j.clube&&j.clube.planos&&j.clube.planos.length?j.clube.planos:null;
+      equipe=lista.length?lista.map(function(p){return {id:p.id,dbId:p.id,nome:p.nome,foto:p.foto_url||"",servicos:(AG.servicos||[]).map(function(v){return v.id}),dias:[0,1,2,3,4,5,6]}}):(AG.profissionais||[]);
+      cb();
+    });
+  }
+  // Serviço incluído em algum plano do clube (sem diferença de acento ou maiúscula)
+  function chave(t){return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase()}
+  function noClube(s){return !!(clube&&s&&clube.some(function(pl){return (pl.servicos||[]).some(function(x){return chave(x)===chave(s.nome)})}))}
+  function clubeSalvo(){try{return localStorage.getItem("bio-clube-"+C.slug)||""}catch(e){return ""}}
+  function salvo(k){try{return localStorage.getItem("bio-"+k+"-"+C.slug)||""}catch(e){return ""}}
+  function guardar(k,v){try{if(v)localStorage.setItem("bio-"+k+"-"+C.slug,v)}catch(e){}}
+  // Seção do clube no site: cada plano com o botão que chama a barbearia no WhatsApp para assinar
+  function desenharClube(){
+    var sec=$("clube"),box=$("clubeLista");
+    if(!sec||!box)return;
+    sec.hidden=!clube;
+    box.textContent="";
+    (clube||[]).forEach(function(pl){
+      var c=document.createElement("article");c.className="plano";
+      var t=document.createElement("h3");t.textContent=pl.nome;c.appendChild(t);
+      var pr=document.createElement("div");pr.className="plano-preco";pr.textContent=brl(Number(pl.preco));
+      var m=document.createElement("small");m.textContent=" por mês";pr.appendChild(m);c.appendChild(pr);
+      if(pl.descricao){var d=document.createElement("p");d.textContent=pl.descricao;c.appendChild(d)}
+      var r=document.createElement("p");r.className="plano-regras";r.textContent=pl.regras;c.appendChild(r);
+      if(whats()){var b=document.createElement("button");b.type="button";b.className="plano-ag";b.setAttribute("data-plano",pl.id);b.textContent="Quero assinar";c.appendChild(b)}
+      else{var n=document.createElement("p");n.className="plano-regras";n.textContent="Para assinar, fale com a barbearia.";c.appendChild(n)}
+      box.appendChild(c);
+    });
+    if(clube&&location.hash==="#clube")setTimeout(function(){sec.scrollIntoView({block:"start"})},50);
+  }
+  function profs(){return (equipe||[]).filter(function(p){return !sel.servico||(p.servicos||[]).indexOf(sel.servico.id)>-1})}
+  function duracaoDe(s){var m=parseInt(String(s&&s.duracao||""),10);return m>=5&&m<=240?m:30}
+  function isoDe(dt){return dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate())}
+  function dataDe(iso){var p=String(iso).split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+  function doBanco(){return !!(sel.qualquer||(sel.prof&&sel.prof.dbId))}
+  // Dias com agenda publicada no banco (null enquanto carrega)
+  function diasDoBanco(){
+    var pid=sel.qualquer?"qualquer":sel.prof.dbId;
+    if(cacheDias[pid])return cacheDias[pid];
+    if(!cacheDias[pid+"!"]){
+      cacheDias[pid+"!"]=1;
+      fetch("/api/horarios?slug="+encodeURIComponent(C.slug)+"&profissional="+encodeURIComponent(pid)+"&dias=1").then(function(r){return r.ok?r.json():{dias:[]}}).catch(function(){return {dias:[]}}).then(function(j){cacheDias[pid]=(j.dias||[]).slice(0,14).map(dataDe);render()});
+    }
+    return null;
+  }
+  // Site sem equipe no banco: dias da semana e horários cadastrados no Criador
+  function diasDe(p){var out=[],h=new Date();for(var i=0;i<30&&out.length<10;i++){var dt=new Date(h.getFullYear(),h.getMonth(),h.getDate()+i);if(!p||(p.dias||[]).indexOf(dt.getDay())>-1)out.push(dt)}return out}
+  function horasDe(p){var h=[],a=String((p&&p.inicio)||"09:00").split(":"),b=String((p&&p.fim)||"18:00").split(":");var t=+a[0]*60+ +a[1],f=+b[0]*60+ +b[1];for(;t<f;t+=30)h.push(pad(Math.floor(t/60))+":"+pad(t%60));return h}
+  // Horários livres do banco: de um barbeiro, ou de qualquer um (qualquer=true). Devolve null enquanto carrega.
+  function horasDoBanco(dia){
+    var pid=sel.qualquer?"qualquer":sel.prof.dbId;
+    var k=pid+"|"+dia+"|"+duracaoDe(sel.servico);
+    if(cacheHoras[k])return cacheHoras[k];
+    if(!cacheHoras[k+"!"]){
+      cacheHoras[k+"!"]=1;
+      fetch("/api/horarios?slug="+encodeURIComponent(C.slug)+"&profissional="+encodeURIComponent(pid)+"&dia="+dia+"&duracao="+duracaoDe(sel.servico)).then(function(r){return r.ok?r.json():{horarios:[]}}).catch(function(){return {horarios:[]}}).then(function(j){cacheHoras[k]=j.horarios||[];render()});
+    }
+    return null;
+  }
+  function rotuloDia(dt){return DIAS[dt.getDay()]+" "+pad(dt.getDate())+"/"+pad(dt.getMonth()+1)}
+  function porId(lista,id){return lista.filter(function(x){return x.id===id})[0]}
+  function whats(){var w=String(C.whatsapp||"").replace(/\D/g,"");if(w&&w.indexOf("55")!==0)w="55"+w;return w}
+  function linkWhats(txt){return "https://wa.me/"+whats()+"?text="+encodeURIComponent(txt)}
+  function abrirLink(url){var a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
+  function botaoWhats(rotulo){return whats()?'<button type="button" class="ag-op" data-ag="whats"><b>'+esc(rotulo||"Falar com a barbearia no WhatsApp")+'</b><small>A barbearia combina o horário com você</small></button>':""}
+  function ir(e){pilha.push(etapa);etapa=e;render()}
+  // Ao voltar para uma etapa, limpa o que foi escolhido depois dela
+  function limpar(depois){
+    if(depois==="servico"){sel.pref=null;sel.prof=null;sel.qualquer=false}
+    if(depois==="servico"||depois==="pref"){sel.prof=null;sel.qualquer=false}
+    if(depois!=="dados"){sel.hora=null}
+    if(depois==="servico"||depois==="pref"||depois==="prof"||depois==="dia"){sel.dia=null}
+  }
+  function escolherDia(i){var dt=dias[i];if(!dt)return;sel.dia=i;sel.diaTxt=rotuloDia(dt);sel.diaISO=isoDe(dt);sel.hora=null}
+  // Arquivo de calendário (.ics) do agendamento, para o cliente salvar no celular
+  function linkCalendario(){
+    if(!ultimo||!window.Blob||!window.URL||!URL.createObjectURL)return "";
+    var p=ultimo.diaISO.split("-"),h=ultimo.hora.split(":"),ini=new Date(+p[0],+p[1]-1,+p[2],+h[0],+h[1]),fim=new Date(ini.getTime()+ultimo.duracao*60000);
+    function f(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+"00"}
+    var limpa=function(t){return String(t||"").replace(/[\r\n,;\\]/g," ")};
+    var ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//biosite//agenda//PT","BEGIN:VEVENT","UID:"+ultimo.codigo+"-"+Date.now()+"@biosite","DTSTAMP:"+f(new Date()),"DTSTART:"+f(ini),"DTEND:"+f(fim),"SUMMARY:"+limpa(ultimo.servico+" - "+C.nome),"DESCRIPTION:"+limpa("Com "+ultimo.quem+(ultimo.codigo?". Código "+ultimo.codigo:"")),(C.endereco?"LOCATION:"+limpa(C.endereco):""),"BEGIN:VALARM","TRIGGER:-PT1H","ACTION:DISPLAY","DESCRIPTION:Lembrete","END:VALARM","END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n");
+    try{return URL.createObjectURL(new Blob([ics],{type:"text/calendar"}))}catch(e){return ""}
+  }
+  function render(){
+    var h=pilha.length&&etapa!=="ok"?'<button type="button" class="ag-voltar" data-ag="voltar">← Voltar</button>':"";
+    var titulo="";
+    $("agEnviar").hidden=etapa!=="dados";
+    if(etapa==="servico"){
+      titulo="Escolha o serviço";
+      (AG.servicos||[]).forEach(function(s){
+        var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
+        var info=[s.duracao,preco].filter(Boolean).join(" · ");
+        h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
+      });
+    }else if(etapa==="pref"){
+      titulo="Você tem preferência de barbeiro?";
+      h+='<button type="button" class="ag-op" data-ag="tem-pref"><b>Sim, quero escolher</b><small>Ver os barbeiros disponíveis</small></button>';
+      h+='<button type="button" class="ag-op" data-ag="sem-pref"><b>Não, tanto faz</b><small>Vejo os horários livres de toda a equipe</small></button>';
+    }else if(etapa==="prof"){
+      titulo="Escolha seu barbeiro";
+      var lista=profs();
+      lista.forEach(function(p){h+='<button type="button" class="ag-op" data-ag="prof" data-id="'+esc(p.id)+'"><b>'+esc(p.nome)+'</b></button>'});
+      if(!equipe)h+='<p class="note">Carregando a equipe…</p>';
+      else if(!lista.length)h+='<p class="note">Nenhum profissional faz este serviço no momento.</p>';
+    }else if(etapa==="dia"){
+      titulo="Escolha o dia e o horário";
+      var lidos=doBanco()?diasDoBanco():diasDe(sel.qualquer?null:sel.prof);
+      if(lidos===null){dias=[];h+='<p class="note">Carregando a agenda…</p>'}
+      else{
+        dias=lidos;
+        if(!dias.length){h+='<p class="note">Ainda não há horários publicados para agendar pelo site.</p>'+botaoWhats()}
+        else{
+          if(sel.dia==null)escolherDia(0);
+          h+='<div class="ag-chips">'+dias.map(function(dt,i){return '<button type="button" data-ag="dia" data-i="'+i+'"'+(sel.dia===i?' aria-pressed="true"':'')+'>'+rotuloDia(dt)+'</button>'}).join("")+'</div>';
+          var hs=doBanco()?horasDoBanco(sel.diaISO):horasDe(sel.prof);
+          if(hs===null)h+='<p class="note">Carregando horários…</p>';
+          else if(!hs.length)h+='<p class="note">Sem horários livres neste dia. Escolha outro dia.</p>';
+          else h+='<p class="ag-sub">Horários</p><div class="ag-chips">'+hs.map(function(t){return '<button type="button" data-ag="hora" data-v="'+t+'">'+t+'</button>'}).join("")+'</div>';
+        }
+      }
+    }else if(etapa==="dados"){
+      titulo="Seus dados";
+      var com=sel.qualquer?"Qualquer barbeiro disponível":sel.prof.nome;
+      h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
+      var doClube=noClube(sel.servico)?clubeSalvo():null;
+      var zap=doClube||salvo("zap");
+      var blocoZap=semCadastro?"":'<label>Seu WhatsApp <small>(opcional, para a barbearia lembrar você do horário)</small><input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" value="'+esc(zap)+'"></label>';
+      var blocoClube=doClube===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(doClube?" checked":"")+'><span>Sou assinante do clube <small>(com o WhatsApp cadastrado no clube)</small></span></label>';
+      var blocoNovidades=semCadastro?"":'<label class="check"><input type="checkbox" id="agNovidades"><span>Quero receber promoções e novidades da '+esc(C.nome)+' pelo WhatsApp</span></label>';
+      h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80" value="'+esc(salvo("nome"))+'"></label>'+blocoZap+blocoClube+blocoNovidades+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
+    }else{
+      titulo="Pedido enviado";
+      var cal=linkCalendario();
+      h+='<p class="cobertura"><b>'+esc(ultimo.servico)+'</b> com '+esc(ultimo.quem)+'<br>'+esc(ultimo.diaTxt)+' às '+esc(ultimo.hora)+(ultimo.codigo?'<br>Código do pedido: <b>'+esc(ultimo.codigo)+'</b>':'')+(ultimo.clube?'<br><b>Pelo clube de assinatura</b>':'')+'</p>';
+      h+='<p class="note">A barbearia confirma pelo WhatsApp. Se o WhatsApp não abriu sozinho, toque abaixo.</p>';
+      h+='<a class="ag-op" href="'+esc(ultimo.link)+'" target="_blank" rel="noopener"><b>Abrir o WhatsApp</b><small>Enviar a mensagem com o pedido</small></a>';
+      if(cal)h+='<a class="ag-op" href="'+cal+'" download="agendamento.ics"><b>Salvar na agenda do celular</b><small>Com lembrete 1 hora antes</small></a>';
+    }
+    $("agTitulo").textContent=titulo;
+    $("agSteps").innerHTML=h;
+  }
+  function abrir(){pilha=[];etapa="servico";sel={};cacheHoras={};cacheDias={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
+  function fechar(){if(dlg.close)dlg.close();else dlg.removeAttribute("open")}
+  $("abrirAgenda").addEventListener("click",abrir);
+  // Cada serviço da vitrine abre o agendamento já com ele escolhido: pergunta a preferência de barbeiro
+  function abrirServico(id){abrir();sel.servico=porId(AG.servicos||[],id);if(sel.servico){pilha=["servico"];etapa="pref";render()}}
+  // Um barbeiro do painel abre o agendamento já com ele escolhido: segue direto para o serviço
+  function abrirBarbeiro(id){abrir();sel.prof=porId(equipe||[],id);if(sel.prof){sel.qualquer=false;etapa="servico";render()}}
+  function desenharBarbeiros(){
+    var sec=document.getElementById("barbeiros"),box=document.getElementById("barbsLista");
+    if(!sec||!box)return;
+    var lista=(equipe||[]).filter(function(p){return p.dbId});
+    sec.hidden=!lista.length;
+    box.textContent="";
+    lista.forEach(function(p){
+      var b=document.createElement("button");b.type="button";b.className="barb";b.setAttribute("data-barb",p.id);
+      b.setAttribute("aria-label","Agendar com "+p.nome);
+      var f=document.createElement("span");f.className="barb-foto";
+      if(p.foto&&/^https:\/\//.test(p.foto)){var img=document.createElement("img");img.src=p.foto;img.alt=p.nome;img.loading="lazy";f.appendChild(img)}else{f.textContent=String(p.nome||"").trim().split(/\s+/).slice(0,2).map(function(x){return x.charAt(0)}).join("").toUpperCase()}
+      var n=document.createElement("b");n.textContent=p.nome;
+      b.appendChild(f);b.appendChild(n);box.appendChild(b);
+    });
+  }
+  document.addEventListener("click",function(e){var c=e.target.closest("[data-barb]");if(c)abrirBarbeiro(c.getAttribute("data-barb"))});
+  document.addEventListener("click",function(e){var c=e.target.closest("[data-agendar]");if(c)abrirServico(c.getAttribute("data-agendar"))});
+  document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
+  // Link pessoal do barbeiro (/slug?barbeiro=id): o site já abre o agendamento com ele escolhido
+  function abrirDoLink(){var id="";try{id=new URLSearchParams(location.search).get("barbeiro")||""}catch(e){}if(id&&porId(equipe||[],id))abrirBarbeiro(id)}
+  carregarEquipe(function(){desenharBarbeiros();desenharClube();if(dlg.open)render();else abrirDoLink()});
+  // "Quero assinar": abre o WhatsApp da barbearia com o plano escolhido
+  document.addEventListener("click",function(e){var c=e.target.closest("[data-plano]");if(!c)return;var pl=porId(clube||[],c.getAttribute("data-plano"));if(pl)abrirLink(linkWhats("Olá! Quero assinar o plano "+pl.nome+" do clube ("+brl(Number(pl.preco))+" por mês). Como faço?"))});
+  // Marcar "Sou assinante" (ou as novidades) leva ao campo do WhatsApp, se estiver vazio
+  $("agSteps").addEventListener("change",function(e){if(e.target.id!=="agClube"&&e.target.id!=="agNovidades")return;if(e.target.checked&&$("agWhats")&&!$("agWhats").value.trim())$("agWhats").focus()});
+  dlg.querySelector("[data-close]").addEventListener("click",fechar);
+  function cliqueWhats(){abrirLink(linkWhats("Olá! Quero agendar um horário"+(sel.servico?" para "+sel.servico.nome:"")+"."))}
+  $("agSteps").addEventListener("click",function(e){
+    var b=e.target.closest("[data-ag]");if(!b)return;
+    var a=b.getAttribute("data-ag");
+    $("agErro").textContent="";
+    if(a==="voltar"){
+      if(pilha.length){etapa=pilha.pop();limpar(etapa)}
+    }
+    else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));if(sel.prof){ir("dia")}else{ir("pref")}}
+    else if(a==="tem-pref"){ir("prof")}
+    else if(a==="sem-pref"){sel.qualquer=true;sel.prof=null;sel.dia=null;ir("dia")}
+    else if(a==="prof"){sel.prof=porId(equipe||[],b.getAttribute("data-id"));sel.qualquer=false;sel.dia=null;ir("dia")}
+    else if(a==="dia"){escolherDia(+b.getAttribute("data-i"))}
+    else if(a==="hora"){sel.hora=b.getAttribute("data-v");ir("dados")}
+    else if(a==="whats"){cliqueWhats();return}
+    render();
+  });
+  // Falha ao registrar: o cliente ainda pode falar com a barbearia, sabendo que o pedido não ficou registrado
+  $("agErro").addEventListener("click",function(e){if(e.target.closest("[data-ag='whats']"))cliqueWhats()});
+  $("agEnviar").addEventListener("click",function(){
+    if(enviando)return;
+    var nome=$("agNome")?$("agNome").value.trim():"",obs=$("agObs")?$("agObs").value.trim():"";
+    if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
+    var peloClube=!!($("agClube")&&$("agClube").checked),zap=$("agWhats")?$("agWhats").value.trim():"";
+    var novidades=!!($("agNovidades")&&$("agNovidades").checked),digitos=zap.replace(/\D/g,"");
+    if(peloClube&&digitos.length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
+    if(digitos&&(digitos.length<10||digitos.length>13)){$("agErro").textContent="Confira seu WhatsApp: DDD e número.";return}
+    if(novidades&&!digitos){$("agErro").textContent="Para receber as novidades, informe seu WhatsApp.";return}
+    if(semCadastro){concluir(nome,obs,{});return}
+    var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
+    if(digitos){corpo.whatsapp=zap;corpo.novidades=novidades}
+    if(peloClube){corpo.clube=true;corpo.clubeWhatsapp=zap}
+    var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
+    enviando=true;botao.disabled=true;if(rotulo)rotulo.textContent="Enviando…";
+    // Grava o pedido como pendente e recebe o código; se o horário já foi ocupado, avisa e volta à escolha da hora
+    fetch("/api/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {status:r.status,ok:r.ok,j:j}})}).catch(function(){return {status:0,ok:false,j:{}}}).then(function(res){
+      enviando=false;botao.disabled=false;if(rotulo)rotulo.textContent=original;
+      if(res.status===409){$("agErro").textContent=res.j.message||"Este horário não está mais livre. Escolha outro.";sel.hora=null;cacheHoras={};etapa="dia";render();return}
+      if(!res.ok&&res.j&&res.j.clube){$("agErro").textContent=res.j.message||"Não conseguimos conferir sua assinatura do clube.";return}
+      if(!res.ok){
+        var m=(res.j&&res.j.message)||(res.status===0?"Sem conexão com a internet.":"Não conseguimos registrar seu pedido agora.");
+        $("agErro").innerHTML=esc(m)+" Seu pedido não foi registrado."+(whats()?'<br><button type="button" class="ag-op" data-ag="whats"><b>Falar com a barbearia no WhatsApp</b></button>':"");
+        return;
+      }
+      if(res.j&&res.j.clube){try{localStorage.setItem("bio-clube-"+C.slug,zap)}catch(e){}}
+      guardar("nome",nome);if(digitos)guardar("zap",zap);
+      concluir(nome,obs,res.j||{});
+    });
+  });
+  // Pedido feito: mostra o resumo (com o código, quando registrado) e abre o WhatsApp com a mensagem pronta
+  function concluir(nome,obs,j){
+    var cod=j.codigo||"";
+    var quem=sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
+    var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
+    if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
+    if(j.clube)txt+="\n*Assinante do clube*";
+    ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),clube:!!j.clube,link:linkWhats(txt)};
+    pilha=[];etapa="ok";render();
+    abrirLink(ultimo.link);
+  }
+})()</script>
+<script>(function(){var n=0;function e(t,d){if(n++>3||!navigator.sendBeacon)return;try{navigator.sendBeacon("/api/config",new Blob([JSON.stringify({tipo:"erro",nome:String(t),detalhe:String(d).slice(0,500),rota:location.pathname})],{type:"application/json"}))}catch(x){}}addEventListener("error",function(v){e((v.error&&v.error.name)||"Error",v.message+" @"+v.lineno)});addEventListener("unhandledrejection",function(v){e("Promise",(v.reason&&v.reason.message)||v.reason)})})()</script>
+</body></html>

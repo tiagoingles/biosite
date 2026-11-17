@@ -1995,11 +1995,14 @@ function senhaAcesso(){try{return sessionStorage.getItem("criador_senha")||""}ca
 function ghFill(){const g=ghCfg();$("ghOwner").value=g.owner||"";$("ghRepo").value=g.repo||"biosite";$("ghSenha").value=senhaAcesso();$("ghBase").value=g.base||""}
 function ghReady(){const g=ghCfg();return g.owner&&g.repo&&senhaAcesso()}
 function ghErr(status,j){
+  const m=String((j&&j.message)||"").trim().replace(/\.+$/,"");
+  // Respostas do próprio servidor (api/criador-gh.js: bloqueio de senha, aba antiga, token inválido...) já vêm prontas
+  if([400,413,426,429,500,502].includes(status)&&m) return m+".";
   if(status===403) return "O token guardado na Vercel não tem permissão de escrita. Gere um token com Contents: Read and write e atualize a variável GITHUB_TOKEN.";
   if(status===404) return "Repositório não encontrado. Confira o nome do repositório e o GITHUB_REPO na Vercel.";
   if(status===409) return "O GitHub recusou por conflito. Clique em Publicar de novo.";
-  if(status===422) return "O GitHub recusou os dados: "+(j.message||"dados inválidos")+".";
-  return `Erro do GitHub (${status}): ${j.message||"sem detalhes"}.`;
+  if(status===422) return "O GitHub recusou os dados: "+(m||"dados inválidos")+".";
+  return `Erro do GitHub (${status}): ${m||"sem detalhes"}.`;
 }
 // Todas as chamadas ao GitHub passam pelo servidor (api/criador-gh.js), que guarda o token
 async function gh(path,opt={}){

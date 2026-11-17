@@ -127,3 +127,18 @@ test("corpo inválido não derruba a rota", () => {
   assert.deepEqual(S.corpoDe({ body: '{"a":1}' }), { a: 1 });
   assert.deepEqual(S.corpoDe({}), {});
 });
+
+test("Criador (tela): bloqueio de senha e erros do servidor aparecem como são, sem 'Erro do GitHub' e sem ponto duplo", () => {
+  const fs = require("fs");
+  const vm = require("vm");
+  const html = fs.readFileSync(require("path").join(__dirname, "..", "criador.html"), "utf8").replace(/\r\n/g, "\n");
+  const fonte = (html.match(/function ghErr\(status,j\)\{[\s\S]*?\n\}/) || [])[0];
+  assert.ok(fonte, "ghErr existe no Criador");
+  const ghErr = vm.runInNewContext(`(${fonte})`);
+  assert.equal(ghErr(429, { message: "Muitas tentativas de senha. Espere 15 minutos e tente de novo." }), "Muitas tentativas de senha. Espere 15 minutos e tente de novo.");
+  assert.equal(ghErr(502, { message: "O token do GitHub guardado na Vercel é inválido ou expirou." }), "O token do GitHub guardado na Vercel é inválido ou expirou.");
+  assert.equal(ghErr(500, { message: "Não foi possível concluir agora. Tente de novo em instantes. (código ab12cd34)" }), "Não foi possível concluir agora. Tente de novo em instantes. (código ab12cd34).");
+  assert.equal(ghErr(418, { message: "Bad thing." }), "Erro do GitHub (418): Bad thing.");
+  assert.equal(ghErr(418, {}), "Erro do GitHub (418): sem detalhes.");
+  assert.equal(ghErr(429, {}), "Erro do GitHub (429): sem detalhes.");
+});

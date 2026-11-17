@@ -94,3 +94,43 @@ test("botão de enviar fica escondido fora da etapa de dados (o CSS não pode ve
   const html = G.bioHTML(siteBarbearia(), (u) => u);
   assert.ok(html.includes(".enviar[hidden]{display:none!important}"));
 });
+
+test("serviço sem foto nunca aparece como quadro vazio; com a maioria sem foto, a seção vira lista de preços", () => {
+  const video = [{ tipo: "video", url: "https://x.supabase.co/v.mp4" }];
+  const comServicos = (fotos) => {
+    const servicos = fotos.map((tem, i) => ({ id: "s" + i, nome: "Serviço " + i, duracao: "30 min", preco: "35,00", midia: tem ? video : [] }));
+    const base = siteBarbearia();
+    return G.bioHTML({ ...base, agenda: { ...base.agenda, servicos, profissionais: [{ id: "p1", nome: "Bruno", servicos: servicos.map((s) => s.id), dias: [1, 2, 3] }] } }, (u) => u);
+  };
+  const vazios = (h) => (h.match(/<div class="svc-midia"><\/div>/g) || []).length;
+  const icones = (h) => (h.match(/class="svc-midia svc-vazio"/g) || []).length;
+
+  const todas = comServicos([true, true, true]);
+  assert.equal(icones(todas), 0);
+  assert.ok(!todas.includes("svc-lista compacta"), "todos com foto: grade de fotos");
+
+  const metade = comServicos([true, true, false, false]);
+  assert.equal(vazios(metade), 0, "nenhum quadro vazio");
+  assert.equal(icones(metade), 2, "quem não tem foto ganha o ícone");
+  assert.ok(!metade.includes("svc-lista compacta"), "metade com foto: continua em grade");
+
+  const poucas = comServicos([true, false, false, false, false]);
+  assert.equal(vazios(poucas), 0);
+  assert.ok(poucas.includes('<div class="svc-lista compacta">'), "maioria sem foto: lista de preços");
+  assert.equal((poucas.match(/data-agendar="s\d"/g) || []).length, 5, "todos os serviços continuam clicáveis para agendar");
+  assert.ok(poucas.includes("v.mp4"), "o vídeo que existe continua aparecendo (miniatura)");
+});
+
+test("destaque legível: cor da marca que some no fundo dá lugar à cor do texto", () => {
+  const acento = (cor, fundo, texto) => (G.bioHTML(siteBarbearia({ cor, fundo, texto }), (u) => u).match(/--acento:([^;]+);/) || [])[1];
+  assert.equal(acento("#b08d57", "#121212", "#f2efe9"), "#b08d57", "dourado no fundo escuro continua dourado");
+  assert.equal(acento("#0d0d0d", "#111111", "#f5f5f5"), "#f5f5f5", "preto no preto vira a cor do texto");
+  assert.equal(acento("#ffe14d", "#ffffff", "#111111"), "#111111", "amarelo claro no branco vira a cor do texto");
+  assert.equal(acento("#111111", "#ffffff", "#222222"), "#111111", "preto no branco continua preto");
+});
+
+test("sites publicados não têm quadro de serviço vazio", () => {
+  for (const f of ["gw-barbearia.html", "jm-barbearia.html"]) {
+    assert.ok(!ler(f).includes('<div class="svc-midia"></div>'), f);
+  }
+});

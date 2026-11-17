@@ -402,7 +402,7 @@ test("site gerado tem a seção do clube escondida e o \"Sou assinante\" no agen
   assert.ok(html.includes("Sou assinante do clube"));
   assert.ok(html.includes("corpo.clubeWhatsapp=zap"), "manda o WhatsApp do clube só quando marcado");
   assert.ok(html.includes("*Assinante do clube*"), "mensagem do WhatsApp avisa a barbearia");
-  assert.equal(G.VERSAO, 6);
+  assert.ok(G.VERSAO >= 6, "recurso existe desde o gerador v6");
 });
 
 test("painéis mostram o selo do clube e usam a comissão fixa", () => {

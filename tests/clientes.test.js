@@ -446,7 +446,7 @@ test("telas: aba Clientes nos dois painéis, Cadastrar no atendimento e página 
 });
 
 test("site (gerador v6): WhatsApp opcional, aceite desmarcado e nada disso no site sem cadastro", () => {
-  assert.equal(G.VERSAO, 6);
+  assert.ok(G.VERSAO >= 6, "recurso existe desde o gerador v6");
   const cfg = { modelo: "cartao", nome: "GW", slug: "gw-teste", tipo: "barbearia", whatsapp: "81999999999", cor: "#111111", fundo: "#ffffff", texto: "#111111", fonteTitulo: "Poppins", fonteTexto: "Poppins", agenda: { ativo: true, servicos: [{ id: "s1", nome: "Corte", duracao: "30 min", preco: "40,00" }], profissionais: [{ id: "p1", nome: "Bruno", servicos: ["s1"], dias: [1, 2, 3] }] } };
   const html = G.bioHTML(cfg, (u) => u);
   assert.ok(html.includes("Seu WhatsApp <small>(opcional"));

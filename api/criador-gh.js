@@ -6,7 +6,7 @@
 //   CRIADOR_SENHA  senha que libera o Criador (use 16+ caracteres aleatórios)
 //   GITHUB_TOKEN   token do GitHub com "Contents: Read and write" no repositório
 //   GITHUB_REPO    ex.: tiagoingles/biosite
-const { segredoIgual, bloqueadoPorTentativas, registrarErroDeSenha, corpoDe, falha } = require("../lib/seguranca");
+const { senhaDoCriadorConfere, bloqueadoPorTentativas, registrarErroDeSenha, corpoDe, falha } = require("../lib/seguranca");
 const { VERSAO } = require("../lib/gerador");
 
 const METODOS = ["GET", "POST", "PUT", "PATCH"];
@@ -63,7 +63,7 @@ module.exports = async (req, res) => {
       return res.status(429).json({ message: "Muitas tentativas de senha. Espere 15 minutos e tente de novo." });
     }
     const b = corpoDe(req);
-    if (!segredoIgual(b.senha, process.env.CRIADOR_SENHA)) {
+    if (!senhaDoCriadorConfere(b.senha)) {
       await registrarErroDeSenha(req, "criador");
       await new Promise((r) => setTimeout(r, 800));
       return res.status(401).json({ message: "Senha incorreta." });

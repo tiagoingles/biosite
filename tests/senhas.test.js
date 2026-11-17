@@ -142,3 +142,32 @@ test("Criador (tela): bloqueio de senha e erros do servidor aparecem como são, 
   assert.equal(ghErr(418, {}), "Erro do GitHub (418): sem detalhes.");
   assert.equal(ghErr(429, {}), "Erro do GitHub (429): sem detalhes.");
 });
+
+test("senha do Criador: espaço ou quebra de linha sobrando nas pontas (de quem colou na Vercel ou no campo) não trava o acesso", () => {
+  const antes = process.env.CRIADOR_SENHA;
+  try {
+    process.env.CRIADOR_SENHA = "NovaSenhaDoCriador2026\n";
+    assert.equal(S.senhaDoCriadorConfere("NovaSenhaDoCriador2026"), true, "valor na Vercel com quebra de linha no fim");
+    process.env.CRIADOR_SENHA = "NovaSenhaDoCriador2026";
+    assert.equal(S.senhaDoCriadorConfere("  NovaSenhaDoCriador2026 "), true, "senha colada com espaços nas pontas");
+    assert.equal(S.senhaDoCriadorConfere("NovaSenhaDoCriador202"), false);
+    assert.equal(S.senhaDoCriadorConfere("Nova SenhaDoCriador2026"), false, "espaço no meio continua contando");
+    assert.equal(S.senhaDoCriadorConfere(""), false);
+    assert.equal(S.senhaDoCriadorConfere(undefined), false);
+    for (const vazio of [undefined, "", "   \n"]) {
+      if (vazio === undefined) delete process.env.CRIADOR_SENHA; else process.env.CRIADOR_SENHA = vazio;
+      for (const tentativa of [undefined, "", "undefined", "   "]) assert.equal(S.senhaDoCriadorConfere(tentativa), false, "sem senha configurada nada confere");
+    }
+  } finally {
+    process.env.CRIADOR_SENHA = antes;
+  }
+});
+
+test("Criador e envio de mídia aceitam a senha certa com espaço sobrando", async () => {
+  A.instalarFetch(rotasGithub(0));
+  const r = await A.chamar(criadorGh, { metodo: "POST", corpo: { senha: " " + process.env.CRIADOR_SENHA + "\n", caminho: "", metodo: "GET" }, headers: { "x-real-ip": "198.51.100.9" } });
+  assert.equal(r.statusCode, 200);
+  const m = await A.chamar(midia, { metodo: "POST", corpo: { senha: process.env.CRIADOR_SENHA + " ", slug: "gw-barbearia", servico: "s1", tipo: "image/png", tamanho: 0 }, headers: { "x-real-ip": "198.51.100.9" } });
+  assert.notEqual(m.statusCode, 401, "passou da senha (o tamanho zero é recusado depois)");
+  assert.notEqual(m.statusCode, 429);
+});

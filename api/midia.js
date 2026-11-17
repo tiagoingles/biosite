@@ -4,7 +4,7 @@
 const crypto = require("crypto");
 const { linkDeEnvio, cfg } = require("../lib/supabase");
 const { texto } = require("../lib/agenda");
-const { segredoIgual, bloqueadoPorTentativas, registrarErroDeSenha, corpoDe, falha } = require("../lib/seguranca");
+const { senhaDoCriadorConfere, bloqueadoPorTentativas, registrarErroDeSenha, corpoDe, falha } = require("../lib/seguranca");
 
 const MB = 1024 * 1024;
 const TIPOS = {
@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   try {
     if (await bloqueadoPorTentativas(req, "criador")) return res.status(429).json({ message: "Muitas tentativas de senha. Espere 15 minutos." });
     const b = corpoDe(req);
-    if (!segredoIgual(b.senha, process.env.CRIADOR_SENHA)) {
+    if (!senhaDoCriadorConfere(b.senha)) {
       await registrarErroDeSenha(req, "criador");
       return res.status(401).json({ message: "Senha do Criador incorreta." });
     }

@@ -25,10 +25,12 @@ const RESERVADOS = new Set([
 function slugDeSite(s) {
   return /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/.test(s) && !RESERVADOS.has(s) && !s.startsWith("painel");
 }
-// Arquivos que o Criador pode publicar: a página do site, o atalho de avaliação, as fotos e o acesso ao painel de preços
+// Arquivos que o Criador pode publicar: a página do site, o atalho de avaliação, o manifesto do app (ícone na tela do
+// celular), as fotos e os ícones e o acesso ao painel de preços
 function arquivoDeSite(p) {
   let m;
   if ((m = /^([a-z0-9-]+)\.html$/.exec(p))) return slugDeSite(m[1].replace(/-avaliar$/, ""));
+  if ((m = /^([a-z0-9-]+)\.webmanifest$/.exec(p))) return slugDeSite(m[1]);
   if ((m = /^img\/([a-z0-9-]+)\/[A-Za-z0-9._-]{1,120}$/.exec(p))) return slugDeSite(m[1]);
   if ((m = /^admin\/([a-z0-9-]+)\.json$/.exec(p))) return slugDeSite(m[1]);
   return false;

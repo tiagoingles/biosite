@@ -66,6 +66,8 @@
       p.codigo ? h("span", { texto: "código " + p.codigo }) : null,
       p.chegou_em ? h("span", { class: "chegou", texto: "chegou " + horaBr(p.chegou_em) }) : atraso >= 5 ? h("span", { class: "atrasado", texto: atraso + " min atrasado" }) : null,
       p.sinal_valor ? h("span", { class: p.sinal_status === "pago" ? "chegou" : "atrasado", texto: "sinal " + P.brl(p.sinal_valor) + (p.sinal_status === "pago" ? " pago" : p.sinal_status === "expirado" ? " não pago" : " aguardando") }) : null,
+      // Confirmação de presença pelo celular do cliente (fase 23)
+      p.cliente_resposta === "sim" ? h("span", { class: "chegou", texto: "✓ cliente confirmou" }) : p.cliente_resposta === "nao" ? h("span", { class: "atrasado", texto: "cancelou pelo celular" }) : null,
     ];
     return h("article", { class: classe + (clube ? " do-clube" : ""), dataset: { id: p.id } }, [
       h("div", { class: "hora" }, [h("b", { texto: P.hm(p.horario) }), opcoes.mostrarDia || p.dia !== hoje ? h("small", { texto: P.diaCurto(p.dia) }) : h("small", { texto: P.hm(p.horario_fim) ? "até " + P.hm(p.horario_fim) : "" })]),
@@ -283,6 +285,7 @@
     var dia = h("input", { type: "date", name: "dia", value: p.dia < P.hoje() ? P.hoje() : p.dia, min: P.hoje(), required: true });
     var hora = h("input", { type: "time", name: "hora", value: P.hm(p.horario), step: 300, required: true });
     var dur = h("input", { type: "number", name: "duracao", min: 5, max: 240, step: 5, value: p.duracao_min || 30 });
+    var avisar = h("input", { type: "checkbox", checked: true });
     var prof = ctx.dono && ctx.equipe && ctx.equipe.length > 1
       ? h("select", { name: "prof" }, ctx.equipe.map(function (e) { var o = h("option", { value: e.id, texto: e.nome }); if (e.id === p.profissional_id) o.selected = true; return o; }))
       : null;
@@ -292,16 +295,17 @@
         h("p", { class: "nota", texto: p.servico + " · agora: " + P.dataLonga(p.dia) + " às " + P.hm(p.horario) }),
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Novo dia", dia]), h("label", { class: "campo" }, ["Novo horário", hora])]),
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Duração (min)", dur]), prof ? h("label", { class: "campo" }, ["Barbeiro", prof]) : null]),
+        h("label", { class: "check-linha" }, [avisar, "Avisar o cliente no celular (se ele ligou os avisos da barbearia)"]),
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Remarcar", classe: "principal", valor: "ok" }],
       validar: function () { return !dia.value || !hora.value ? "Escolha o dia e o horário." : ""; },
     }).then(function (r) {
       if (r.valor !== "ok") return;
-      var corpo = { acao: "remarcar", id: p.id, dia: dia.value, horario: hora.value, duracao: Number(dur.value) || p.duracao_min || 30 };
+      var corpo = { acao: "remarcar", id: p.id, dia: dia.value, horario: hora.value, duracao: Number(dur.value) || p.duracao_min || 30, avisar: avisar.checked };
       if (prof) corpo.profissionalId = prof.value;
       P.api("/api/pedido", { corpo: corpo })
         .then(function (res) {
-          P.toast("Remarcado para " + P.dataLonga(dia.value) + " às " + hora.value + ".", "ok");
+          P.toast("Remarcado para " + P.dataLonga(dia.value) + " às " + hora.value + "." + (res.avisados ? " Cliente avisado no celular." : ""), "ok");
           ctx.recarregar();
           return oferecerWhats("remarcado", Object.assign({}, p, res.pedido || {}, { dia: dia.value, horario: hora.value }), ctx, "Remarcado");
         })

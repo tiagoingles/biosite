@@ -1,0 +1,47 @@
+{
+  "id": "/barbearia-modelo",
+  "name": "Barbearia Modelo",
+  "short_name": "Modelo",
+  "description": "Barbearia de demonstração do Bio Site: agende à vontade, aqui tudo é de teste.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/barbearia-modelo?app=1",
+  "scope": "/barbearia-modelo",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#b08d57",
+  "icons": [
+    {
+      "src": "/img/barbearia-modelo/icone-192-1xr3c5a.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/barbearia-modelo/icone-512-12tz2es.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/barbearia-modelo/icone-512-12tz2es.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agendar horário",
+      "short_name": "Agendar",
+      "url": "/barbearia-modelo?agendar=1",
+      "icons": [
+        {
+          "src": "/img/barbearia-modelo/icone-192-1xr3c5a.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

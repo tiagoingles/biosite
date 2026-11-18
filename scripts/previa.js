@@ -11,13 +11,15 @@ const AUTO = require("../lib/automacoes");
 
 const PORTA = Number(process.argv[2] || 4321);
 const RAIZ = path.join(__dirname, "..");
-const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".jpg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml" };
+const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".jpg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
 
 const hoje = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
 const somaDias = (iso, n) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 let papel = "dono";
 let googleAtivo = false; // como em produção: login com Google desligado no Supabase (/__google?ativo=1 liga)
 let seq = 1;
+// Confirmação de presença da prévia (/barbearia-modelo?confirmar=<id>.<assinatura>)
+const presencaPrev = { status: "confirmado", resposta: "" };
 const P = (extra) => ({ id: "p" + seq++, codigo: "K" + (100 + seq), servico: "Corte degradê", profissional: "Bruno", profissional_id: "b1", dia: hoje, horario: "10:00", horario_fim: "10:40", duracao_min: 40, cliente: "Carlos Souza", observacao: "", status: "confirmado", motivo: null, valor: 40, comissao_pct: null, simulado: false, ...extra });
 let pedidos = [
   P({ horario: "09:00", horario_fim: "09:30", duracao_min: 30, servico: "Corte social", cliente: "João Pedro", status: "realizado", valor: 35, comissao_pct: 40 }),
@@ -285,6 +287,15 @@ const servidor = http.createServer(async (req, res) => {
     const metodo = req.method;
     const b = metodo === "GET" ? {} : await corpoDe(req);
     if (u.pathname === "/api/config") {
+      // App do cliente (fase 23): avisos ligados e confirmação de presença
+      if (metodo === "POST" && b.tipo === "lembrete-cliente") return json(res, 201, { ok: true, ligadoAoPedido: !!b.codigo });
+      if (metodo === "GET" && q.presenca) return /^[0-9a-f-]{36}\.[A-Za-z0-9_-]{16}$/i.test(q.presenca) ? json(res, 200, { barbearia: "Barbearia Modelo", servico: "Corte + barba", profissional: "Rafael", dia: hoje, horario: "15:00", hoje, status: presencaPrev.status, resposta: presencaPrev.resposta, passou: false }) : json(res, 404, { message: "Link inválido. Fale com a barbearia pelo WhatsApp." });
+      if (metodo === "POST" && b.tipo === "presenca") {
+        if (presencaPrev.status === "cancelado") return json(res, 409, { message: "Este horário já foi cancelado.", status: "cancelado" });
+        presencaPrev.resposta = b.resposta;
+        if (b.resposta === "nao") presencaPrev.status = "cancelado";
+        return json(res, 200, { ok: true, status: presencaPrev.status, resposta: b.resposta });
+      }
       if (metodo === "POST" && b.tipo === "lead") {
         if (String(b.nome || "").trim().length < 2 || String(b.whatsapp || "").replace(/[^0-9]/g, "").length < 10) return json(res, 400, { message: "Informe o seu nome e o WhatsApp com DDD." });
         leads.unshift({ id: "00000000-0000-4000-8000-" + String(100000000000 + seq++), criado_em: new Date().toISOString(), nome: b.nome, barbearia: b.barbearia, cidade: b.cidade || "", whatsapp: String(b.whatsapp).replace(/[^0-9]/g, ""), barbeiros: b.barbeiros || "", plano: b.plano || "", pagina: b.pagina || "", status: "novo" });

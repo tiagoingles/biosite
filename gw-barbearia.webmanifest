@@ -1,0 +1,47 @@
+{
+  "id": "/gw-barbearia",
+  "name": "GW Barbearia",
+  "short_name": "GW Barbearia",
+  "description": "Barbearia em Abreu e Lima - PE",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/gw-barbearia?app=1",
+  "scope": "/gw-barbearia",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#b08d57",
+  "icons": [
+    {
+      "src": "/img/gw-barbearia/icone-192-1j5syy1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/gw-barbearia/icone-512-cs0tis.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/gw-barbearia/icone-512-cs0tis.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agendar horário",
+      "short_name": "Agendar",
+      "url": "/gw-barbearia?agendar=1",
+      "icons": [
+        {
+          "src": "/img/gw-barbearia/icone-192-1j5syy1.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

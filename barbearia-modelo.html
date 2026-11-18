@@ -6,6 +6,12 @@
 <meta property="og:title" content="Barbearia Modelo | Recife - PE">
 <meta property="og:description" content="Barbearia de demonstração do Bio Site: agende à vontade, aqui tudo é de teste.">
 <meta name="theme-color" content="#b08d57">
+<link rel="manifest" href="/barbearia-modelo.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/img/barbearia-modelo/icone-192-1xr3c5a.png">
+<link rel="apple-touch-icon" href="/img/barbearia-modelo/icone-180-1unsslo.png">
+<meta name="apple-mobile-web-app-title" content="Modelo">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=DM+Sans:wght@400;600;700&display=swap">
 <script defer src="/_vercel/speed-insights/script.js"></script>
@@ -230,8 +236,34 @@ a.ag-op{text-decoration:none}
 .campos .check input[type=checkbox]{width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--acento)}
 .campos .check small{display:block;opacity:.7;font-size:12px}
 @media (min-width:640px){.planos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* App na tela do celular (v12) e confirmação de presença */
+.app-rodape{text-align:center;margin:20px 0 0}
+.app-rodape [hidden]{display:none}
+.app-link{display:inline-flex;align-items:center;gap:8px;background:var(--suave);border:1px solid var(--linha);color:inherit;border-radius:999px;padding:10px 16px;font:600 13px var(--fb);cursor:pointer}
+.app-link svg{width:17px;height:17px}
+.app-faixa{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:30;max-width:536px;margin:0 auto;display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:12px;row-gap:10px;align-items:center;padding:14px;border-radius:18px;background:var(--fundo);color:var(--texto);border:1px solid var(--linha);box-shadow:0 18px 40px -12px rgba(0,0,0,.55);animation:cartSobe .5s var(--ease) both}
+.app-faixa.app-avisos{top:calc(12px + env(safe-area-inset-top,0px));bottom:auto}
+body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+.app-faixa img{width:44px;height:44px;border-radius:11px}
+.app-faixa .t{line-height:1.3}
+.app-faixa .t b{display:block;font-size:15px}
+.app-faixa .t small{display:block;font-size:12.5px;opacity:.75}
+.app-faixa .bts{grid-column:2;display:flex;align-items:center;gap:6px}
+.app-faixa .sim{background:var(--acento);color:var(--sobre-acento);border:0;border-radius:999px;padding:9px 16px;font:700 13px var(--fb);cursor:pointer}
+.app-faixa .nao{background:none;border:0;color:inherit;opacity:.7;font:600 13px var(--fb);padding:9px 8px;cursor:pointer}
+.app-icone{display:flex;align-items:center;gap:12px}
+.app-icone img{width:56px;height:56px;border-radius:14px;flex:none}
+.app-icone b{display:block;font-size:16px}.app-icone small{opacity:.7;font-size:13px}
+.app-passos{margin:0;padding:0;list-style:none;display:grid;gap:14px;counter-reset:passo}
+.app-passos li{display:flex;gap:12px;align-items:flex-start;counter-increment:passo;line-height:1.45}
+.app-passos li::before{content:counter(passo);flex:none;width:28px;height:28px;border-radius:50%;background:var(--acento);color:var(--sobre-acento);display:grid;place-items:center;font-weight:700;font-size:14px}
+.app-passos svg{width:18px;height:18px;vertical-align:-3px}
+.ag-op.destaque{background:var(--acento);color:var(--sobre-acento);border-color:transparent}
+.ag-op.destaque small{opacity:.85}
+.ag-op.perigo{border-color:#c0392b;color:#c0392b}
+.ag-ok{font-weight:600;margin:0}
 </style>
-<script type="application/json" id="bio-config">{"modelo":"vitrine","tipo":"barbearia","nome":"Barbearia Modelo","cidade":"Recife - PE","descricao":"Barbearia de demonstração do Bio Site: agende à vontade, aqui tudo é de teste.","whatsapp":"5581997977699","whatsMsg":"Olá! Vim pelo site da Barbearia Modelo (demonstração do Bio Site).","instagram":"","review":"","endereco":"Rua da Demonstração, 100 - Boa Viagem, Recife - PE","maps":"","horario":"Seg a Sex: 9h às 19h\nSáb: 9h às 17h\nDom: fechado","logo":"/img/barbearia-modelo/logo.svg","capa":"/img/barbearia-modelo/capa.svg","nota":"","totalAval":"","mostrarNota":false,"extras":[],"catalogoTitulo":"Produtos","categorias":["Cabelo","Barba"],"produtos":[{"id":"mp1","nome":"Pomada modeladora 120 g","preco":"35,00","cat":"Cabelo","desc":"Efeito seco, fixação média.","foto":"","esgotado":false},{"id":"mp2","nome":"Shampoo para barba 200 ml","preco":"30,00","cat":"Barba","desc":"Limpa sem ressecar.","foto":"","esgotado":false},{"id":"mp3","nome":"Óleo para barba 30 ml","preco":"45,00","cat":"Barba","desc":"Hidrata e perfuma.","foto":"","esgotado":false},{"id":"mp4","nome":"Balm pós-barba","preco":"40,00","cat":"Barba","desc":"Acalma a pele depois da navalha.","foto":"","esgotado":true}],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o Rafael"},"cor":"#b08d57","fundo":"#121212","texto":"#f2efe9","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"barbearia-modelo","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"m-corte","nome":"Corte","duracao":"30 min","preco":"40,00","midia":[]},{"id":"m-degrade","nome":"Corte degradê","duracao":"40 min","preco":"45,00","midia":[]},{"id":"m-barba","nome":"Barba","duracao":"30 min","preco":"30,00","midia":[]},{"id":"m-combo","nome":"Corte + barba","duracao":"60 min","preco":"65,00","midia":[]},{"id":"m-sobrancelha","nome":"Sobrancelha","duracao":"10 min","preco":"15,00","midia":[]},{"id":"m-pigmentacao","nome":"Pigmentação","duracao":"30 min","preco":"35,00","midia":[]},{"id":"m-protese-aplicacao","nome":"Prótese capilar (aplicação)","duracao":"120 min","preco":"350,00","midia":[],"protese":true},{"id":"m-protese-manutencao","nome":"Prótese capilar (manutenção)","duracao":"60 min","preco":"120,00","midia":[],"protese":true}],"profissionais":[{"id":"m-carlos","nome":"Carlos","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao","m-protese-aplicacao","m-protese-manutencao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"m-rafael","nome":"Rafael","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao","m-protese-aplicacao","m-protese-manutencao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"m-lucas","nome":"Lucas","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"}]}}</script>
+<script type="application/json" id="bio-config">{"modelo":"vitrine","tipo":"barbearia","nome":"Barbearia Modelo","cidade":"Recife - PE","descricao":"Barbearia de demonstração do Bio Site: agende à vontade, aqui tudo é de teste.","whatsapp":"5581997977699","whatsMsg":"Olá! Vim pelo site da Barbearia Modelo (demonstração do Bio Site).","instagram":"","review":"","endereco":"Rua da Demonstração, 100 - Boa Viagem, Recife - PE","maps":"","horario":"Seg a Sex: 9h às 19h\nSáb: 9h às 17h\nDom: fechado","logo":"/img/barbearia-modelo/logo.svg","capa":"/img/barbearia-modelo/capa.svg","nota":"","totalAval":"","mostrarNota":false,"extras":[],"catalogoTitulo":"Produtos","categorias":["Cabelo","Barba"],"produtos":[{"id":"mp1","nome":"Pomada modeladora 120 g","preco":"35,00","cat":"Cabelo","desc":"Efeito seco, fixação média.","foto":"","esgotado":false},{"id":"mp2","nome":"Shampoo para barba 200 ml","preco":"30,00","cat":"Barba","desc":"Limpa sem ressecar.","foto":"","esgotado":false},{"id":"mp3","nome":"Óleo para barba 30 ml","preco":"45,00","cat":"Barba","desc":"Hidrata e perfuma.","foto":"","esgotado":false},{"id":"mp4","nome":"Balm pós-barba","preco":"40,00","cat":"Barba","desc":"Acalma a pele depois da navalha.","foto":"","esgotado":true}],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o Rafael"},"cor":"#b08d57","fundo":"#121212","texto":"#f2efe9","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"barbearia-modelo","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"m-corte","nome":"Corte","duracao":"30 min","preco":"40,00","midia":[]},{"id":"m-degrade","nome":"Corte degradê","duracao":"40 min","preco":"45,00","midia":[]},{"id":"m-barba","nome":"Barba","duracao":"30 min","preco":"30,00","midia":[]},{"id":"m-combo","nome":"Corte + barba","duracao":"60 min","preco":"65,00","midia":[]},{"id":"m-sobrancelha","nome":"Sobrancelha","duracao":"10 min","preco":"15,00","midia":[]},{"id":"m-pigmentacao","nome":"Pigmentação","duracao":"30 min","preco":"35,00","midia":[]},{"id":"m-protese-aplicacao","nome":"Prótese capilar (aplicação)","duracao":"120 min","preco":"350,00","midia":[],"protese":true},{"id":"m-protese-manutencao","nome":"Prótese capilar (manutenção)","duracao":"60 min","preco":"120,00","midia":[],"protese":true}],"profissionais":[{"id":"m-carlos","nome":"Carlos","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao","m-protese-aplicacao","m-protese-manutencao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"m-rafael","nome":"Rafael","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao","m-protese-aplicacao","m-protese-manutencao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"m-lucas","nome":"Lucas","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"}]},"icones":{"i180":"/img/barbearia-modelo/icone-180-1unsslo.png","i192":"/img/barbearia-modelo/icone-192-1xr3c5a.png","i512":"/img/barbearia-modelo/icone-512-12tz2es.png"}}</script>
 </head>
 <body class="t-vitrine"><div class="pg">
 <div class="capa" style="background-image:url('/img/barbearia-modelo/capa.svg')"></div>
@@ -251,10 +283,124 @@ a.ag-op{text-decoration:none}
 
 
 <section class="bloco infos"><details class="info"><summary>Horário de funcionamento</summary><p>Seg a Sex: 9h às 19h<br>Sáb: 9h às 17h<br>Dom: fechado</p></details><p class="end"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 7 12 7 12s7-6.9 7-12a7 7 0 0 0-7-7zm0 4.3a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z"/></svg><span>Rua da Demonstração, 100 - Boa Viagem, Recife - PE</span></p></section>
+<p class="app-rodape"><button type="button" class="app-link" id="appInstalar" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5h8A1.5 1.5 0 0 1 17.5 4v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5zM10.5 18.5h3"/></svg><span>Colocar na tela do celular</span></button></p>
 <footer>Barbearia Modelo · Recife - PE</footer>
 </div>
 
 <dialog id="agenda" aria-labelledby="agTitulo"><div class="sheet"><div class="sh-top"><h2 id="agTitulo">Agendar</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div><div id="agSteps" class="ag-steps"></div><p class="erro" id="agErro" role="alert"></p><button type="button" class="enviar" id="agEnviar" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3zm0 1.8a7.2 7.2 0 1 1-3.7 13.4l-.3-.2-2.5.7.7-2.4-.2-.3A7.2 7.2 0 0 1 12 4.8zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.1.8 2.6.7 3 .6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.3-1.6-.8c-.2-.1-.4-.1-.6.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4z"/></svg><span>Enviar pedido pelo WhatsApp</span></button></div></dialog>
+<script>(function appRuntime(){
+  var C=JSON.parse(document.getElementById("bio-config").textContent);
+  if(!C.slug||!C.icones||!C.icones.i192)return;
+  var chave="bio-app-"+C.slug,DIA=864e5;
+  function ler(){try{return JSON.parse(localStorage.getItem(chave)||"{}")||{}}catch(e){return {}}}
+  function gravar(o){try{localStorage.setItem(chave,JSON.stringify(Object.assign(ler(),o)))}catch(e){}}
+  function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  var ua=navigator.userAgent||"";
+  var ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  var android=/Android/i.test(ua);
+  // Navegador de dentro do Instagram, Facebook, TikTok...: não instala; o cliente abre no navegador primeiro
+  var dentroDeApp=/Instagram|FBAN|FBAV|FB_IAB|FBIOS|Line\/|TikTok|musical_ly|Snapchat|Twitter/i.test(ua);
+  var celular=ios||android||!!(window.matchMedia&&matchMedia("(pointer:coarse)").matches&&screen.width<900);
+  var instalado=!!((window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true);
+  var nome=C.nome||"barbearia",evento=null,faixa=null,timer=null;
+
+  // Android (Chrome, Samsung): o navegador avisa que dá para instalar; o botão "Instalar" usa esse aviso
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();evento=e;mostrarLink();agendarFaixa(Math.max(1500,5000-(window.performance&&performance.now?performance.now():0)))});
+  window.addEventListener("appinstalled",function(){gravar({instalado:Date.now()});evento=null;fecharFaixa();mostrarLink()});
+
+  function podeInstalar(){return !instalado&&!ler().instalado&&(!!evento||celular)}
+  function mostrarLink(){var b=document.getElementById("appInstalar");if(b)b.hidden=!podeInstalar()}
+  function instalar(){
+    if(evento){
+      var e=evento;evento=null;fecharFaixa();
+      try{e.prompt();(e.userChoice||Promise.resolve({})).then(function(r){if(r&&r.outcome==="accepted")gravar({instalado:Date.now()});mostrarLink()})}catch(x){comoColocar()}
+      return;
+    }
+    comoColocar();
+  }
+  var ICO_COMP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3.5M7.5 8L12 3.5 16.5 8M5 12.5v6A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-6"/></svg>';
+  function comoColocar(){
+    fecharFaixa();
+    var passos;
+    if(dentroDeApp)passos=["Toque no menu <b>⋯</b> no canto da tela.","Escolha <b>Abrir no navegador</b> (Safari ou Chrome).","No navegador, toque em <b>Colocar na tela do celular</b>, no fim da página."];
+    else if(ios)passos=["Toque em <b>Compartilhar</b> "+ICO_COMP+" (no Safari fica na barra de baixo ou no menu <b>⋯</b>).","Role a lista e toque em <b>Adicionar à Tela de Início</b>.","Toque em <b>Adicionar</b>. Pronto: o ícone da "+esc(nome)+" fica na tela do seu iPhone."];
+    else passos=["Toque no menu <b>⋮</b> do navegador (no canto de cima).","Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.","Confirme. Pronto: o ícone da "+esc(nome)+" fica na tela do celular."];
+    var d=document.getElementById("appComo");
+    if(!d){
+      d=document.createElement("dialog");d.id="appComo";d.setAttribute("aria-labelledby","appComoT");document.body.appendChild(d);
+      d.addEventListener("click",function(e){if(e.target===d||e.target.closest("[data-close]")){if(d.close)d.close();else d.removeAttribute("open")}});
+    }
+    d.innerHTML='<div class="sheet"><div class="sh-top"><h2 id="appComoT">Colocar na tela do celular</h2><button type="button" class="x" data-close aria-label="Fechar">×</button></div><div class="app-icone"><img src="'+esc(C.icones.i192)+'" alt=""><div><b>'+esc(nome)+'</b><small>Abre como um app, direto no agendamento</small></div></div><ol class="app-passos">'+passos.map(function(p){return "<li><span>"+p+"</span></li>"}).join("")+'</ol></div>';
+    if(d.showModal){if(!d.open)d.showModal()}else d.setAttribute("open","");
+  }
+
+  // Faixa no pé da tela: aparece sozinha (volta 14 dias depois de "Agora não") e nunca por cima de uma janela aberta
+  function dispensada(){var x=ler();return !!x.instalado||!!(x.dispensada&&Date.now()-x.dispensada<14*DIA)}
+  function agendarFaixa(ms){
+    if(instalado||!celular||dentroDeApp||dispensada()||faixa||timer)return;
+    if(!evento&&!ios)return;
+    timer=setTimeout(function tenta(){timer=null;if(document.querySelector("dialog[open]")){timer=setTimeout(tenta,4000);return}mostrarFaixa()},ms);
+  }
+  function mostrarFaixa(){
+    if(faixa||instalado||dispensada())return;
+    faixa=document.createElement("div");faixa.className="app-faixa";faixa.setAttribute("role","region");faixa.setAttribute("aria-label","Colocar na tela do celular");
+    faixa.innerHTML='<img src="'+esc(C.icones.i192)+'" alt=""><div class="t"><b>Tenha a '+esc(nome)+' no celular</b><small>Agende mais rápido e receba os lembretes</small></div><div class="bts"><button type="button" class="sim">'+(evento?"Instalar":"Como colocar")+'</button><button type="button" class="nao">Agora não</button></div>';
+    faixa.querySelector(".sim").onclick=instalar;
+    faixa.querySelector(".nao").onclick=function(){gravar({dispensada:Date.now()});fecharFaixa()};
+    document.body.appendChild(faixa);
+  }
+  function fecharFaixa(){if(faixa){faixa.remove();faixa=null}}
+
+  // Avisos no celular (Web Push). No iPhone, só funcionam com o site aberto pelo ícone da tela de início.
+  function suportado(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window}
+  function permissao(){try{return Notification.permission}catch(e){return "denied"}}
+  function bytesDe(b64u){var s=(b64u+"=".repeat((4-(b64u.length%4))%4)).replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0)})}
+  function inscricao(pedir){
+    return Promise.resolve(pedir?Notification.requestPermission():permissao()).then(function(r){
+      if(r!=="granted")throw new Error("permissao");
+      return fetch("/api/config").then(function(x){return x.json()});
+    }).then(function(c){
+      if(!c.vapidPublic)throw new Error("config");
+      return navigator.serviceWorker.register("/sw.js").then(function(reg){return navigator.serviceWorker.ready.then(function(){return reg.pushManager.getSubscription().then(function(a){return a||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytesDe(c.vapidPublic)})})})});
+    });
+  }
+  // o: { pedir (mostra a pergunta do navegador), codigo (pedido recém-feito), novidades (aceite) }
+  function ligar(o){
+    o=o||{};
+    return inscricao(!!o.pedir).then(function(sub){
+      var corpo={tipo:"lembrete-cliente",slug:C.slug,subscription:sub.toJSON(),app:true};
+      if(o.codigo)corpo.codigo=o.codigo;
+      if(o.novidades)corpo.novidades=true;
+      return fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){if(!r.ok)throw new Error("api");gravar({avisos:Date.now()});return true});
+    });
+  }
+  window.BioApp={podeInstalar:podeInstalar,instalar:instalar,instalado:function(){return instalado},avisos:{suportado:suportado,permissao:permissao,ligar:ligar}};
+
+  // Aberto pelo ícone: pede os avisos uma vez (volta em 30 dias se recusar); quem já ligou só renova o vínculo
+  function cartaoAvisos(){
+    if(document.querySelector("dialog[open]")){setTimeout(cartaoAvisos,4000);return}
+    var c=document.createElement("div");c.className="app-faixa app-avisos";c.setAttribute("role","region");c.setAttribute("aria-label","Avisos no celular");
+    c.innerHTML='<img src="'+esc(C.icones.i192)+'" alt=""><div class="t"><b>Ative os avisos</b><small>Lembrete e confirmação do seu horário e novidades da '+esc(nome)+'</small></div><div class="bts"><button type="button" class="sim">Ativar avisos</button><button type="button" class="nao">Agora não</button></div>';
+    var sim=c.querySelector(".sim"),t=c.querySelector(".t"),bts=c.querySelector(".bts");
+    sim.onclick=function(){
+      sim.disabled=true;sim.textContent="…";
+      ligar({pedir:true,novidades:true}).then(function(){t.innerHTML="<b>Avisos ligados ✓</b><small>Você recebe o lembrete dos seus horários</small>";bts.remove();setTimeout(function(){c.remove()},3500)})
+      .catch(function(e){gravar({avisosNao:Date.now()});t.innerHTML=e&&e.message==="permissao"?"<b>Avisos bloqueados</b><small>Libere as notificações nas configurações do celular</small>":"<b>Não deu para ligar agora</b><small>Tente de novo mais tarde</small>";bts.remove();setTimeout(function(){c.remove()},5000)});
+    };
+    c.querySelector(".nao").onclick=function(){gravar({avisosNao:Date.now()});c.remove()};
+    document.body.appendChild(c);
+  }
+  if(instalado&&suportado()){
+    var x=ler();
+    if(permissao()==="granted"){if(!x.avisos||Date.now()-x.avisos>7*DIA)ligar({}).catch(function(){})}
+    // Só barbearia com cadastro no sistema manda avisos (site sem cadastro ou catálogo: não pergunta)
+    else if(permissao()==="default"&&!(x.avisosNao&&Date.now()-x.avisosNao<30*DIA))fetch("/api/profissionais?slug="+encodeURIComponent(C.slug)).then(function(r){if(r.ok)setTimeout(cartaoAvisos,1500)}).catch(function(){});
+  }
+
+  mostrarLink();
+  var b=document.getElementById("appInstalar");if(b)b.addEventListener("click",instalar);
+  if(ios)agendarFaixa(6000);
+})()</script>
 
 <script>(function agendaRuntime(){
   var C=JSON.parse(document.getElementById("bio-config").textContent);
@@ -270,7 +416,7 @@ a.ag-op{text-decoration:none}
   var MSG_PADRAO="Olá! Quero agendar:\n*{servico}*\nCom: {profissional}\nDia: {dia} às {horario}\nNome: {nome}{obs}";
   // Etapas: servico -> pref (tem preferência de barbeiro?) -> prof (só se sim) -> dia -> dados -> ok
   var etapa="servico",pilha=[],sel={},dias=[],enviando=false,ultimo=null;
-  var equipe=null,cacheHoras={},cacheDias={};
+  var equipe=null,cacheHoras={},cacheDias={},pres=null;
   // Planos do clube de assinatura (vêm da API junto com a equipe; null quando a barbearia não tem clube)
   var clube=null;
   // Barbearia sem cadastro no sistema (só o site): o pedido vai direto pelo WhatsApp, sem registro
@@ -416,6 +562,9 @@ a.ag-op{text-decoration:none}
       var blocoClube=doClube===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(doClube?" checked":"")+'><span>Sou assinante do clube <small>(com o WhatsApp cadastrado no clube)</small></span></label>';
       var blocoNovidades=semCadastro?"":'<label class="check"><input type="checkbox" id="agNovidades"><span>Quero receber promoções e novidades da '+esc(C.nome)+' pelo WhatsApp</span></label>';
       h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80" value="'+esc(salvo("nome"))+'"></label>'+blocoZap+blocoClube+blocoNovidades+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
+    }else if(etapa==="presenca"){
+      titulo=pres&&pres.dados&&pres.dados.resposta==="sim"&&pres.dados.status!=="cancelado"?"Presença confirmada":"Seu horário";
+      h+=htmlPresenca();
     }else{
       // Barbearia com confirmação automática: o horário já está garantido e o WhatsApp é só para falar com ela
       titulo=ultimo.sinal?"Falta o sinal":ultimo.confirmado?"Horário confirmado":"Pedido enviado";
@@ -435,7 +584,7 @@ a.ag-op{text-decoration:none}
         h+='<p class="note">A barbearia confirma pelo WhatsApp. Se o WhatsApp não abriu sozinho, toque abaixo.</p>';
         h+='<a class="ag-op" href="'+esc(ultimo.link)+'" target="_blank" rel="noopener"><b>Abrir o WhatsApp</b><small>Enviar a mensagem com o pedido</small></a>';
       }
-      if(ultimo.codigo&&podeLembrar())h+='<button type="button" class="ag-op" data-ag="lembrete"><b>Lembrete no celular</b><small>Aviso 30 min antes do horário</small></button>';
+      h+=blocoAvisos();
       if(cal)h+='<a class="ag-op" href="'+cal+'" download="agendamento.ics"><b>Salvar na agenda do celular</b><small>Com lembrete 1 hora antes</small></a>';
     }
     $("agTitulo").textContent=titulo;
@@ -468,7 +617,9 @@ a.ag-op{text-decoration:none}
   document.addEventListener("click",function(e){var c=e.target.closest("[data-agendar]");if(c)abrirServico(c.getAttribute("data-agendar"))});
   document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
   // Link pessoal do barbeiro (/slug?barbeiro=id): o site já abre o agendamento com ele escolhido
-  function abrirDoLink(){var id="";try{id=new URLSearchParams(location.search).get("barbeiro")||""}catch(e){}if(id&&porId(equipe||[],id))abrirBarbeiro(id)}
+  // Atalho "Agendar horário" do ícone (/slug?agendar=1): o site já abre o agendamento
+  function abrirDoLink(){var id="",ag="";try{var q=new URLSearchParams(location.search);id=q.get("barbeiro")||"";ag=q.get("agendar")||""}catch(e){}if(id&&porId(equipe||[],id))abrirBarbeiro(id);else if(ag&&!dlg.open)abrir()}
+  abrirPresenca();
   carregarEquipe(function(){desenharBarbeiros();desenharClube();if(dlg.open)render();else abrirDoLink()});
   // "Quero assinar": abre o WhatsApp da barbearia com o plano escolhido
   document.addEventListener("click",function(e){var c=e.target.closest("[data-plano]");if(!c)return;var pl=porId(clube||[],c.getAttribute("data-plano"));if(pl)abrirLink(linkWhats("Olá! Quero assinar o plano "+pl.nome+" do clube ("+brl(Number(pl.preco))+" por mês). Como faço?"))});
@@ -488,6 +639,73 @@ a.ag-op{text-decoration:none}
     function ok(){b.innerHTML="<b>Código copiado ✓</b><small>Abra o app do banco e escolha Pix copia e cola</small>"}
     if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(cod).then(ok).catch(function(){window.prompt("Copie o código Pix:",cod)});
     else window.prompt("Copie o código Pix:",cod);
+  }
+  // Avisos no celular (o "app" da barbearia, gerador v12): lembrete, confirmação e mudança de horário, e as
+  // novidades com o aceite. Quem já ligou os avisos neste celular não toca em nada: o pedido novo já fica ligado.
+  function blocoAvisos(){
+    var A=window.BioApp,h="";
+    if(ultimo.codigo&&A&&A.avisos.suportado()){
+      var perm=A.avisos.permissao();
+      if(perm==="granted"){if(ultimo.avisos!=="erro")h+='<p class="note ag-ok">'+(ultimo.avisos==="ok"?"✓ Avisos ligados neste celular: lembrete e confirmação do horário.":"Ligando os avisos deste celular…")+'</p>'}
+      else if(perm==="default")h+='<button type="button" class="ag-op" data-ag="avisos"><b>Receber avisos no celular</b><small>Lembrete e confirmação do horário e novidades da '+esc(C.nome)+'</small></button>';
+    }else if(ultimo.codigo&&!A&&podeLembrar())h+='<button type="button" class="ag-op" data-ag="lembrete"><b>Lembrete no celular</b><small>Aviso 30 min antes do horário</small></button>';
+    if(A&&A.podeInstalar())h+='<button type="button" class="ag-op" data-ag="instalar"><b>Colocar na tela do celular</b><small>Abra a '+esc(C.nome)+' como app e agende em 2 toques</small></button>';
+    return h;
+  }
+  function ligarAvisosAqui(b){
+    b.disabled=true;b.innerHTML="<b>Ligando os avisos…</b>";
+    window.BioApp.avisos.ligar({codigo:ultimo.codigo,pedir:true,novidades:true}).then(function(){ultimo.avisos="ok";render()})
+    .catch(function(e){b.disabled=false;b.innerHTML=e&&e.message==="permissao"?"<b>Avisos bloqueados</b><small>Libere as notificações deste site nas configurações do navegador</small>":"<b>Não deu para ligar os avisos</b><small>Use \"Salvar na agenda do celular\"</small>"});
+  }
+  // Confirmação de presença: o aviso "Confirme seu horário" (ou "Seu horário mudou") abre /slug?confirmar=TOKEN
+  function quandoTxt(dia,hoje){
+    if(dia===hoje)return "Hoje";
+    var a=new Date(hoje+"T12:00:00");a.setDate(a.getDate()+1);
+    if(dia===isoDe(a))return "Amanhã";
+    var d=new Date(dia+"T12:00:00");return DIAS[d.getDay()]+" "+pad(d.getDate())+"/"+pad(d.getMonth()+1);
+  }
+  function htmlPresenca(){
+    if(!pres)return "";
+    if(!pres.dados&&!pres.erro)return '<p class="note">Carregando seu horário…</p>';
+    if(pres.erro)return '<p class="note">'+esc(pres.erro)+'</p>'+botaoWhats();
+    var d=pres.dados,h='<p class="cobertura"><b>'+esc(d.servico)+'</b>'+(d.profissional?' com '+esc(d.profissional):'')+'<br>'+esc(quandoTxt(d.dia,d.hoje))+' às '+esc(d.horario)+'</p>';
+    if(d.status==="cancelado")return h+'<p class="note">'+(pres.feito==="nao"?"Horário cancelado. A barbearia já foi avisada.":"Este horário foi cancelado.")+'</p><button type="button" class="ag-op" data-ag="novo"><b>Agendar outro horário</b><small>Escolha o serviço, o dia e a hora</small></button>';
+    if(["pendente","confirmado","avulso"].indexOf(d.status)<0)return h+'<p class="note">Este horário não está mais ativo.</p>'+botaoWhats();
+    if(d.passou)return h+'<p class="note">O horário já passou.</p>'+botaoWhats();
+    if(pres.querCancelar)return h+'<p class="note">Cancelar seu horário? A barbearia é avisada e o horário fica livre para outra pessoa.</p><button type="button" class="ag-op perigo" data-ag="pres-nao-ok"><b>Sim, cancelar o horário</b></button><button type="button" class="ag-op" data-ag="pres-voltar"><b>Voltar</b></button>';
+    if(d.resposta==="sim")h+='<p class="note ag-ok">✓ Presença confirmada. Até lá!</p>';
+    else h+='<button type="button" class="ag-op destaque" data-ag="pres-sim"><b>Confirmo, estarei lá</b><small>A barbearia fica sabendo na hora</small></button>';
+    h+='<button type="button" class="ag-op" data-ag="pres-nao"><b>Não vou poder ir</b><small>Cancela e libera o horário</small></button>';
+    if(whats())h+='<a class="ag-op" href="'+esc(linkWhats("Olá! Sobre o meu horário de "+d.servico+" ("+quandoTxt(d.dia,d.hoje).toLowerCase()+" às "+d.horario+")."))+'" target="_blank" rel="noopener"><b>Falar com a barbearia</b><small>Pelo WhatsApp, para remarcar</small></a>';
+    return h;
+  }
+  function jsonDe(r){return r.json().catch(function(){return {}}).then(function(j){return {ok:r.ok,j:j}})}
+  function abrirPresenca(){
+    var q,t;
+    try{q=new URLSearchParams(location.search);t=q.get("confirmar")||""}catch(e){return false}
+    if(!/^[0-9a-f-]{36}\.[A-Za-z0-9_-]{16}$/i.test(t))return false;
+    pres={token:t,dados:null,erro:"",querCancelar:q.get("r")==="nao"};
+    try{history.replaceState(null,"",location.pathname)}catch(e){}
+    pilha=[];etapa="presenca";$("agErro").textContent="";render();
+    if(dlg.showModal){if(!dlg.open)dlg.showModal()}else dlg.setAttribute("open","");
+    fetch("/api/config?presenca="+encodeURIComponent(t)).then(jsonDe).catch(function(){return {ok:false,j:{message:"Sem conexão com a internet."}}}).then(function(x){
+      if(x.ok)pres.dados=x.j;else pres.erro=x.j.message||"Não deu para abrir seu horário.";
+      if(etapa==="presenca")render();
+    });
+    return true;
+  }
+  function presencaAcao(a,b){
+    if(a==="novo"){pres=null;abrir();return}
+    if(!pres||!pres.dados)return;
+    if(a==="pres-nao"){pres.querCancelar=true;render();return}
+    if(a==="pres-voltar"){pres.querCancelar=false;render();return}
+    var resp=a==="pres-sim"?"sim":"nao";
+    b.disabled=true;
+    fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"presenca",token:pres.token,resposta:resp})}).then(jsonDe).catch(function(){return {ok:false,j:{message:"Sem conexão com a internet."}}}).then(function(x){
+      b.disabled=false;pres.querCancelar=false;
+      if(!x.ok){$("agErro").textContent=x.j.message||"Não deu para responder agora.";if(x.j.status)pres.dados.status=x.j.status;render();return}
+      pres.feito=resp;pres.dados.resposta=resp;if(resp==="nao")pres.dados.status="cancelado";render();
+    });
   }
   // Lembrete no celular do cliente (Web Push), 30 min antes do horário. Sem suporte, o botão nem aparece.
   function podeLembrar(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window}
@@ -510,6 +728,9 @@ a.ag-op{text-decoration:none}
     var a=b.getAttribute("data-ag");
     $("agErro").textContent="";
     if(a==="lembrete"){lembreteCelular(b);return}
+    if(a==="avisos"){ligarAvisosAqui(b);return}
+    if(a==="instalar"){if(window.BioApp)window.BioApp.instalar();return}
+    if(a==="novo"||a.indexOf("pres-")===0){presencaAcao(a,b);return}
     if(a==="pix-copiar"){copiarPix(b);return}
     if(a==="voltar"){
       if(pilha.length){etapa=pilha.pop();limpar(etapa)}
@@ -566,6 +787,9 @@ a.ag-op{text-decoration:none}
     var txtPago=j.sinal?"Olá! Paguei o sinal de R$ "+Number(j.sinal.valor).toFixed(2).replace(".",",")+" do meu agendamento (código "+cod+"): "+sel.servico.nome+" com "+quem+", "+sel.diaTxt+" às "+sel.hora+".":"";
     ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),clube:!!j.clube,confirmado:!!j.confirmado,link:linkWhats(txt),sinal:j.sinal||null,linkPago:j.sinal?linkWhats(txtPago):""};
     pilha=[];etapa="ok";render();
+    // Quem já ligou os avisos neste celular: o pedido novo fica ligado sem tocar em nada
+    var A=window.BioApp;
+    if(cod&&A&&A.avisos.suportado()&&A.avisos.permissao()==="granted")A.avisos.ligar({codigo:cod}).then(function(){ultimo.avisos="ok"}).catch(function(){ultimo.avisos="erro"}).then(function(){if(etapa==="ok")render()});
     // Pedido que espera confirmação: o WhatsApp abre com a mensagem pronta. Confirmado ou com sinal a pagar: não abre
     if(!ultimo.confirmado&&!ultimo.sinal)abrirLink(ultimo.link);
   }

@@ -6,7 +6,10 @@
 //   POST /api/config { tipo: "vital" | "erro", ... }  eventos do navegador (Web Vitals e erros de JavaScript).
 //   POST /api/config { tipo: "lead", nome, barbearia, whatsapp, ... }  contato da página de vendas.
 //   GET  /api/config?lembretes=proximos  avisos perto da hora (cliente chegando, atrasado), a cada 5 min (lib/lembretes.js);
-//   POST /api/config { tipo: "lembrete-cliente", slug, codigo, subscription }  o cliente liga o lembrete no celular;
+//   POST /api/config { tipo: "lembrete-cliente", slug, subscription, codigo?, app?, novidades? }  o cliente liga os
+//                                      avisos no celular (lib/app-cliente.js);
+//   GET  /api/config?presenca=TOKEN    o horário do link de confirmação; POST { tipo: "presenca", token, resposta }
+//                                      o cliente confirma ou cancela pelo celular (lib/presenca.js);
 //   GET  /api/config?formulario=TOKEN   formulário inicial da implantação (lib/formulario.js);
 //   POST /api/config { tipo: "formulario", token, dados, enviar } salva (e envia) as respostas;
 //   POST /api/config { tipo: "formulario-midia", token, tipoArquivo, tamanho } link para enviar foto ou vídeo.
@@ -18,6 +21,7 @@ const { rest } = require("../lib/supabase");
 const { registrar, origemDe, contarTentativas, corpoDe, falha } = require("../lib/seguranca");
 const formulario = require("../lib/formulario");
 const lembretes = require("../lib/lembretes");
+const presenca = require("../lib/presenca");
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 
 const { VERSAO: GERADOR_VERSAO } = require("../lib/gerador");
@@ -118,6 +122,7 @@ module.exports = async (req, res) => {
   if (req.method === "POST") {
     const b = corpoDe(req);
     if (b.tipo === "lembrete-cliente") return lembretes.inscreverCliente(req, res, b).catch((e) => falha(res, e, "POST /api/config (lembrete-cliente)"));
+    if (b.tipo === "presenca") return presenca.responder(req, res, b).catch((e) => falha(res, e, "POST /api/config (presenca)"));
     if (b.tipo === "formulario" || b.tipo === "formulario-midia") {
       res.setHeader("Cache-Control", "no-store");
       return (b.tipo === "formulario" ? formulario.salvarPublico(req, res, b) : formulario.midiaPublica(req, res, b)).catch((e) => falha(res, e, "POST /api/config (formulario)"));
@@ -128,6 +133,7 @@ module.exports = async (req, res) => {
   if (req.query && req.query.saude === "1") return saude(req, res);
   // Avisos perto da hora (o agendador do banco chama a cada 5 minutos)
   if (req.query && req.query.lembretes === "proximos") return lembretes.proximos(req, res).catch((e) => falha(res, e, "GET /api/config?lembretes=proximos"));
+  if (req.query && req.query.presenca) return presenca.info(req, res, String(req.query.presenca)).catch((e) => falha(res, e, "GET /api/config?presenca"));
   if (req.query && req.query.formulario) {
     res.setHeader("Cache-Control", "no-store");
     return formulario.lerPublico(req, res, String(req.query.formulario)).catch((e) => falha(res, e, "GET /api/config (formulario)"));

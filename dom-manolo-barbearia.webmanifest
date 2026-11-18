@@ -1,0 +1,47 @@
+{
+  "id": "/dom-manolo-barbearia",
+  "name": "Dom Manolo Barbearia",
+  "short_name": "Dom Manolo",
+  "description": "Barbearia em Abreu e Lima - PE",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/dom-manolo-barbearia?app=1",
+  "scope": "/dom-manolo-barbearia",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#b08d57",
+  "icons": [
+    {
+      "src": "/img/dom-manolo-barbearia/icone-192-fpk4o7.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/dom-manolo-barbearia/icone-512-spfdb.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/dom-manolo-barbearia/icone-512-spfdb.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agendar horário",
+      "short_name": "Agendar",
+      "url": "/dom-manolo-barbearia?agendar=1",
+      "icons": [
+        {
+          "src": "/img/dom-manolo-barbearia/icone-192-fpk4o7.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

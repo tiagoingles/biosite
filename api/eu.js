@@ -167,6 +167,13 @@ module.exports = async (req, res) => {
           await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { sinal: lido.cfg } });
           return res.status(200).json({ ok: true, sinal: lido.cfg });
         }
+        // Confirmação de presença (fase 23): o cliente com os avisos ligados recebe "Confirme seu horário" X minutos antes
+        if (b.pedirConfirmacaoMin !== undefined) {
+          const min = b.pedirConfirmacaoMin === null || b.pedirConfirmacaoMin === 0 ? null : Number(b.pedirConfirmacaoMin);
+          if (min !== null && ![60, 120, 180, 1440].includes(min)) return res.status(400).json({ message: "Escolha quanto tempo antes." });
+          await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { pedir_confirmacao_min: min } });
+          return res.status(200).json({ ok: true, pedirConfirmacaoMin: min });
+        }
         if (typeof b.confirmacaoAutomatica !== "boolean") return res.status(400).json({ message: "Pedido inválido." });
         await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { confirmacao_automatica: b.confirmacaoAutomatica } });
         return res.status(200).json({ ok: true, confirmacaoAutomatica: b.confirmacaoAutomatica });

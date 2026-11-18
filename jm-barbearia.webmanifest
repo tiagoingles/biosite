@@ -1,0 +1,47 @@
+{
+  "id": "/jm-barbearia",
+  "name": "JM BARBEARIA",
+  "short_name": "JM BARBEARIA",
+  "description": "Barbearia em Abreu e Lima - PE",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/jm-barbearia?app=1",
+  "scope": "/jm-barbearia",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#0d0d0d",
+  "icons": [
+    {
+      "src": "/img/jm-barbearia/icone-192-ldqsij.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/jm-barbearia/icone-512-w7myr4.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/jm-barbearia/icone-512-w7myr4.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agendar horário",
+      "short_name": "Agendar",
+      "url": "/jm-barbearia?agendar=1",
+      "icons": [
+        {
+          "src": "/img/jm-barbearia/icone-192-ldqsij.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

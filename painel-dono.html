@@ -182,6 +182,16 @@
         <div class="cartao-topo"><h2>Agendamentos do site</h2></div>
         <label class="check-linha"><input type="checkbox" id="confirmacaoAuto"> Confirmar sozinho</label>
         <p class="nota p" id="notaConfirmacao"></p>
+        <label class="campo">Pedir ao cliente que confirme a presença
+          <select id="pedirConfirmacao">
+            <option value="">Não pedir</option>
+            <option value="60">1 hora antes</option>
+            <option value="120">2 horas antes</option>
+            <option value="180">3 horas antes</option>
+            <option value="1440">1 dia antes</option>
+          </select>
+        </label>
+        <p class="nota p">Vai no celular de quem ligou os avisos da barbearia no site, com os botões "Confirmo" e "Não vou poder ir" (só entre 7h e 22h). Quem confirma ganha o selo na agenda; quem cancela libera o horário e você recebe o aviso.</p>
       </section>
     </div>
     <div class="coluna">
@@ -243,6 +253,7 @@
     montarMenu(d);
     var siteBarbearia = d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "";
     mostrarConfirmacao(!!(d.barbearia && d.barbearia.confirmacao_automatica));
+    $("pedirConfirmacao").value = d.barbearia && d.barbearia.pedir_confirmacao_min ? String(d.barbearia.pedir_confirmacao_min) : "";
     mostrarProtese(!!(d.barbearia && d.barbearia.protese_ativa));
     window.Protese.configurar({ barbearia: ctx.barbearia, site: siteBarbearia, ctx: ctx });
     window.Premium.configurar({ barbearia: ctx.barbearia, site: siteBarbearia });
@@ -1069,6 +1080,15 @@
       mostrarConfirmacao(novo);
       P.toast(novo ? "Os agendamentos do site agora entram confirmados." : "Os pedidos do site voltam a esperar a sua confirmação.", "ok");
     }).catch(function (e) { caixa.checked = !novo; P.toast(e.message, "erro"); }).finally(function () { caixa.disabled = false; });
+  };
+
+  $("pedirConfirmacao").onchange = function () {
+    var sel = $("pedirConfirmacao"), antes = eu && eu.barbearia && eu.barbearia.pedir_confirmacao_min ? String(eu.barbearia.pedir_confirmacao_min) : "", novo = sel.value;
+    sel.disabled = true;
+    P.api("/api/eu", { corpo: { acao: "config-barbearia", pedirConfirmacaoMin: novo ? Number(novo) : null } }).then(function (r) {
+      if (eu && eu.barbearia) eu.barbearia.pedir_confirmacao_min = r.pedirConfirmacaoMin;
+      P.toast(novo ? "Pronto: o cliente recebe o pedido de confirmação " + sel.options[sel.selectedIndex].text.toLowerCase() + "." : "O pedido de confirmação foi desligado.", "ok");
+    }).catch(function (e) { sel.value = antes; P.toast(e.message, "erro"); }).finally(function () { sel.disabled = false; });
   };
 
   // ---------- Sinal no Pix (lib/sinal.js) ----------

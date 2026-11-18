@@ -171,10 +171,11 @@
       if (!hs.length) return "";
       var ola = o.cliente ? "Olá, " + P.primeiroNome(o.cliente) + "! " : "Olá! ";
       var dia = P.dataLonga(est.dia).replace(/^Hoje, /, "hoje, ").replace(/^Amanhã, /, "amanhã, ");
-      var link = location.origin + "/" + ctx.slug + "?barbeiro=" + encodeURIComponent(est.prof);
+      // O link leva o dia e os horários escolhidos: no site, o cliente escolhe só entre eles
+      var link = location.origin + "/" + ctx.slug + "?barbeiro=" + encodeURIComponent(est.prof) + "&dia=" + est.dia + "&horas=" + hs.map(function (x) { return x.replace(":", ""); }).join("-") + (o.servico ? "&servico=" + encodeURIComponent(o.servico) : "");
       return ola + "Tenho " + (hs.length === 1 ? "este horário livre" : "estes horários livres") + " na " + (ctx.barbearia || "barbearia") + " " + (/^(hoje|amanhã)/.test(dia) ? "" : "na ") + dia + ", com " + nomeProf() + ":\n" +
         hs.map(function (x) { return "• " + x; }).join("\n") + (o.servico ? "\n(" + o.servico + ")" : "") +
-        "\n\nQual fica melhor? É só responder aqui ou marcar pelo site: " + link;
+        "\n\nQual fica melhor? É só responder aqui ou marcar um deles pelo link: " + link;
     }
     function desenharPrevia() { var t = texto(); previa.textContent = t || "Toque nos horários que você quer oferecer."; }
     function desenharHoras() {

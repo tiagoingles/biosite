@@ -216,3 +216,17 @@ test("mandar horários livres: botão nos dois painéis, escolha dos horários e
     assert.match(html, /ctx\.slug = d\.barbearia \? d\.barbearia\.slug : ""/, p);
   }
 });
+
+// Teste do dono (18/11): pelo link da mensagem, o cliente escolhe só entre os horários enviados
+test("mandar horários livres: o link leva o dia e os horários, e o site mostra só esses", () => {
+  const agenda = ler("painel-agenda.js");
+  assert.match(agenda, /"\?barbeiro=" \+ encodeURIComponent\(est\.prof\) \+ "&dia=" \+ est\.dia \+ "&horas=" \+ hs\.map\(function \(x\) \{ return x\.replace\(":", ""\); \}\)\.join\("-"\)/);
+  const G = require("../lib/gerador");
+  assert.ok(G.VERSAO >= 13, "site com a oferta de horários desde o gerador v13");
+  const site = ler("gw-barbearia.html");
+  assert.match(site, /function lerOferta\(\)/);
+  assert.match(site, /var of=lerOferta\(\);if\(of&&porId\(equipe\|\|\[\],of\.barbeiro\)\)\{abrirOferta\(of\);return\}/, "o link com horários abre a oferta antes do link do barbeiro");
+  assert.match(site, /etapa==="dia"&&oferta&&sel\.prof/, "na oferta, a etapa do dia mostra só os horários enviados");
+  assert.match(site, /var hs=oferta\.horas\.filter\(function\(x\)\{return livres\.indexOf\(x\)>-1\}\)/, "só os que ainda estão livres");
+  assert.match(site, /if\(!profFixo\)\{/, "voltar não desfaz o barbeiro que veio do link");
+});

@@ -446,7 +446,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
 
 <script src="/conta.js"></script>
 <script>
-const GERADOR_VERSAO = 12;
+const GERADOR_VERSAO = 13;
 const FONTS = {
   "Poppins":"Poppins:wght@400;600;700",
   "Montserrat":"Montserrat:wght@400;600;800",
@@ -889,6 +889,8 @@ function agendaRuntime(){
   // Etapas: servico -> pref (tem preferência de barbeiro?) -> prof (só se sim) -> dia -> dados -> ok
   var etapa="servico",pilha=[],sel={},dias=[],enviando=false,ultimo=null;
   var equipe=null,cacheHoras={},cacheDias={},pres=null;
+  // oferta: horários mandados pelo WhatsApp (o cliente escolhe só entre eles); profFixo: barbeiro veio do link
+  var oferta=null,profFixo=false;
   // Planos do clube de assinatura (vêm da API junto com a equipe; null quando a barbearia não tem clube)
   var clube=null;
   // Barbearia sem cadastro no sistema (só o site): o pedido vai direto pelo WhatsApp, sem registro
@@ -972,8 +974,10 @@ function agendaRuntime(){
   function ir(e){pilha.push(etapa);etapa=e;render()}
   // Ao voltar para uma etapa, limpa o que foi escolhido depois dela
   function limpar(depois){
-    if(depois==="servico"){sel.pref=null;sel.prof=null;sel.qualquer=false}
-    if(depois==="servico"||depois==="pref"){sel.prof=null;sel.qualquer=false}
+    if(!profFixo){
+      if(depois==="servico"){sel.pref=null;sel.prof=null;sel.qualquer=false}
+      if(depois==="servico"||depois==="pref"){sel.prof=null;sel.qualquer=false}
+    }
     if(depois!=="dados"){sel.hora=null}
     if(depois==="servico"||depois==="pref"||depois==="prof"||depois==="dia"){sel.dia=null}
   }
@@ -993,6 +997,7 @@ function agendaRuntime(){
     $("agEnviar").hidden=etapa!=="dados";
     if(etapa==="servico"){
       titulo="Escolha o serviço";
+      if(oferta&&sel.prof)h+=notaOferta();
       (AG.servicos||[]).forEach(function(s){
         var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
         var info=[s.duracao,preco].filter(Boolean).join(" · ");
@@ -1008,6 +1013,9 @@ function agendaRuntime(){
       lista.forEach(function(p){h+='<button type="button" class="ag-op" data-ag="prof" data-id="'+esc(p.id)+'"><b>'+esc(p.nome)+'</b></button>'});
       if(!equipe)h+='<p class="note">Carregando a equipe…</p>';
       else if(!lista.length)h+='<p class="note">Nenhum profissional faz este serviço no momento.</p>';
+    }else if(etapa==="dia"&&oferta&&sel.prof){
+      titulo="Escolha um dos horários";
+      h+=htmlOferta();
     }else if(etapa==="dia"){
       titulo="Escolha o dia e o horário";
       var lidos=doBanco()?diasDoBanco():diasDe(sel.qualquer?null:sel.prof);
@@ -1063,13 +1071,50 @@ function agendaRuntime(){
     $("agSteps").innerHTML=h;
     if(etapa==="ok"&&ultimo&&ultimo.sinal)desenharQrPix();
   }
-  function abrir(){pilha=[];etapa="servico";sel={};cacheHoras={};cacheDias={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
+  function abrir(){pilha=[];etapa="servico";sel={};oferta=null;profFixo=false;cacheHoras={};cacheDias={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
   function fechar(){if(dlg.close)dlg.close();else dlg.removeAttribute("open")}
   $("abrirAgenda").addEventListener("click",abrir);
   // Cada serviço da vitrine abre o agendamento já com ele escolhido: pergunta a preferência de barbeiro
   function abrirServico(id){abrir();sel.servico=porId(AG.servicos||[],id);if(sel.servico){pilha=["servico"];etapa="pref";render()}}
   // Um barbeiro do painel abre o agendamento já com ele escolhido: segue direto para o serviço
-  function abrirBarbeiro(id){abrir();sel.prof=porId(equipe||[],id);if(sel.prof){sel.qualquer=false;etapa="servico";render()}}
+  function abrirBarbeiro(id){abrir();sel.prof=porId(equipe||[],id);if(sel.prof){sel.qualquer=false;profFixo=true;etapa="servico";render()}}
+  // Horários que a barbearia mandou pelo WhatsApp ("Mandar horários" do painel):
+  // /slug?barbeiro=<id>&dia=2026-11-18&horas=1000-1030-1400[&servico=Nome] — o cliente escolhe só entre eles.
+  function lerOferta(){
+    try{
+      var q=new URLSearchParams(location.search);
+      var hs=(q.get("horas")||"").split("-").filter(function(x){return /^([01]\d|2[0-3])[0-5]\d$/.test(x)}).map(function(x){return x.slice(0,2)+":"+x.slice(2)});
+      var dia=q.get("dia")||"";
+      if(!hs.length||!/^\d{4}-\d{2}-\d{2}$/.test(dia))return null;
+      return {dia:dia,horas:hs.filter(function(x,i){return hs.indexOf(x)===i}).sort().slice(0,12),barbeiro:q.get("barbeiro")||"",servico:q.get("servico")||""};
+    }catch(e){return null}
+  }
+  function porNome(n){var k=chave(n);return (AG.servicos||[]).filter(function(s){return chave(s.nome)===k})[0]}
+  function abrirOferta(of){
+    abrir();
+    oferta=of;profFixo=true;
+    sel.prof=porId(equipe||[],of.barbeiro);sel.qualquer=false;
+    // Serviço que veio no link (ex.: pedido recusado com "Sugerir outros horários"): vai direto para os horários
+    var s=of.servico?porNome(of.servico):null;
+    if(s&&(sel.prof.servicos||[]).indexOf(s.id)>-1){sel.servico=s;pilha=["servico"];etapa="dia"}
+    render();
+  }
+  function listaTxt(l){return l.length<2?l.join(""):l.slice(0,-1).join(", ")+" e "+l[l.length-1]}
+  function notaOferta(){return '<p class="cobertura">Horários separados para você com <b>'+esc(sel.prof.nome)+'</b>: '+esc(rotuloDia(dataDe(oferta.dia)))+' às '+esc(listaTxt(oferta.horas))+'. Escolha o serviço.</p>'}
+  function htmlOferta(){
+    sel.diaISO=oferta.dia;sel.diaTxt=rotuloDia(dataDe(oferta.dia));
+    var h='<p class="ag-sub">'+esc(sel.diaTxt)+' · com '+esc(sel.prof.nome)+'</p>';
+    if(oferta.dia<isoDe(new Date()))return h+'<p class="note">Esses horários já passaram. Fale com a barbearia para combinar outro.</p>'+botaoWhats("Combinar outro horário pelo WhatsApp");
+    var livres=horasDoBanco(oferta.dia);
+    if(livres===null)return h+'<p class="note">Conferindo os horários…</p>';
+    var hs=oferta.horas.filter(function(x){return livres.indexOf(x)>-1});
+    if(!hs.length)return h+'<p class="note">Os horários enviados não estão mais livres'+(sel.servico?' para '+esc(sel.servico.nome):'')+'. Fale com a barbearia para combinar outro.</p>'+botaoWhats("Combinar outro horário pelo WhatsApp");
+    h+='<div class="ag-chips">'+hs.map(function(t){return '<button type="button" data-ag="hora" data-v="'+t+'">'+t+'</button>'}).join("")+'</div>';
+    var fora=oferta.horas.length-hs.length;
+    if(fora)h+='<p class="note">'+(fora===1?"Um dos horários enviados não está mais livre.":fora+" dos horários enviados não estão mais livres.")+'</p>';
+    return h+'<p class="note">Nenhum serve?</p>'+botaoWhats("Pedir outro horário pelo WhatsApp");
+  }
+
   function desenharBarbeiros(){
     var sec=document.getElementById("barbeiros"),box=document.getElementById("barbsLista");
     if(!sec||!box)return;
@@ -1090,7 +1135,7 @@ function agendaRuntime(){
   document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-agendar")){e.preventDefault();abrirServico(e.target.getAttribute("data-agendar"))}});
   // Link pessoal do barbeiro (/slug?barbeiro=id): o site já abre o agendamento com ele escolhido
   // Atalho "Agendar horário" do ícone (/slug?agendar=1): o site já abre o agendamento
-  function abrirDoLink(){var id="",ag="";try{var q=new URLSearchParams(location.search);id=q.get("barbeiro")||"";ag=q.get("agendar")||""}catch(e){}if(id&&porId(equipe||[],id))abrirBarbeiro(id);else if(ag&&!dlg.open)abrir()}
+  function abrirDoLink(){var id="",ag="";try{var q=new URLSearchParams(location.search);id=q.get("barbeiro")||"";ag=q.get("agendar")||""}catch(e){}var of=lerOferta();if(of&&porId(equipe||[],of.barbeiro)){abrirOferta(of);return}if(id&&porId(equipe||[],id))abrirBarbeiro(id);else if(ag&&!dlg.open)abrir()}
   abrirPresenca();
   carregarEquipe(function(){desenharBarbeiros();desenharClube();if(dlg.open)render();else abrirDoLink()});
   // "Quero assinar": abre o WhatsApp da barbearia com o plano escolhido

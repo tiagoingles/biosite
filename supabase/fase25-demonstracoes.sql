@@ -94,7 +94,13 @@ begin
             select 1 from pedidos x where x.profissional_id = v_p.id and x.dia = d
               and x.status in ('pendente', 'confirmado', 'avulso', 'realizado')
               and x.horario < v_fim and coalesce(x.horario_fim, x.horario) > v_hh);
-          select id, nome into v_c from clientes where barbearia_id = v_b.id order by random() limit 1;
+          -- Um cliente que não está em outra cadeira nesse mesmo horário
+          select c.id, c.nome into v_c from clientes c where c.barbearia_id = v_b.id
+            and not exists (select 1 from pedidos x where x.cliente_id = c.id and x.dia = d
+              and x.status in ('pendente', 'confirmado', 'avulso', 'realizado')
+              and x.horario < v_fim and coalesce(x.horario_fim, x.horario) > v_hh)
+            order by random() limit 1;
+          continue when v_c.id is null;
           v_status := case when k = 1 and random() < 0.3 then 'pendente' else 'confirmado' end;
           n := n + 1;
           v_cod := 'D' || to_char(d, 'YYMMDD') || chr(64 + v_prof) || chr(64 + n);

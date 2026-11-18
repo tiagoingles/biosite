@@ -288,6 +288,10 @@ const servidor = http.createServer(async (req, res) => {
   if (u.pathname === "/falso/auth/v1/token") return json(res, 200, { access_token: "previa", refresh_token: "previa", expires_in: 3600, user: { id: "u9", email: "novo@exemplo.com" } });
   if (u.pathname.startsWith("/api/")) {
     const metodo = req.method;
+    // Demonstração sem login (como lib/conta.js): o token demo-* só lê e vê a barbearia como dono ou barbeiro
+    const tokenDemo = (String(req.headers.authorization || "").match(/^Bearer demo-(dono|barbeiro)$/) || [])[1];
+    if (tokenDemo && metodo !== "GET") return json(res, 403, { message: "Esta é uma demonstração: aqui nada é salvo. Para usar na sua barbearia, fale com o Bio Site." });
+    if (tokenDemo) papel = tokenDemo;
     const b = metodo === "GET" ? {} : await corpoDe(req);
     if (u.pathname === "/api/config") {
       // App do cliente (fase 23): avisos ligados e confirmação de presença
@@ -336,6 +340,11 @@ const servidor = http.createServer(async (req, res) => {
         return json(res, 200, papel === "barbeiro"
           ? { usuario: { id: "u2", email: "bruno@exemplo.com" }, perfil: { papel: "barbeiro", nome: "Bruno", barbearia_id: "x" }, barbearia: { id: "x", slug: "gw-barbearia", nome: "GW Barbearia" }, profissional: { id: "b1", nome: "Bruno Oliveira", foto_url: null, comissao_pct: 40 } }
           : { usuario: { id: "u1", email: "dono@exemplo.com" }, perfil: { papel: "dono", nome: "Gustavo Wanderley", barbearia_id: "x" }, barbearia: { id: "x", slug: "gw-barbearia", nome: "GW Barbearia", protese_ativa: true }, profissional: null });
+      }
+      if (b.acao === "config-barbearia" && b.whatsapp !== undefined) {
+        const n = soNumeros(b.whatsapp);
+        if (n && !/^\d{10,11}$/.test(n)) return json(res, 400, { message: "Confira o WhatsApp: DDD e número." });
+        return json(res, 200, { ok: true, whatsapp: n || null });
       }
       if (b.acao === "lead-status") { const l = leads.find((x) => x.id === b.id); if (l) l.status = b.status; return json(res, 200, { ok: true }); }
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));
@@ -568,10 +577,11 @@ const servidor = http.createServer(async (req, res) => {
     if (u.pathname === "/api/barbearia") return json(res, 200, { email: "bruno.teste@exemplo.com", senha: "Previa-1234" });
     // Site público (agendamento): equipe e horários fictícios
     // Site sem cadastro no sistema (como a JM): a API não conhece a barbearia
-    if (u.pathname === "/api/profissionais" && q.slug !== "gw-barbearia") return json(res, 404, { message: "Barbearia não encontrada." });
+    if (u.pathname === "/api/profissionais" && !["gw-barbearia", "barbearia-modelo", "barbearia-exemplo"].includes(q.slug)) return json(res, 404, { message: "Barbearia não encontrada." });
     if (u.pathname === "/api/profissionais") {
       const planos = clubePlanos.filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome, descricao: p.descricao, preco: p.preco, servicos: p.servicos, regras: `Inclui ${p.servicos.join(", ")} · ${regrasPrevia(p)}` }));
-      return json(res, 200, { profissionais: equipeGestao.map((p) => ({ id: p.id, nome: p.nome, foto_url: p.foto_url })), precos: {}, clube: planos.length ? { planos } : null });
+      // WhatsApp do painel (fase 25): na Modelo da prévia, o número do dono que assiste à apresentação
+      return json(res, 200, { profissionais: equipeGestao.map((p) => ({ id: p.id, nome: p.nome, foto_url: p.foto_url })), precos: {}, clube: planos.length ? { planos } : null, whatsapp: q.slug === "barbearia-modelo" ? "81988887777" : null });
     }
     if (u.pathname === "/api/horarios") {
       if (q.dias === "1") return json(res, 200, { dias: [hoje, somaDias(hoje, 1), somaDias(hoje, 2)] });

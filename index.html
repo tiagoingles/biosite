@@ -137,6 +137,20 @@ section{scroll-margin-top:72px}
 .recurso h3{font-size:17px;margin-top:6px}
 .recurso p{color:var(--suave);font-size:15px}
 
+/* demonstração */
+.bloco.demo{background:var(--tinta);color:#fff}
+.bloco.demo .titulo-bloco .sobre{color:var(--ouro)}
+.bloco.demo .titulo-bloco p{color:rgba(255,255,255,.75)}
+.demos{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.demo-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:22px;display:grid;gap:10px;align-content:start}
+.demo-card .ic{width:44px;height:44px;border-radius:12px;background:var(--ouro);color:var(--tinta);display:grid;place-items:center}
+.demo-card .ic svg{width:22px;height:22px}
+.demo-card h3{font-size:18px;margin-top:4px}
+.demo-card p{color:rgba(255,255,255,.75);font-size:15px}
+.demo-card .botao{margin-top:6px;width:100%}
+.demo-nota{margin-top:20px;color:rgba(255,255,255,.7);font-size:15px}
+.demo-nota a{color:var(--ouro);font-weight:700}
+
 /* para quem */
 .publicos{display:grid;gap:16px}
 @media (min-width:820px){.publicos{grid-template-columns:1fr 1fr}}
@@ -256,6 +270,7 @@ section{scroll-margin-top:72px}
     <nav class="menu" aria-label="Seções da página">
       <a class="so-largo" href="#como-funciona">Como funciona</a>
       <a class="so-largo" href="#recursos">Recursos</a>
+      <a class="so-largo" href="#demonstracao">Demonstração</a>
       <a class="so-largo" href="#precos">Preços</a>
       <a class="so-largo" href="#duvidas">Dúvidas</a>
       <a href="/entrar">Entrar</a>
@@ -274,7 +289,7 @@ section{scroll-margin-top:72px}
         <p class="lead">O cliente escolhe o serviço, o barbeiro e o horário em 30 segundos, sem baixar aplicativo. O pedido chega no seu WhatsApp e no painel, e você confirma com um toque.</p>
         <div class="acoes">
           <a class="botao ouro" href="#comecar" data-plano="Lançamento">Quero garantir minha vaga</a>
-          <a class="botao vazado" href="#como-funciona">Ver como funciona</a>
+          <a class="botao vazado" href="#demonstracao">Ver funcionando</a>
         </div>
         <div class="garantias">
           <span><svg><use href="#i-check"/></svg>1º mês grátis</span>
@@ -374,6 +389,38 @@ section{scroll-margin-top:72px}
         <article class="recurso"><span class="ic"><svg><use href="#i-baixar"/></svg></span><h3>Planilhas</h3><p>Atendimentos e comissões em planilha que abre no Excel, para você ou para o contador.</p></article>
         <article class="recurso"><span class="ic"><svg><use href="#i-trava"/></svg></span><h3>Dados protegidos</h3><p>Cada pessoa da equipe entra com a própria senha, com bloqueio automático contra quem tenta adivinhar senhas.</p></article>
       </div>
+    </div>
+  </section>
+
+  <!-- ===== Demonstração: a Barbearia Exemplo, sem login e só para olhar ===== -->
+  <section class="bloco demo" id="demonstracao" aria-labelledby="t-demo">
+    <div class="miolo">
+      <div class="titulo-bloco">
+        <span class="sobre">Demonstração</span>
+        <h2 id="t-demo">Veja funcionando, sem cadastro.</h2>
+        <p>A Barbearia Exemplo tem agenda, clientes e financeiro de exemplo. Abra o site como o seu cliente vê e o painel como você vai usar no dia a dia.</p>
+      </div>
+      <div class="demos">
+        <article class="demo-card">
+          <span class="ic"><svg><use href="#i-site"/></svg></span>
+          <h3>Site do cliente</h3>
+          <p>Escolha o serviço, o barbeiro e o horário, como o seu cliente faz. Na demonstração, nada é enviado.</p>
+          <a class="botao ouro" href="/barbearia-exemplo">Abrir o site</a>
+        </article>
+        <article class="demo-card">
+          <span class="ic"><svg><use href="#i-painel"/></svg></span>
+          <h3>Painel do dono</h3>
+          <p>Agenda em quadro, pedidos para confirmar, clientes sumidos, clube, prótese e financeiro com lucro.</p>
+          <a class="botao ouro" href="/painel-dono?demo=dono">Abrir o painel do dono</a>
+        </article>
+        <article class="demo-card">
+          <span class="ic"><svg><use href="#i-tesoura"/></svg></span>
+          <h3>Painel do barbeiro</h3>
+          <p>A agenda de cada barbeiro, os horários da semana, os ganhos e o link pessoal para o Instagram.</p>
+          <a class="botao ouro" href="/painel-barbeiro?demo=barbeiro">Abrir o painel do barbeiro</a>
+        </article>
+      </div>
+      <p class="demo-nota">Os dados são de exemplo e nada é salvo. Gostou? <a href="#comecar" data-plano="Lançamento">Garanta o preço de lançamento</a>.</p>
     </div>
   </section>
 

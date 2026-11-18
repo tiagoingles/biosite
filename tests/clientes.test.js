@@ -446,7 +446,9 @@ test("site: WhatsApp obrigatório (com o motivo), aceite desmarcado e nada disso
   const cfg = { modelo: "cartao", nome: "GW", slug: "gw-teste", tipo: "barbearia", whatsapp: "81999999999", cor: "#111111", fundo: "#ffffff", texto: "#111111", fonteTitulo: "Poppins", fonteTexto: "Poppins", agenda: { ativo: true, servicos: [{ id: "s1", nome: "Corte", duracao: "30 min", preco: "40,00" }], profissionais: [{ id: "p1", nome: "Bruno", servicos: ["s1"], dias: [1, 2, 3] }] } };
   const html = G.bioHTML(cfg, (u) => u);
   // Desde o gerador v14 o WhatsApp é obrigatório: a barbearia precisa dele para avisar mudanças no horário
-  assert.ok(html.includes('id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" required'));
+  // (desde o gerador v15, só a vitrine da página de vendas, demonstracao: "vitrine", deixa em branco)
+  assert.ok(html.includes('id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20"\'+(demo?\'\':\' required\')'));
+  assert.ok(html.includes('var demo=C.demonstracao==="vitrine";'));
   assert.ok(html.includes("avisar você se ele precisar mudar"));
   assert.ok(html.includes('<input type="checkbox" id="agNovidades">'), "aceite desmarcado");
   assert.ok(html.includes('var blocoZap=semCadastro?"":'), "site sem cadastro não pergunta o número");

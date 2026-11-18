@@ -5,7 +5,9 @@ var Avisos = (function () {
     return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); });
   }
 
+  // Na demonstração sem login (fase 25) não há conta para receber avisos: a opção nem aparece
   function suportado() {
+    if (window.Conta && Conta.demo && Conta.demo()) return false;
     return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   }
 

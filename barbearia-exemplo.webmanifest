@@ -1,0 +1,47 @@
+{
+  "id": "/barbearia-exemplo",
+  "name": "Barbearia Exemplo",
+  "short_name": "Exemplo",
+  "description": "Demonstração do Bio Site: veja como o seu cliente agenda, do serviço ao horário. Aqui nada é enviado.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/barbearia-exemplo?app=1",
+  "scope": "/barbearia-exemplo",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#b08d57",
+  "icons": [
+    {
+      "src": "/img/barbearia-exemplo/icone-192-1igv6b3.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/barbearia-exemplo/icone-512-1t56jns.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/barbearia-exemplo/icone-512-1t56jns.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agendar horário",
+      "short_name": "Agendar",
+      "url": "/barbearia-exemplo?agendar=1",
+      "icons": [
+        {
+          "src": "/img/barbearia-exemplo/icone-192-1igv6b3.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

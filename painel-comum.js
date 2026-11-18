@@ -406,7 +406,10 @@
     if (!window.Conta || !window.Conta.ler()) { location.replace("entrar.html"); return false; }
     return true;
   };
-  P.sair = function () { window.Conta.sair(); location.href = "entrar.html"; };
+  // Demonstração sem login (fase 25): sair volta para a página de vendas
+  P.demo = function () { return !!(window.Conta && window.Conta.demo && window.Conta.demo()); };
+  P.sair = function () { var demo = P.demo(); window.Conta.sair(); location.href = demo ? "/#demonstracao" : "entrar.html"; };
+  if (window.Conta && window.Conta.faixaDemo) window.Conta.faixaDemo();
 
   window.Painel = P;
 })();

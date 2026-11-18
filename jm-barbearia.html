@@ -263,6 +263,8 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
 .ag-op.perigo{border-color:#c0392b;color:#c0392b}
 .ag-ok{font-weight:600;margin:0}
 .ag-dica{font-weight:400;font-size:12.5px;opacity:.75}
+.demo-faixa{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:center;padding:9px 14px;background:var(--acento);color:var(--sobre-acento);font:600 13px/1.4 var(--fb);text-align:center}
+.demo-faixa a{color:inherit;text-decoration:underline;white-space:nowrap}
 </style>
 <script type="application/json" id="bio-config">{"modelo":"vitrine","nome":"JM BARBEARIA","cidade":"Abreu e Lima - PE","descricao":"Barbearia em Abreu e Lima - PE","whatsapp":"5581984926848","whatsMsg":"Olá! Vim pelo site.","instagram":"@jmbarbearia00","review":"https://search.google.com/local/writereview?placeid=ChIJe6y1DwAVqwcRGIeBjQ0zxeI","endereco":"Av. D, 2 - Caetés I, Abreu e Lima - PE, 53540-250","maps":"https://maps.google.com/?cid=16340522956285380376&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgBIAA&hl=pt-BR&gl=br&source=apiv3","horario":"segunda-feira: Fechado\nterça-feira: 08:30 – 20:00\nquarta-feira: 08:30 – 20:00\nquinta-feira: 08:30 – 20:00\nsexta-feira: 08:30 – 21:00\nsábado: 08:30 – 21:00\ndomingo: Fechado","logo":"/img/jm-barbearia/logo-1tbfmms.jpg","capa":"/img/jm-barbearia/capa-4it9u2.jpg","nota":5,"totalAval":3,"mostrarNota":true,"extras":[],"catalogoTitulo":"Serviços","categorias":[],"produtos":[],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o barbeiro João"},"cor":"#0d0d0d","fundo":"#111111","texto":"#f5f5f5","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"jm-barbearia","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"pmw41wgoacf97","nome":"Corte social","duracao":"30 min","preco":"35,00","midia":[{"tipo":"video","url":"https://egyimskbvvgzxibelyhz.supabase.co/storage/v1/object/public/midia/jm-barbearia/pmw41wgoacf97/mw42f8uq01ab59.mp4","titulo":""}]},{"id":"pmw41wgoai1lc","nome":"Corte degradê","duracao":"40 min","preco":"40,00","midia":[]},{"id":"pmw41wgoavb1b","nome":"Corte na tesoura","duracao":"40 min","preco":"45,00","midia":[]},{"id":"pmw41wgoaxule","nome":"Corte infantil","duracao":"30 min","preco":"30,00","midia":[]},{"id":"pmw41wgoavgab","nome":"Barba tradicional","duracao":"20 min","preco":"25,00","midia":[]},{"id":"pmw41wgoa18to","nome":"Barba com toalha quente","duracao":"30 min","preco":"30,00","midia":[]},{"id":"pmw41wgoag4o4","nome":"Pezinho / acabamento","duracao":"10 min","preco":"10,00","midia":[]},{"id":"pmw41wgoadjfa","nome":"Corte + barba","duracao":"50 min","preco":"60,00","midia":[]},{"id":"pmw41wgoaz76n","nome":"Corte + barba + sobrancelha","duracao":"60 min","preco":"70,00","midia":[]},{"id":"pmw41wgoalv4b","nome":"Sobrancelha","duracao":"10 min","preco":"10,00","midia":[]},{"id":"pmw41wgoatvp6","nome":"Pigmentação","duracao":"40 min","preco":"25,00","midia":[]},{"id":"pmw41wgoaevb8","nome":"Hidratação capilar","duracao":"40 min","preco":"30,00","midia":[]},{"id":"pmw41wgoao9up","nome":"Luzes ou platinado","duracao":"120 min","preco":"120,00","midia":[]}],"profissionais":[{"id":"pmw41wgoarbp8","nome":"Dono barbeiro 1","servicos":["pmw41wgoacf97","pmw41wgoai1lc","pmw41wgoavb1b","pmw41wgoaxule","pmw41wgoavgab","pmw41wgoa18to","pmw41wgoag4o4","pmw41wgoadjfa","pmw41wgoaz76n","pmw41wgoalv4b","pmw41wgoatvp6","pmw41wgoaevb8","pmw41wgoao9up"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"}]},"tipo":"barbearia","icones":{"i180":"/img/jm-barbearia/icone-180-14b6jkz.png","i192":"/img/jm-barbearia/icone-192-ldqsij.png","i512":"/img/jm-barbearia/icone-512-w7myr4.png"}}</script>
 </head>
@@ -424,6 +426,8 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
   var clube=null;
   // Barbearia sem cadastro no sistema (só o site): o pedido vai direto pelo WhatsApp, sem registro
   var semCadastro=false;
+  // Barbearia vitrine da página de vendas: o agendamento vai até o fim, mas nada é enviado nem gravado
+  var demo=C.demonstracao==="vitrine";
   function carregarEquipe(cb){
     fetch("/api/profissionais?slug="+encodeURIComponent(C.slug)).then(function(r){if(r.status===404)semCadastro=true;return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
       var lista=j&&j.profissionais?j.profissionais:[];
@@ -436,6 +440,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
         if(card)card.textContent=[s.duracao,brl(v)].filter(Boolean).join(" · ");
       });
       clube=j&&j.clube&&j.clube.planos&&j.clube.planos.length?j.clube.planos:null;
+      if(j&&j.whatsapp)trocarWhats(j.whatsapp);
       equipe=lista.length?lista.map(function(p){return {id:p.id,dbId:p.id,nome:p.nome,foto:p.foto_url||"",servicos:(AG.servicos||[]).map(function(v){return v.id}),dias:[0,1,2,3,4,5,6]}}):(AG.profissionais||[]);
       cb();
     });
@@ -498,6 +503,15 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
   function porId(lista,id){return lista.filter(function(x){return x.id===id})[0]}
   function whats(){var w=String(C.whatsapp||"").replace(/\D/g,"");if(w&&w.indexOf("55")!==0)w="55"+w;return w}
   function linkWhats(txt){return "https://wa.me/"+whats()+"?text="+encodeURIComponent(txt)}
+  // WhatsApp cadastrado no painel (gerador v15): vale no lugar do número publicado no site, sem republicar.
+  // Troca também os botões de WhatsApp que já estão na página.
+  function trocarWhats(n){
+    n=String(n||"").replace(/\D/g,"");if(!/^\d{10,11}$/.test(n))return;
+    var novo="55"+n,velho=whats();if(novo===velho)return;
+    C.whatsapp=novo;if(!velho)return;
+    var links=document.querySelectorAll('a[href^="https://wa.me/'+velho+'"]');
+    for(var i=0;i<links.length;i++)links[i].setAttribute("href",links[i].getAttribute("href").replace("https://wa.me/"+velho,"https://wa.me/"+novo));
+  }
   function abrirLink(url){var a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()}
   function botaoWhats(rotulo){return whats()?'<button type="button" class="ag-op" data-ag="whats"><b>'+esc(rotulo||"Falar com a barbearia no WhatsApp")+'</b><small>A barbearia combina o horário com você</small></button>':""}
   function ir(e){pilha.push(etapa);etapa=e;render()}
@@ -567,10 +581,17 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
       h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
       var doClube=noClube(sel.servico)?clubeSalvo():null;
       var zap=doClube||salvo("zap");
-      var blocoZap=semCadastro?"":'<label>Seu WhatsApp<input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" required value="'+esc(zap)+'"><small class="ag-dica">Obrigatório: a barbearia usa para confirmar o horário e avisar você se ele precisar mudar.</small></label>';
+      var blocoZap=semCadastro?"":'<label>Seu WhatsApp<input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20"'+(demo?'':' required')+' value="'+esc(zap)+'"><small class="ag-dica">'+(demo?'Na barbearia de verdade é obrigatório: serve para confirmar o horário e avisar se ele mudar. Na demonstração, pode deixar em branco.':'Obrigatório: a barbearia usa para confirmar o horário e avisar você se ele precisar mudar.')+'</small></label>';
       var blocoClube=doClube===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(doClube?" checked":"")+'><span>Sou assinante do clube <small>(com o WhatsApp cadastrado no clube)</small></span></label>';
       var blocoNovidades=semCadastro?"":'<label class="check"><input type="checkbox" id="agNovidades"><span>Quero receber promoções e novidades da '+esc(C.nome)+' pelo WhatsApp</span></label>';
       h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80" value="'+esc(salvo("nome"))+'"></label>'+blocoZap+blocoClube+blocoNovidades+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
+    }else if(etapa==="demo"){
+      // Vitrine: mostra o que aconteceria numa barbearia de verdade, sem gravar nem abrir o WhatsApp
+      titulo="Pronto: é assim que o cliente agenda";
+      h+='<p class="cobertura"><b>'+esc(sel.servico.nome)+'</b> com '+esc(sel.qualquer?"Qualquer barbeiro disponível":sel.prof.nome)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
+      h+='<p class="note">Numa barbearia de verdade, este pedido entraria agora na agenda do painel, com aviso no celular do dono e do barbeiro, e o cliente receberia a confirmação. Esta é só uma demonstração: nada foi enviado.</p>';
+      h+='<a class="ag-op" href="/painel-dono?demo=dono"><b>Ver o painel do dono</b><small>A agenda, os clientes e o financeiro desta barbearia</small></a>';
+      if(whats())h+='<a class="ag-op" href="'+esc(linkWhats("Olá! Vi a demonstração da "+C.nome+" e quero o Bio Site na minha barbearia."))+'" target="_blank" rel="noopener"><b>Quero na minha barbearia</b><small>Fale com o Bio Site no WhatsApp</small></a>';
     }else if(etapa==="presenca"){
       var dd=pres&&pres.dados,ativo=!!dd&&dd.status!=="cancelado";
       titulo=dd&&dd.anterior?(ativo&&dd.resposta==="sim"?"Novo horário aceito":ativo?"Seu horário mudou":"Seu horário"):(ativo&&dd.resposta==="sim"?"Presença confirmada":"Seu horário");
@@ -801,11 +822,12 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
     var peloClube=!!($("agClube")&&$("agClube").checked),zap=$("agWhats")?$("agWhats").value.trim():"";
     var novidades=!!($("agNovidades")&&$("agNovidades").checked),digitos=zap.replace(/\D/g,"");
-    if(!semCadastro&&(digitos.length<10||digitos.length>13)){$("agErro").textContent=digitos?"Confira seu WhatsApp: DDD e número.":"Informe seu WhatsApp com DDD: a barbearia usa para avisar se o seu horário mudar.";if($("agWhats"))$("agWhats").focus();return}
+    if(!semCadastro&&!demo&&(digitos.length<10||digitos.length>13)){$("agErro").textContent=digitos?"Confira seu WhatsApp: DDD e número.":"Informe seu WhatsApp com DDD: a barbearia usa para avisar se o seu horário mudar.";if($("agWhats"))$("agWhats").focus();return}
     if(peloClube&&digitos.length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
     if(digitos&&(digitos.length<10||digitos.length>13)){$("agErro").textContent="Confira seu WhatsApp: DDD e número.";return}
     if(novidades&&!digitos){$("agErro").textContent="Para receber as novidades, informe seu WhatsApp.";return}
     if(semCadastro){concluir(nome,obs,{});return}
+    if(demo){pilha=[];etapa="demo";render();return}
     var corpo={slug:C.slug,servico:sel.servico.nome,profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoDe(sel.servico),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
     if(digitos){corpo.whatsapp=zap;corpo.novidades=novidades}
     if(peloClube){corpo.clube=true;corpo.clubeWhatsapp=zap}
@@ -828,6 +850,8 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
   });
   // Pedido feito: mostra o resumo (com o código, quando registrado) e abre o WhatsApp com a mensagem pronta
   function concluir(nome,obs,j){
+    // O número vem do pedido recém-gravado (sem cache): a mensagem vai para o WhatsApp atual da barbearia
+    if(j.whatsapp)trocarWhats(j.whatsapp);
     var cod=j.codigo||"";
     var quem=sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
     var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);

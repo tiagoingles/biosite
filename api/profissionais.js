@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
   if (!/^[a-z0-9-]{3,40}$/.test(slug)) return res.status(400).json({ message: "Barbearia inválida." });
 
   try {
-    const barb = await rest(`barbearias?slug=eq.${slug}&select=id`);
+    const barb = await rest(`barbearias?slug=eq.${slug}&select=id,whatsapp`);
     if (!barb.length) return res.status(404).json({ message: "Barbearia não encontrada." });
     const [lista, precos, clube] = await Promise.all([
       rest(`profissionais?barbearia_id=eq.${barb[0].id}&ativo=eq.true&select=id,nome,foto_url&order=nome`),
@@ -24,7 +24,8 @@ module.exports = async (req, res) => {
       planosPublicos(barb[0].id).catch((e) => { console.error("clube no site:", e.message); return null; }),
     ]);
     res.setHeader("Cache-Control", "public, max-age=0, s-maxage=60, stale-while-revalidate=300");
-    return res.status(200).json({ profissionais: lista, precos: Object.fromEntries(precos.map((p) => [p.nome, Number(p.preco)])), clube });
+    // whatsapp: o número que o dono cadastrou no painel (fase 25); o site usa no lugar do número publicado
+    return res.status(200).json({ profissionais: lista, precos: Object.fromEntries(precos.map((p) => [p.nome, Number(p.preco)])), clube, whatsapp: barb[0].whatsapp || null });
   } catch (e) {
     return falha(res, e, "GET /api/profissionais");
   }

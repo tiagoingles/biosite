@@ -215,7 +215,9 @@ button.perigo{color:var(--erro)}
   }
 
   if (!Conta.ler()) { location.replace("entrar.html"); return; }
-  $("sair").onclick = function () { Conta.sair(); location.href = "entrar.html"; };
+  // Demonstração sem login: faixa no topo, e sair volta para a página de vendas
+  Conta.faixaDemo();
+  $("sair").onclick = function () { var demo = Conta.demo(); Conta.sair(); location.href = demo ? "/#demonstracao" : "entrar.html"; };
   $("movData").value = hoje;
 
   function carregar() {

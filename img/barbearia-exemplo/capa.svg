@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <pattern id="listras" width="80" height="80" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <rect width="80" height="80" fill="#151515"/>
+      <rect width="22" height="80" fill="#b08d57" opacity=".18"/>
+      <rect x="40" width="6" height="80" fill="#f2efe9" opacity=".05"/>
+    </pattern>
+    <radialGradient id="luz" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#2a2420" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#0b0b0b" stop-opacity=".95"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="600" fill="url(#listras)"/>
+  <rect width="1200" height="600" fill="url(#luz)"/>
+</svg>

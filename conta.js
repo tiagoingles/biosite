@@ -14,7 +14,20 @@
     return cfgPromessa;
   }
 
+  // Demonstração sem login (fase 25): ?demo=dono ou ?demo=barbeiro abre o painel da barbearia vitrine, só para
+  // olhar. A sessão de mentira fica só nesta aba (sessionStorage) e não mexe no login de verdade deste aparelho.
+  var DEMO = "bio_demo";
+  try {
+    var pedidoDemo = new URLSearchParams(window.location.search).get("demo");
+    if (pedidoDemo === "dono" || pedidoDemo === "barbeiro") sessionStorage.setItem(DEMO, pedidoDemo);
+  } catch (e) {}
+  function demo() {
+    try { var v = sessionStorage.getItem(DEMO); return v === "dono" || v === "barbeiro" ? v : null; } catch (e) { return null; }
+  }
+
   function ler() {
+    var d = demo();
+    if (d) return { access_token: "demo-" + d, refresh_token: "", expira: Date.now() + 864e5, demo: d };
     try { return JSON.parse(localStorage.getItem(CHAVE)); } catch (e) { return null; }
   }
   function gravar(s) {
@@ -137,7 +150,36 @@
     return res.j;
   }
 
+  // Faixa da demonstração no topo das páginas do painel: dados de exemplo, nada é salvo, e os caminhos para
+  // contratar (WhatsApp de vendas do Bio Site, o mesmo da página de vendas) ou sair da demonstração.
+  var WHATS_VENDAS = "5581997977699";
+  function faixaDemo() {
+    if (!demo() || !document.body || document.getElementById("faixaDemo")) return;
+    var f = document.createElement("div");
+    f.id = "faixaDemo";
+    f.setAttribute("role", "note");
+    f.style.cssText = "display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;justify-content:center;padding:9px 14px;background:#1f2a44;color:#fff;font:600 13px/1.4 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-align:center";
+    var t = document.createElement("span");
+    t.textContent = "Demonstração: os dados são de exemplo e nada é salvo.";
+    var quero = document.createElement("a");
+    quero.href = "https://wa.me/" + WHATS_VENDAS + "?text=" + encodeURIComponent("Olá! Vi a demonstração do painel do Bio Site e quero para a minha barbearia.");
+    quero.target = "_blank";
+    quero.rel = "noopener";
+    quero.textContent = "Quero na minha barbearia";
+    var sairLink = document.createElement("a");
+    sairLink.href = "/#demonstracao";
+    sairLink.textContent = "Sair da demonstração";
+    sairLink.addEventListener("click", function () { sair(); });
+    [quero, sairLink].forEach(function (a) { a.style.cssText = "color:#fff;text-decoration:underline;white-space:nowrap"; });
+    f.appendChild(t);
+    f.appendChild(quero);
+    f.appendChild(sairLink);
+    document.body.insertBefore(f, document.body.firstChild);
+  }
+
+  // Na demonstração, sair só encerra a demonstração desta aba (o login de verdade continua como estava)
   function sair() {
+    if (demo()) { try { sessionStorage.removeItem(DEMO); } catch (e) {} return; }
     gravar(null);
   }
 
@@ -153,6 +195,8 @@
     capturarSessaoDaUrl: capturarSessaoDaUrl,
     api: api,
     sair: sair,
+    demo: demo,
+    faixaDemo: faixaDemo,
     traduz: traduz,
   };
 })();

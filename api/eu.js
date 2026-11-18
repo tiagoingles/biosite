@@ -11,7 +11,7 @@
 //   "virar-barbeiro"  o dono passa a atender também (vira dono-barbeiro).
 const crypto = require("crypto");
 const { rest, linkDeEnvio, cfg } = require("../lib/supabase");
-const { usuarioDaRequisicao, perfilDe, perfilDoContexto, barbeariaDe, ehAdminDaPlataforma, ehAdmin } = require("../lib/conta");
+const { usuarioDaRequisicao, perfilDe, perfilDoContexto, barbeariaDe, ehAdminDaPlataforma, ehAdmin, papelDemo, profissionalDemo } = require("../lib/conta");
 const { dataValida, hojeBr } = require("../lib/horarios");
 const { agendaDoDia, agendaDaSemana, salvarDia, salvarSemana, criarBloqueio, removerBloqueio } = require("../lib/agenda-dia");
 const { falha, corpoDe } = require("../lib/seguranca");
@@ -24,6 +24,8 @@ const FOTO_MAX = 5 * 1024 * 1024;
 const { endpointDePushValido } = require("../lib/webpush");
 
 async function meuProfissional(userId) {
+  // Demonstração sem login (fase 25): o barbeiro de exemplo da vitrine
+  if (papelDemo(userId) === "barbeiro") return profissionalDemo();
   return (await rest(`profissionais?perfil_user_id=eq.${userId}&select=id,barbearia_id,nome`))[0] || null;
 }
 
@@ -88,7 +90,10 @@ module.exports = async (req, res) => {
         const convites = await rest(`convites?email=eq.${encodeURIComponent(u.email)}&aceito_em=is.null&expira_em=gt.${new Date().toISOString()}&select=token,barbearia_id`);
         return res.status(200).json({ usuario: { id: u.id, email: u.email }, perfil: null, convites: convites.length });
       }
-      const [barbearia, prof] = await Promise.all([barbeariaDe(perfil.barbearia_id), rest(`profissionais?perfil_user_id=eq.${u.id}&select=id,nome,ativo,foto_url,comissao_pct`)]);
+      const meu = papelDemo(u.id) === "barbeiro"
+        ? profissionalDemo("id,nome,ativo,foto_url,comissao_pct").then((p) => (p ? [p] : []))
+        : papelDemo(u.id) ? Promise.resolve([]) : rest(`profissionais?perfil_user_id=eq.${u.id}&select=id,nome,ativo,foto_url,comissao_pct`);
+      const [barbearia, prof] = await Promise.all([barbeariaDe(perfil.barbearia_id), meu]);
       return res.status(200).json({ usuario: { id: u.id, email: u.email }, perfil, barbearia, profissional: prof[0] || null });
     }
 
@@ -173,6 +178,15 @@ module.exports = async (req, res) => {
           if (min !== null && ![60, 120, 180, 1440].includes(min)) return res.status(400).json({ message: "Escolha quanto tempo antes." });
           await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { pedir_confirmacao_min: min } });
           return res.status(200).json({ ok: true, pedirConfirmacaoMin: min });
+        }
+        // WhatsApp que recebe os pedidos do site (fase 25): vale no lugar do número publicado, sem republicar.
+        // Vazio volta para o número do site.
+        if (b.whatsapp !== undefined) {
+          const bruto = String(b.whatsapp == null ? "" : b.whatsapp).trim();
+          const numero = bruto ? require("../lib/clube").normalizarWhats(bruto) : "";
+          if (bruto && !numero) return res.status(400).json({ message: "Confira o WhatsApp: DDD e número." });
+          await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { whatsapp: numero || null } });
+          return res.status(200).json({ ok: true, whatsapp: numero || null });
         }
         if (typeof b.confirmacaoAutomatica !== "boolean") return res.status(400).json({ message: "Pedido inválido." });
         await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { confirmacao_automatica: b.confirmacaoAutomatica } });

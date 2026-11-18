@@ -78,8 +78,10 @@ module.exports = async (req, res) => {
   if (temZap && !zapCliente) return erro(res, 400, "Confira seu WhatsApp: DDD e número.");
 
   try {
-    const barb = await rest(`barbearias?slug=eq.${slug}&select=id,confirmacao_automatica,sinal`);
+    const barb = await rest(`barbearias?slug=eq.${slug}&select=id,confirmacao_automatica,sinal,whatsapp,demonstracao`);
     if (!barb.length) return erro(res, 404, "Barbearia não encontrada.");
+    // Vitrine da página de vendas (fase 25): aberta ao público, não grava agendamento de ninguém
+    if (barb[0].demonstracao === "vitrine") return res.status(403).json({ message: "Esta é uma barbearia de demonstração: o agendamento não é enviado.", demonstracao: true });
     const barbearia_id = barb[0].id;
     // A barbearia escolhe: o agendamento do site entra confirmado sozinho ou espera o dono/barbeiro confirmar
     const automatico = barb[0].confirmacao_automatica === true;
@@ -182,7 +184,8 @@ module.exports = async (req, res) => {
       await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico: assinante ? servicoPedido + " · Clube" : servico, dia, horario, confirmado: confirmaSozinho }).catch((e) =>
         console.error("aviso de pedido:", e.message)
       );
-      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado, clube: !!assinante, confirmado: confirmaSozinho, sinal: valorSinal ? sinal.pixDoPedido(barb[0].sinal, valorSinal, codigo) : null });
+      // whatsapp: o número atual da barbearia (fase 25), para a mensagem do pedido ir para ele mesmo se o site estiver em cache
+      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado, clube: !!assinante, confirmado: confirmaSozinho, sinal: valorSinal ? sinal.pixDoPedido(barb[0].sinal, valorSinal, codigo) : null, whatsapp: barb[0].whatsapp || undefined });
     }
     throw new Error("Não foi possível gerar um código livre para o pedido.");
   } catch (e) {

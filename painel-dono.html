@@ -184,6 +184,13 @@
       </label>
       <p class="nota p">Vai no celular de quem ligou os avisos da barbearia no site, com os botões "Confirmo" e "Não vou poder ir" (só entre 7h e 22h). Quem confirma ganha o selo na agenda; quem cancela libera o horário e você recebe o aviso.</p>
     </section>
+    <section class="cartao" id="secWhatsBarbearia">
+      <label class="campo">WhatsApp que recebe os pedidos do site
+        <input id="whatsBarbearia" type="tel" inputmode="tel" autocomplete="off" placeholder="Número publicado no site" maxlength="20">
+      </label>
+      <div class="linha"><button type="button" class="botao principal" id="salvarWhats">Salvar WhatsApp</button></div>
+      <p class="nota p" id="notaWhats"></p>
+    </section>
   </section>
 
   <section class="tela estreita" data-tela="ajuste-sinal" data-pai="mais" hidden>
@@ -276,6 +283,7 @@
     var siteBarbearia = d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "";
     mostrarConfirmacao(!!(d.barbearia && d.barbearia.confirmacao_automatica));
     $("pedirConfirmacao").value = d.barbearia && d.barbearia.pedir_confirmacao_min ? String(d.barbearia.pedir_confirmacao_min) : "";
+    mostrarWhats(d.barbearia ? d.barbearia.whatsapp : null);
     mostrarProtese(!!(d.barbearia && d.barbearia.protese_ativa));
     window.Protese.configurar({ barbearia: ctx.barbearia, site: siteBarbearia, ctx: ctx });
     window.Premium.configurar({ barbearia: ctx.barbearia, site: siteBarbearia });
@@ -1172,6 +1180,31 @@
       if (eu && eu.barbearia) eu.barbearia.pedir_confirmacao_min = r.pedirConfirmacaoMin;
       P.toast(novo ? "Pronto: o cliente recebe o pedido de confirmação " + sel.options[sel.selectedIndex].text.toLowerCase() + "." : "O pedido de confirmação foi desligado.", "ok");
     }).catch(function (e) { sel.value = antes; P.toast(e.message, "erro"); }).finally(function () { sel.disabled = false; });
+  };
+
+  // ---------- WhatsApp que recebe os pedidos do site ----------
+  // Vale no lugar do número publicado no site, sem republicar. Na Barbearia Modelo (demonstração), o Tiago põe
+  // aqui o WhatsApp do dono que está vendo a apresentação.
+  function zapBr(n) {
+    var t = String(n || "").replace(/\D/g, "");
+    if (t.length === 11) return "(" + t.slice(0, 2) + ") " + t.slice(2, 7) + "-" + t.slice(7);
+    if (t.length === 10) return "(" + t.slice(0, 2) + ") " + t.slice(2, 6) + "-" + t.slice(6);
+    return t;
+  }
+  function mostrarWhats(numero) {
+    $("whatsBarbearia").value = numero ? zapBr(numero) : "";
+    $("notaWhats").textContent = numero
+      ? "Os pedidos do site e os botões de WhatsApp vão para " + zapBr(numero) + ". Apague o número e salve para voltar ao WhatsApp publicado no site."
+      : "Em branco, vale o WhatsApp publicado no site. Preencha para trocar o número sem republicar o site.";
+  }
+  $("salvarWhats").onclick = function () {
+    var valor = $("whatsBarbearia").value.trim();
+    P.acao($("salvarWhats"), P.api("/api/eu", { corpo: { acao: "config-barbearia", whatsapp: valor } }).then(function (r) {
+      var numero = r && r.whatsapp !== undefined ? r.whatsapp : valor.replace(/\D/g, "") || null;
+      if (eu && eu.barbearia) eu.barbearia.whatsapp = numero;
+      mostrarWhats(numero);
+      P.toast(numero ? "Pronto: os pedidos do site vão para " + zapBr(numero) + "." : "Voltou a valer o WhatsApp publicado no site.", "ok");
+    }).catch(function (e) { P.toast(e.message, "erro"); }));
   };
 
   // ---------- Sinal no Pix (lib/sinal.js) ----------

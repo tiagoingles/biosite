@@ -139,9 +139,10 @@ test("painel e site: WhatsApp quando não há aviso no celular, link de aceite n
   assert.match(agenda, /aguardando o cliente aceitar o novo horário/);
   assert.match(agenda, /whatsapp: zap\.checked/);
   const site = ler("gw-barbearia.html");
-  assert.match(site, /maxlength="20" required value=/, "o campo do WhatsApp é obrigatório");
+  // Obrigatório em toda barbearia; só a vitrine da página de vendas (gerador v15) deixa em branco
+  assert.match(site, /maxlength="20"'\+\(demo\?'':' required'\)\+' value=/, "o campo do WhatsApp é obrigatório");
   assert.match(site, /Obrigatório: a barbearia usa para confirmar o horário e avisar você se ele precisar mudar\./);
-  assert.match(site, /if\(!semCadastro&&\(digitos\.length<10\|\|digitos\.length>13\)\)/);
+  assert.match(site, /if\(!semCadastro&&!demo&&\(digitos\.length<10\|\|digitos\.length>13\)\)/);
   assert.match(site, /Aceito o novo horário/);
   assert.match(site, /Não posso nesse horário/);
   assert.ok(require("../lib/gerador").VERSAO >= 14);

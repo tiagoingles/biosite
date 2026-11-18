@@ -88,6 +88,32 @@
     });
   }
 
+  // ---------- vender produto no balcão (lib/produtos.js) ----------
+  // O barbeiro vende em nome dele; o estoque baixa sozinho e o dono recebe o aviso quando chega ao mínimo
+  function venderProduto(ctx) {
+    P.api("/api/equipe?area=produtos").then(function (j) {
+      var ativos = j.produtos.filter(function (p) { return p.ativo; });
+      if (!ativos.length) {
+        P.janela({ titulo: "Nenhum produto cadastrado", conteudo: h("p", { class: "nota", texto: ctx.dono ? "Cadastre os produtos no Financeiro, em Produtos e estoque." : "O dono ainda não cadastrou os produtos que a barbearia vende." }), acoes: [{ texto: "Entendi", classe: "principal", valor: "ok" }] });
+        return;
+      }
+      var sel = h("select", { "aria-label": "Produto" }, ativos.map(function (p) { return h("option", { value: p.id, texto: p.nome + " · " + P.brl(p.preco) + (p.estoque <= 0 ? " · sem estoque" : " · " + p.estoque + " em estoque") }); }));
+      var qtd = h("input", { type: "number", min: "1", max: "100", step: "1", value: "1", inputmode: "numeric" });
+      P.janela({
+        titulo: "Vender produto",
+        conteudo: h("div", { class: "grade" }, [h("label", { class: "campo" }, ["Produto", sel]), h("label", { class: "campo" }, ["Quantidade", qtd]), j.hoje && j.hoje.unidades ? h("p", { class: "nota p", texto: "Hoje: " + j.hoje.unidades + " vendido(s), " + P.brl(j.hoje.bruto) + "." }) : null]),
+        acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Registrar venda", classe: "principal", valor: "ok" }],
+      }).then(function (r) {
+        if (r.valor !== "ok") return;
+        var p = ativos.filter(function (a) { return a.id === sel.value; })[0];
+        P.api("/api/equipe?area=produtos", { corpo: { acao: "vender", id: sel.value, quantidade: Number(qtd.value) || 1 } }).then(function (x) {
+          P.toast("Venda registrada" + (p ? ": " + p.nome : "") + "." + (x.baixo ? (ctx.dono ? " Estoque baixo: hora de repor." : " Estoque baixo: avise o dono.") : ""), "ok");
+          if (ctx.recarregar) ctx.recarregar();
+        }).catch(function (e) { P.toast(e.message, "erro"); });
+      });
+    }).catch(function (e) { P.toast(e.message, "erro"); });
+  }
+
   // ---------- mandar horários livres pelo WhatsApp ----------
   // Pedido dos donos: ao passar a agenda para o cliente, escolher QUAIS horários mandar.
   // ctx.slug + ctx.equipe (dono) ou ctx.eu (barbeiro); o: { profissionalId, cliente, telefone, duracao, servico, dia }
@@ -394,6 +420,7 @@
   P.cartaoPedido = cartaoPedido;
   P.encaixe = encaixe;
   P.oferecerHorarios = oferecerHorarios;
+  P.venderProduto = venderProduto;
   P.remarcar = remarcar;
   P.editorSemana = editorSemana;
   P.editorBloqueios = editorBloqueios;

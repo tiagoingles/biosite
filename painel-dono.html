@@ -76,6 +76,7 @@
       <div class="linha">
         <button type="button" class="botao principal" id="btnEncaixe"></button>
         <button type="button" class="botao" id="btnHorarios"></button>
+        <button type="button" class="botao" id="btnVender"></button>
         <button type="button" class="botao" id="btnHoje">Hoje</button>
         <button type="button" class="botao fantasma" id="btnCsvDia"></button>
       </div>
@@ -206,6 +207,7 @@
   P.trocar($("diaProx"), P.icone("seta_dir"));
   P.trocar($("btnEncaixe"), [P.icone("mais_um"), "Encaixe"]);
   P.trocar($("btnHorarios"), [P.icone("whats"), "Mandar horários"]);
+  P.trocar($("btnVender"), [P.icone("dinheiro"), "Vender produto"]);
   P.trocar($("btnCsvDia"), [P.icone("baixar"), "Planilha do dia"]);
   $("linkFin").href = P.link("financeiro.html");
   P.trocar($("btnConvidar"), [P.icone("email"), "Gerar convite"]);
@@ -277,6 +279,12 @@
       alertas.push(h("div", { class: "aviso-faixa " + (lembrar.some(function (x) { return x.dias < 0; }) ? "alerta" : "info") }, [h("span", { texto: textoClube }), h("a", { href: "#clube", class: "botao p principal", texto: "Lembrar" })]));
     }
     if (d.lembretesClube) P.bolinha("clube", lembrar.length);
+    // Produtos acabando: hora de repor (Financeiro > Produtos e estoque)
+    var repor = d.estoqueBaixo || [];
+    if (repor.length) {
+      var lista = repor.slice(0, 3).map(function (p) { return p.nome + (p.estoque <= 0 ? " (acabou)" : " (restam " + p.estoque + ")"); });
+      alertas.push(h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: "Hora de repor: " + lista.join(", ") + (repor.length > 3 ? " e mais " + (repor.length - 3) : "") + "." }), h("a", { href: P.link("financeiro.html") + "#secProdutos", class: "botao p principal", texto: "Ver estoque" })]));
+    }
     P.trocar($("alertas"), alertas);
 
     P.trocar($("kpis"), [
@@ -327,6 +335,7 @@
   $("btnHoje").onclick = function () { dia = P.hoje(); $("dia").value = dia; carregarDia(); };
   $("btnEncaixe").onclick = function () { P.encaixe(ctx, { dia: dia, profissionalId: filtro }); };
   $("btnHorarios").onclick = function () { P.oferecerHorarios(ctx, { dia: dia, profissionalId: filtro }); };
+  $("btnVender").onclick = function () { P.venderProduto(ctx); };
   function carregarDia() {
     $("rotuloDia").textContent = P.dataLonga(dia);
     return P.api("/api/pedido?painel=1&dia=" + dia).then(function (d) {

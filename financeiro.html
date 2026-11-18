@@ -47,6 +47,13 @@ button.perigo{color:var(--erro)}
 .detalhe.total{border-top:1px solid var(--linha);padding-top:6px;font-weight:700}
 .detalhe.clube span{color:var(--cor-clube);font-weight:600}
 .aviso-card{font-size:12px;color:var(--aviso)}
+.estoque button{min-width:44px;min-height:40px;font-size:18px;line-height:1}
+.estoque button.main{font-size:15px}
+.estoque .qtd{min-width:44px;text-align:center;font-size:17px}
+.item.apagado{opacity:.6}
+.item details{font-size:14px}
+.item details summary{cursor:pointer;color:var(--cor);font-weight:600;padding:4px 0}
+.faixa-repor{margin:0 0 4px;padding:10px 12px;border-radius:10px;background:var(--aviso-fundo);color:var(--aviso);font-weight:600;font-size:14px}
 .grafico{display:flex;align-items:flex-end;gap:3px;height:150px;border-bottom:1px solid var(--linha);padding-top:6px}
 .coluna{flex:1;min-width:4px;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
 .seg{background:var(--cor);flex:none}
@@ -151,6 +158,27 @@ button.perigo{color:var(--erro)}
     <p class="msg" id="msgInsumos" role="status"></p>
   </section>
 
+  <section class="largo" id="secProdutos" hidden>
+    <h2>Produtos e estoque</h2>
+    <p class="note">Cada venda entra no faturamento com o preço de compra do dia, e o lucro já sai certo. Toque em + quando chegar mercadoria e em − quando um produto sair sem venda (perda ou uso).</p>
+    <p class="faixa-repor" id="avisoBaixo" hidden></p>
+    <div id="listaProdutos"></div>
+    <form id="formProduto" style="display:grid;gap:10px">
+      <h3 style="margin:0;font-size:14px">Novo produto</h3>
+      <label>Nome<input id="prodNome" required maxlength="80" placeholder="Ex.: Pomada modeladora 120 g"></label>
+      <div class="linha">
+        <label>Preço de compra (R$)<input id="prodCusto" inputmode="decimal" placeholder="0,00" maxlength="12"></label>
+        <label>Preço de venda (R$)<input id="prodPreco" inputmode="decimal" placeholder="0,00" maxlength="12" required></label>
+      </div>
+      <div class="linha">
+        <label>Quantidade em estoque<input id="prodEstoque" type="number" min="0" step="1" value="0"></label>
+        <label>Avisar quando chegar a<input id="prodMinimo" type="number" min="0" step="1" value="2"></label>
+      </div>
+      <div class="linha"><button type="submit" class="main">Adicionar produto</button></div>
+    </form>
+    <p class="msg" id="msgProdutos" role="status"></p>
+  </section>
+
   <section class="largo" id="secPrecos" hidden>
     <h2>Preços dos serviços</h2>
     <p class="note">O valor do atendimento é gravado quando ele é marcado como realizado. Quem já tinha atendimento realizado sem preço recebe o valor ao salvar aqui.</p>
@@ -203,6 +231,7 @@ button.perigo{color:var(--erro)}
       desenharDespesas(j.despesas);
       desenharInsumos(j.insumos);
       desenharPrecos(j);
+      carregarProdutos();
     }).catch(function (err) {
       $("carregando").textContent = err.message;
       $("carregando").className = "msg erro";
@@ -215,6 +244,7 @@ button.perigo{color:var(--erro)}
     $("notaFaturamento").textContent = j.temClube
       ? "Faturamento = atendimentos realizados + mensalidades do clube (no dia em que você tocou em \"Recebi\"). Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos."
       : "Faturamento = atendimentos realizados. Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos.";
+    if (j.temProdutos) $("notaFaturamento").textContent += " Produtos: o que foi vendido entra no faturamento e o preço de compra sai do lucro.";
     ["dia", "semana", "ultimos30", "mes", "trimestre"].forEach(function (k) {
       var p = j.resumo[k];
       var c = el("div", "card");
@@ -225,6 +255,11 @@ button.perigo{color:var(--erro)}
       if (j.temClube) {
         linhas.push(["Atendimentos", p.faturamento]);
         linhas.push(["Mensalidades" + (p.pagamentosClube ? " (" + p.pagamentosClube + ")" : ""), p.clube, "clube"]);
+      }
+      if (j.temProdutos) {
+        if (!j.temClube) linhas.push(["Atendimentos", p.faturamento]);
+        linhas.push(["Produtos vendidos" + (p.produtosVendidos ? " (" + p.produtosVendidos + ")" : ""), p.produtos]);
+        linhas.push(["Custo dos produtos", p.custoProdutos]);
       }
       linhas.push(["Comissões", p.comissoes], ["Gastos fixos", p.gastosFixos], ["Insumos comprados", p.insumosComprados], ["Lucro", p.lucro, "total"]);
       linhas.forEach(function (linha) {
@@ -322,6 +357,98 @@ button.perigo{color:var(--erro)}
       .catch(function (err) { msg("msgDespesas", err.message, "erro"); });
   });
 
+  // ---------- produtos e estoque (lib/produtos.js) ----------
+  function caminhoProdutos() { return "/api/equipe?area=produtos" + (q ? "&barbearia=" + encodeURIComponent(q) : ""); }
+  function apiProdutos(corpo) { return Conta.api(caminhoProdutos(), corpo ? { corpo: corpo } : undefined); }
+  function carregarProdutos() {
+    apiProdutos().then(function (j) { $("secProdutos").hidden = false; desenharProdutos(j); })
+      .catch(function (err) { $("secProdutos").hidden = false; msg("msgProdutos", err.message, "erro"); });
+  }
+  function ocupado(botao, promessa) {
+    botao.disabled = true;
+    return promessa.finally(function () { botao.disabled = false; });
+  }
+  function mexer(p, n, botao) {
+    ocupado(botao, apiProdutos({ acao: "estoque", id: p.id, quantidade: n })).then(function () { carregarProdutos(); })
+      .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
+  }
+  function venderUm(p, botao) {
+    ocupado(botao, apiProdutos({ acao: "vender", id: p.id, quantidade: 1 })).then(function (r) {
+      msg("msgProdutos", "Venda de " + p.nome + " registrada." + (r.baixo ? " Estoque baixo: hora de repor." : ""), r.baixo ? "" : "ok");
+      carregar();
+    }).catch(function (err) { msg("msgProdutos", err.message, "erro"); });
+  }
+  function campo(rotulo, valor, extra) {
+    var l = el("label", null, rotulo);
+    var i = document.createElement("input");
+    Object.keys(extra || {}).forEach(function (k) { i.setAttribute(k, extra[k]); });
+    i.value = valor == null ? "" : valor;
+    l.appendChild(i);
+    return { label: l, input: i };
+  }
+  function precoTexto(n) { return n == null ? "" : n.toFixed(2).replace(".", ","); }
+  function desenharProdutos(j) {
+    var box = $("listaProdutos"); box.textContent = "";
+    $("avisoBaixo").hidden = !j.baixos.length;
+    $("avisoBaixo").textContent = j.baixos.length ? "Hora de repor: " + j.baixos.map(function (b) { return b.nome + (b.estoque <= 0 ? " (acabou)" : " (restam " + b.estoque + ")"); }).join(", ") : "";
+    if (!j.produtos.length) box.appendChild(el("p", "vazio", "Nenhum produto cadastrado. Cadastre abaixo o que você vende no balcão."));
+    j.produtos.forEach(function (p) {
+      var item = el("div", "item" + (p.ativo ? "" : " apagado"));
+      var topo = el("div", "topo");
+      topo.appendChild(el("b", null, p.nome));
+      if (!p.ativo) topo.appendChild(el("span", "pill", "desativado"));
+      else if (p.baixo) topo.appendChild(el("span", "pill aviso", p.estoque <= 0 ? "acabou" : "estoque baixo"));
+      item.appendChild(topo);
+      item.appendChild(el("span", "note", "Venda " + brl(p.preco) + (p.custo != null ? " · compra " + brl(p.custo) + " · lucro " + brl(p.lucro) + " por unidade" : " · sem preço de compra (o lucro fica sem o custo)")));
+      var linha = el("div", "linha estoque");
+      var menos = el("button", null, "−"); menos.type = "button"; menos.setAttribute("aria-label", "Tirar 1 de " + p.nome + " sem venda");
+      var qtd = el("b", "qtd", String(p.estoque));
+      var mais = el("button", null, "+"); mais.type = "button"; mais.setAttribute("aria-label", "Repor 1 de " + p.nome);
+      var vender = el("button", "main", "Vender 1"); vender.type = "button";
+      menos.onclick = function () { mexer(p, -1, menos); };
+      mais.onclick = function () { mexer(p, 1, mais); };
+      vender.onclick = function () { venderUm(p, vender); };
+      vender.disabled = !p.ativo;
+      [menos, qtd, mais, vender].forEach(function (x) { linha.appendChild(x); });
+      item.appendChild(linha);
+      // Repor várias de uma vez (com o preço de compra novo) e mudar os preços
+      var det = document.createElement("details");
+      det.appendChild(el("summary", null, "Repor várias ou mudar preços"));
+      var rq = campo("Quantas chegaram", "", { type: "number", min: "1", step: "1" });
+      var rc = campo("Preço de compra de cada (R$)", precoTexto(p.custo), { inputmode: "decimal", maxlength: "12" });
+      var bRepor = el("button", "main", "Repor estoque"); bRepor.type = "button";
+      bRepor.onclick = function () {
+        ocupado(bRepor, apiProdutos({ acao: "estoque", id: p.id, quantidade: Number(rq.input.value), custo: rc.input.value })).then(function () { msg("msgProdutos", "Estoque de " + p.nome + " reposto.", "ok"); carregarProdutos(); })
+          .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
+      };
+      var l1 = el("div", "linha"); [rq.label, rc.label, bRepor].forEach(function (x) { l1.appendChild(x); });
+      var ev = campo("Preço de venda (R$)", precoTexto(p.preco), { inputmode: "decimal", maxlength: "12" });
+      var ec = campo("Preço de compra (R$)", precoTexto(p.custo), { inputmode: "decimal", maxlength: "12" });
+      var em = campo("Avisar quando chegar a", String(p.minimo), { type: "number", min: "0", step: "1" });
+      var bSalvar = el("button", null, "Salvar preços"); bSalvar.type = "button";
+      bSalvar.onclick = function () {
+        ocupado(bSalvar, apiProdutos({ acao: "editar", id: p.id, preco: ev.input.value, custo: ec.input.value, minimo: Number(em.input.value) })).then(function () { msg("msgProdutos", p.nome + " atualizado.", "ok"); carregarProdutos(); })
+          .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
+      };
+      var bAtivo = el("button", p.ativo ? "perigo" : null, p.ativo ? "Desativar" : "Ativar de novo"); bAtivo.type = "button";
+      bAtivo.onclick = function () {
+        ocupado(bAtivo, apiProdutos({ acao: "editar", id: p.id, ativo: !p.ativo })).then(function () { carregarProdutos(); })
+          .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
+      };
+      var l2 = el("div", "linha"); [ev.label, ec.label, em.label].forEach(function (x) { l2.appendChild(x); });
+      var l3 = el("div", "linha"); [bSalvar, bAtivo].forEach(function (x) { l3.appendChild(x); });
+      [l1, l2, l3].forEach(function (x) { x.style.marginTop = "8px"; det.appendChild(x); });
+      item.appendChild(det);
+      box.appendChild(item);
+    });
+  }
+  $("formProduto").addEventListener("submit", function (e) {
+    e.preventDefault();
+    apiProdutos({ acao: "criar", nome: $("prodNome").value.trim(), custo: $("prodCusto").value, preco: $("prodPreco").value, estoque: Number($("prodEstoque").value || 0), minimo: Number($("prodMinimo").value || 0) })
+      .then(function () { msg("msgProdutos", "Produto adicionado.", "ok"); e.target.reset(); $("prodEstoque").value = "0"; $("prodMinimo").value = "2"; carregarProdutos(); })
+      .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
+  });
+
   var insumosAtuais = [];
   function desenharInsumos(lista) {
     insumosAtuais = lista;
@@ -336,6 +463,19 @@ button.perigo{color:var(--erro)}
       if (i.abaixoDoMinimo) topo.appendChild(el("span", "pill aviso", "abaixo do mínimo"));
       item.appendChild(topo);
       item.appendChild(el("span", "note", "Estoque: " + i.estoque + " " + i.unidade + " · mínimo " + i.estoqueMinimo + " " + i.unidade));
+      // Estoque fácil: −1 quando usar, +1 quando chegar (compra com valor continua no formulário abaixo)
+      var rapido = el("div", "linha estoque");
+      var usar = el("button", null, "−"); usar.type = "button"; usar.setAttribute("aria-label", "Usar 1 " + i.unidade + " de " + i.nome);
+      var chegou = el("button", null, "+"); chegou.type = "button"; chegou.setAttribute("aria-label", "Chegou 1 " + i.unidade + " de " + i.nome);
+      [[usar, "saida"], [chegou, "entrada"]].forEach(function (par) {
+        par[0].onclick = function () {
+          par[0].disabled = true;
+          enviar("movimento", { insumoId: i.id, tipo: par[1], quantidade: 1, data: hoje, motivo: par[1] === "saida" ? "Uso (botão −)" : "Reposição (botão +)" })
+            .then(carregar).catch(function (err) { msg("msgInsumos", err.message, "erro"); }).finally(function () { par[0].disabled = false; });
+        };
+      });
+      [usar, el("b", "qtd", String(i.estoque)), chegou].forEach(function (x) { rapido.appendChild(x); });
+      item.appendChild(rapido);
       var rem = el("button", "perigo", "Remover insumo");
       rem.onclick = function () {
         if (!confirm("Remover \"" + i.nome + "\" e o histórico dele?")) return;

@@ -194,6 +194,9 @@ test("aplicar no painel: convites do dono e da equipe com a comissão, reaprovei
     { metodo: "GET", padrao: /\/rest\/v1\/insumos\?barbearia_id=eq\./, resposta: { corpo: [] } },
     { metodo: "POST", padrao: /\/rest\/v1\/insumos$/, resposta: { status: 201, corpo: [{ id: "i1" }] } },
     { metodo: "POST", padrao: /\/rest\/v1\/insumo_movimentos/, resposta: { status: 201 } },
+    { metodo: "GET", padrao: /\/rest\/v1\/produtos\?barbearia_id=eq\./, resposta: { corpo: [] } },
+    { metodo: "POST", padrao: /\/rest\/v1\/produtos$/, resposta: (u, op, corpo) => ({ status: 201, corpo: [{ id: "p1", ...corpo }] }) },
+    { padrao: /\/rest\/v1\/rpc\/produto_movimentar/, resposta: { corpo: { estoque: 12, minimo: 0, cruzou: false } } },
     ...f.rotas,
   ]);
   const r = await A.chamar(barbearia, { metodo: "POST", token: "token-admin", corpo: { acao: "formulario-aplicar", id: FORM_ID, slug: "barbearia-modelo" } });
@@ -208,6 +211,11 @@ test("aplicar no painel: convites do dono e da equipe com a comissão, reaprovei
   assert.deepEqual([mov.corpo.tipo, mov.corpo.quantidade, mov.corpo.valor_total], ["entrada", 100, 50]);
   assert.equal(r.body.insumos, 1);
   assert.equal(f.estado.status, "importado");
+  const prod = chamadas.find((c) => c.metodo === "POST" && /\/rest\/v1\/produtos$/.test(c.url));
+  assert.deepEqual([prod.corpo.nome, prod.corpo.custo, prod.corpo.preco, prod.corpo.foto], ["Pomada", 18, 35, MIDIA], "produto com compra, venda e foto");
+  const est = chamadas.find((c) => c.url.includes("produto_movimentar"));
+  assert.deepEqual([est.corpo.p.tipo, est.corpo.p.quantidade, est.corpo.p.custo_unit], ["entrada", 12, 18], "estoque inicial do formulário");
+  assert.equal(r.body.produtos, 1);
   const conf = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("/rest/v1/barbearias?id=eq."));
   assert.deepEqual(conf.corpo, { confirmacao_automatica: true }, "o dono escolheu confirmação automática no formulário");
   assert.equal(r.body.confirmacaoAutomatica, true);

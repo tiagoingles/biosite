@@ -43,6 +43,7 @@
       <section class="cartao">
         <div class="cartao-topo"><h2 id="tituloHoje">Hoje</h2><div class="linha"><button type="button" class="botao p" id="btnHorarios"></button><button type="button" class="botao p principal" id="btnEncaixe"></button></div></div>
         <div class="lista" id="listaHoje"><div class="esqueleto"></div></div>
+        <div class="linha"><button type="button" class="botao p" id="btnVender"></button></div>
       </section>
     </div>
     <div class="coluna">
@@ -155,6 +156,7 @@
   $("sairTopo").onclick = P.sair;
   P.trocar($("btnEncaixe"), [P.icone("mais_um"), "Encaixe"]);
   P.trocar($("btnHorarios"), [P.icone("whats"), "Mandar horários"]);
+  P.trocar($("btnVender"), [P.icone("dinheiro"), "Vender produto"]);
   P.trocar($("btnEncaixeDia"), [P.icone("mais_um"), "Encaixe"]);
   P.trocar($("diaAnt"), P.icone("seta_esq"));
   P.trocar($("diaProx"), P.icone("seta_dir"));
@@ -196,6 +198,7 @@
   $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); if (location.hash === "#agenda") carregarDia(); };
   $("btnEncaixe").onclick = function () { P.encaixe(ctx); };
   $("btnHorarios").onclick = function () { P.oferecerHorarios(ctx); };
+  $("btnVender").onclick = function () { P.venderProduto(ctx); };
 
   function kpi(rotulo, valor, detalhe, barra) {
     return h("div", { class: "kpi" }, [h("span", { texto: rotulo }), h("b", { texto: valor }), detalhe ? h("small", { texto: detalhe }) : null, barra != null ? h("div", { class: "barra" }, h("i", { style: "width:" + Math.max(0, Math.min(100, barra)) + "%" })) : null]);

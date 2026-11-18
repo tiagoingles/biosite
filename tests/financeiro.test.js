@@ -58,7 +58,7 @@ test("mensalidades do clube entram no faturamento e no lucro, no dia do registro
   assert.equal(trimestre.pagamentosClube, 3);
 
   assert.equal(f.serie.length, 30);
-  assert.deepEqual(f.serie[29], { dia: HOJE, faturamento: 40, clube: 99.9, atendimentos: 2 });
+  assert.deepEqual(f.serie[29], { dia: HOJE, faturamento: 40, clube: 99.9, produtos: 0, atendimentos: 2 });
   assert.equal(f.serie.find((s) => s.dia === "2026-11-03").clube, 89.9);
   assert.equal(f.temClube, true);
 

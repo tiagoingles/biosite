@@ -188,6 +188,13 @@ let equipeGestao = [
 // Formulário inicial falso: começa vazio, como o dono recebe
 const formVazio = () => ({ barbearia: { nome: "", cidade: "", endereco: "", whatsapp: "", instagram: "", horario: "" }, dono: { nome: "", email: "", whatsapp: "", atende: false }, servicos: [], produtos: [], insumos: [], barbeiros: [], fotos: { logo: "", capa: "", ambiente: [] }, preferencias: { confirmacao: "", sinal: false, pixChave: "", pixNome: "" }, observacoes: "" });
 let formPrev = { token: "ab".repeat(24), nome: "", status: "aberto", dados: formVazio() };
+// Produtos falsos da prévia (lib/produtos.js)
+let produtosPrev = [
+  { id: "pr1", nome: "Pomada modeladora", custo: 18, preco: 35, estoque: 2, minimo: 3, foto: "", ativo: true },
+  { id: "pr2", nome: "Óleo para barba", custo: 22, preco: 45, estoque: 9, minimo: 2, foto: "", ativo: true },
+  { id: "pr3", nome: "Shampoo anticaspa", custo: null, preco: 30, estoque: 0, minimo: 1, foto: "", ativo: true },
+];
+let vendasPrev = [];
 let leads = [
   { id: "00000000-0000-4000-8000-000000000001", criado_em: new Date(Date.now() - 2 * 36e5).toISOString(), nome: "Marcos Lima", barbearia: "Barbearia do Marcos", cidade: "Olinda", whatsapp: "81988887777", barbeiros: "2-3", plano: "Barbearia", pagina: "/?utm_source=instagram", status: "novo" },
   { id: "00000000-0000-4000-8000-000000000002", criado_em: new Date(Date.now() - 30 * 36e5).toISOString(), nome: "Ana Souza", barbearia: "Studio Navalha", cidade: "Recife", whatsapp: "5581977776666", barbeiros: "1", plano: "Solo", pagina: "/", status: "contatado" },
@@ -460,6 +467,24 @@ const servidor = http.createServer(async (req, res) => {
       if (q.area === "financeiro") {
         if (metodo === "GET") return json(res, 200, { ...financeiroPrevia(), plataforma: false });
         return json(res, 200, { ok: true });
+      }
+      // Produtos e estoque (lib/produtos.js): estado em memória da prévia
+      if (q.area === "produtos") {
+        const baixo = (p) => p.ativo && p.estoque <= Math.max(0, p.minimo);
+        const lista = () => ({
+          dono: papel !== "barbeiro",
+          produtos: produtosPrev.map((p) => ({ ...p, baixo: baixo(p), ...(papel === "barbeiro" ? { custo: undefined, lucro: undefined } : { lucro: p.custo == null ? null : Math.round((p.preco - p.custo) * 100) / 100 }) })),
+          baixos: produtosPrev.filter(baixo).map((p) => ({ id: p.id, nome: p.nome, estoque: p.estoque })),
+          hoje: { unidades: vendasPrev.length, bruto: vendasPrev.reduce((t, v) => t + v, 0) },
+        });
+        if (metodo === "GET") return json(res, 200, lista());
+        const p = produtosPrev.find((x) => x.id === b.id);
+        if (b.acao === "criar") { produtosPrev.push({ id: "pr" + seq++, nome: b.nome, custo: Number(String(b.custo).replace(",", ".")) || null, preco: Number(String(b.preco).replace(",", ".")) || 0, estoque: Number(b.estoque) || 0, minimo: Number(b.minimo) || 0, foto: "", ativo: true }); return json(res, 201, { ok: true }); }
+        if (!p) return json(res, 404, { message: "Produto não encontrado." });
+        if (b.acao === "estoque") { p.estoque += Number(b.quantidade) || 0; return json(res, 200, { estoque: p.estoque, baixo: baixo(p) }); }
+        if (b.acao === "vender") { const n = Number(b.quantidade) || 1; p.estoque -= n; for (let i = 0; i < n; i++) vendasPrev.push(p.preco); return json(res, 201, { estoque: p.estoque, baixo: baixo(p) }); }
+        if (b.acao === "editar") { if (b.ativo !== undefined) p.ativo = b.ativo; if (b.preco !== undefined) p.preco = Number(String(b.preco).replace(",", ".")); if (b.custo !== undefined) p.custo = Number(String(b.custo).replace(",", ".")) || null; if (b.minimo !== undefined) p.minimo = Number(b.minimo); return json(res, 200, { ok: true }); }
+        return json(res, 400, { message: "Ação desconhecida." });
       }
       if (q.agenda === "1") return json(res, 200, { profissional: { id: q.profissionalId, nome: "Rafael", temLogin: false }, ...semana(q.de || hoje, q.dias) });
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));

@@ -88,10 +88,11 @@
 
     var cab = h("div", { class: "q-cab" }, [h("div", { class: "q-canto" })].concat(colunas.map(function (c) {
       var temProximos = editavel && pedidos.some(function (p) { return p.profissional_id === c.id && MOVEIS.indexOf(p.status) > -1 && (dia > hoje || min(p.horario) + duracao(p) > agoraMin()); });
-      var atrasar = temProximos ? h("button", { type: "button", class: "q-atrasar", "aria-label": "Atrasar os próximos horários de " + c.nome }, [P.icone("relogio"), "Atrasar"]) : null;
+      // No celular, só o ícone (o nome do barbeiro fica com o espaço); a palavra volta na tela larga
+      var atrasar = temProximos ? h("button", { type: "button", class: "q-atrasar", title: "Atrasar os próximos", "aria-label": "Atrasar os próximos horários de " + c.nome }, [P.icone("relogio"), h("span", { class: "q-rotulo", texto: "Atrasar" })]) : null;
       if (atrasar) atrasar.onclick = function () { atrasarProximos(c, dia, ctx); };
       var semAgenda = !c.agenda || !c.agenda.publicada;
-      return h("div", { class: "q-nome" }, [P.avatar(c, "p"), h("span", null, [h("b", { texto: c.nome }), semAgenda ? h("small", { texto: "agenda não publicada" }) : null]), atrasar]);
+      return h("div", { class: "q-nome" }, [P.avatar(c, "p"), h("span", { class: "q-quem" }, [h("b", { texto: c.nome }), semAgenda ? h("small", { texto: "agenda não publicada" }) : null]), atrasar]);
     })));
 
     var horas = h("div", { class: "q-horas", style: "height:" + altura + "px" });
@@ -131,7 +132,11 @@
     var dica = editavel
       ? (mudarColuna ? "Segure um horário e arraste para cima, para baixo ou para outro barbeiro. Toque num espaço livre para encaixar." : "Segure um horário e arraste para cima ou para baixo. Toque num espaço livre para encaixar.")
       : "Dia que já passou: toque num horário para ver e encerrar.";
-    P.trocar(alvo, [h("p", { class: "nota p q-dica", texto: dica }), grade]);
+    // Em cima do quadro: a dica e "Tela cheia"; na tela cheia, fechar, o dia e as setas para trocar de dia
+    var barra = alvo.classList.contains("q-cheio")
+      ? h("div", { class: "q-barra cheia" }, [botaoCheio(alvo, false, redesenhar), navDia(-1), h("b", { class: "q-titulo", texto: P.dataLonga(dia) }), navDia(1), P.demo && P.demo() ? h("span", { class: "q-demo", texto: "Demonstração" }) : null])
+      : h("div", { class: "q-barra" }, [h("p", { class: "nota p q-dica", texto: dica }), botaoCheio(alvo, true, redesenhar)]);
+    P.trocar(alvo, [barra, grade]);
     // Volta onde estava; na primeira vez, abre perto de agora (ou do primeiro horário)
     if (rolagem) { grade.scrollTop = rolagem.top; grade.scrollLeft = rolagem.left; }
     else {
@@ -139,6 +144,59 @@
       grade.scrollTop = Math.max(0, (foco - f.ini) * PX - 90);
     }
   }
+
+  // ---------- Tela cheia ----------
+  // O quadro cobre a tela (o topo e as abas do painel saem da frente) e, onde o navegador deixa (Android), some
+  // também a barra do navegador. Fecha no botão, no Esc, ao sair da tela cheia do navegador ou ao trocar de aba.
+  // Os avisos (toasts) e as janelas continuam aparecendo por cima.
+  var cheioAtual = null;
+  function botaoCheio(alvo, ligar, redesenhar) {
+    var b = ligar
+      ? h("button", { type: "button", class: "botao p q-btn-cheio", "aria-label": "Abrir o quadro em tela cheia" }, [P.icone("expandir"), h("span", { texto: "Tela cheia" })])
+      : h("button", { type: "button", class: "icone q-btn-cheio", "aria-label": "Sair da tela cheia", title: "Sair da tela cheia" }, P.icone("recolher"));
+    b.onclick = function () { if (ligar) abrirTelaCheia(alvo, redesenhar); else fecharTelaCheia(); };
+    return b;
+  }
+  // As setas da tela cheia usam as mesmas do painel (que já sabem trocar de dia e recarregar)
+  function navDia(passo) {
+    var original = document.getElementById(passo < 0 ? "diaAnt" : "diaProx");
+    if (!original) return null;
+    var b = h("button", { type: "button", class: "icone", "aria-label": passo < 0 ? "Dia anterior" : "Próximo dia" }, P.icone(passo < 0 ? "seta_esq" : "seta_dir"));
+    b.onclick = function () { original.click(); };
+    return b;
+  }
+  function abrirTelaCheia(alvo, redesenhar) {
+    if (cheioAtual) return;
+    var raiz = document.documentElement;
+    cheioAtual = { alvo: alvo, redesenhar: redesenhar, doNavegador: false };
+    alvo.classList.add("q-cheio");
+    raiz.classList.add("q-sem-rolagem");
+    document.addEventListener("fullscreenchange", aoMudarTelaCheia);
+    document.addEventListener("keydown", aoTeclar);
+    window.addEventListener("hashchange", fecharTelaCheia);
+    try {
+      if (raiz.requestFullscreen && !document.fullscreenElement) {
+        var pedido = raiz.requestFullscreen({ navigationUI: "hide" });
+        if (pedido && pedido.then) pedido.then(function () { if (cheioAtual) cheioAtual.doNavegador = true; }, function () {});
+      }
+    } catch (e) {}
+    redesenhar();
+  }
+  function fecharTelaCheia() {
+    if (!cheioAtual) return;
+    var c = cheioAtual;
+    cheioAtual = null;
+    c.alvo.classList.remove("q-cheio");
+    document.documentElement.classList.remove("q-sem-rolagem");
+    document.removeEventListener("fullscreenchange", aoMudarTelaCheia);
+    document.removeEventListener("keydown", aoTeclar);
+    window.removeEventListener("hashchange", fecharTelaCheia);
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {}); } catch (e) {}
+    c.redesenhar();
+  }
+  // Saiu da tela cheia do navegador (botão voltar do Android, Esc no computador): o quadro volta ao lugar
+  function aoMudarTelaCheia() { if (cheioAtual && cheioAtual.doNavegador && !document.fullscreenElement) fecharTelaCheia(); }
+  function aoTeclar(e) { if (e.key === "Escape" && !document.querySelector("dialog[open]")) fecharTelaCheia(); }
 
   // Toque: abre o atendimento (com as ações de sempre). Segurar e arrastar: muda o horário.
   function ligarBloco(el, p, q) {
@@ -368,5 +426,5 @@
     } catch (e) { return novo || "quadro"; }
   }
 
-  window.Quadro = { desenhar: desenhar, modo: modo, arrastando: function () { return !!arraste; }, _: { faixa: faixa, sombras: sombras, hm: hm, min: min } };
+  window.Quadro = { desenhar: desenhar, modo: modo, arrastando: function () { return !!arraste; }, telaCheia: function () { return !!cheioAtual; }, fecharTelaCheia: fecharTelaCheia, _: { faixa: faixa, sombras: sombras, hm: hm, min: min } };
 })();

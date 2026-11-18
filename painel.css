@@ -140,6 +140,8 @@ main { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; gap: 16p
   background: var(--cartao); border: 1px solid var(--linha); border-radius: var(--raio);
   padding: 16px; display: grid; gap: 12px; box-shadow: var(--sombra); min-width: 0;
 }
+/* Nada dentro do cartão o deixa mais largo que a tela: o que é largo (como o quadro) rola por dentro */
+.cartao > * { min-width: 0; }
 .cartao-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .cartao-topo h2 { display: flex; align-items: center; gap: 8px; }
 .nota { color: var(--suave); font-size: 14px; }
@@ -494,7 +496,7 @@ body.sem-abas { padding-bottom: 24px; }
 .q-cab { position: sticky; top: 0; z-index: 4; background: var(--cartao); border-bottom: 1px solid var(--linha); }
 .q-canto { position: sticky; left: 0; z-index: 1; background: var(--cartao); }
 .q-nome { display: flex; align-items: center; gap: 6px; padding: 8px 6px 8px 8px; min-width: 0; border-left: 1px solid var(--linha); }
-.q-nome > span { display: grid; flex: 1; min-width: 0; line-height: 1.2; }
+.q-nome > .q-quem { display: grid; flex: 1; min-width: 0; line-height: 1.2; }
 .q-nome b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .q-nome small { font-size: 11px; color: var(--alerta); font-weight: 700; }
 .q-atrasar { flex: none; display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--linha); background: var(--cartao-2); color: var(--texto); border-radius: 999px; padding: 4px 8px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -535,6 +537,45 @@ body.sem-abas { padding-bottom: 24px; }
 .q-agora::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--erro); }
 .chips-tempo { flex-wrap: wrap; }
 @media (min-width: 900px) { .quadro { max-height: calc(100vh - 240px); } }
+@supports (height: 100dvh) {
+  .quadro { max-height: calc(100dvh - 210px); }
+  @media (min-width: 900px) { .quadro { max-height: calc(100dvh - 240px); } }
+}
+
+/* Nome do cliente em até duas linhas quando o horário tem altura para isso */
+.q-bloco:not(.curto) b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Barra em cima do quadro: a dica e "Tela cheia" */
+.q-barra { display: flex; align-items: center; gap: 8px 10px; margin: 0 0 8px; }
+.q-barra .q-dica { flex: 1; margin: 0; min-width: 0; }
+.q-btn-cheio { flex: none; }
+.q-barra .botao.p svg { width: 16px; height: 16px; }
+
+/* Celular: colunas um pouco mais estreitas, "Atrasar" só com o ícone e o nome do barbeiro inteiro */
+@media (max-width: 700px) {
+  .q-cab, .q-corpo { grid-template-columns: 44px repeat(var(--n), minmax(124px, 1fr)); min-width: calc(44px + var(--n) * 124px); }
+  .q-agora { left: 44px; }
+  .q-horas span { right: 4px; }
+  .q-nome { gap: 5px; padding: 6px 4px 6px 6px; }
+  .q-nome .avatar.p { width: 24px; height: 24px; font-size: 10px; }
+  .q-nome b { font-size: 13px; }
+  .q-atrasar { padding: 6px; }
+  .q-atrasar svg { width: 16px; height: 16px; }
+  .q-atrasar .q-rotulo { display: none; }
+  .q-dica { font-size: 12.5px; line-height: 1.35; }
+}
+
+/* Tela cheia: o quadro ocupa a tela toda, por cima do topo e das abas do painel */
+html.q-sem-rolagem, html.q-sem-rolagem body { overflow: hidden; }
+.q-cheio {
+  position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; gap: 8px; background: var(--fundo);
+  padding: calc(8px + env(safe-area-inset-top, 0px)) calc(8px + env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) calc(8px + env(safe-area-inset-left, 0px));
+}
+.q-cheio .q-barra { margin: 0; flex: none; }
+.q-cheio .quadro { flex: 1; min-height: 0; max-height: none; }
+.q-barra.cheia .q-titulo { flex: 1; text-align: center; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-demo { flex: none; font-size: 12px; font-weight: 800; color: var(--info); background: var(--info-fundo); padding: 4px 10px; border-radius: 999px; }
+.q-cheio ~ .lista { display: none; }
 
 /* Mudança de horário esperando o aceite do cliente (fase 24) */
 .meta .aguarda { color: var(--alerta); font-weight: 700; }

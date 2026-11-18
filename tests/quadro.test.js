@@ -60,6 +60,21 @@ test("painel do dia: traz os bloqueios do dia de cada barbeiro (do dia e os sema
   assert.ok(busca.url.includes(`data=eq.${dia}`) && busca.url.includes(`profissionais.barbearia_id=eq.${UUIDS.barbearia}`), "só desta barbearia e deste dia");
 });
 
+test("quadro no celular: não alarga a página, Atrasar só com o ícone e tela cheia que fecha sozinha", () => {
+  const css = ler("painel.css");
+  assert.match(css, /\.cartao > \* \{ min-width: 0; \}/, "o quadro rola por dentro do cartão, sem alargar a página");
+  assert.match(css, /\.q-atrasar \.q-rotulo \{ display: none; \}/, "no celular, Atrasar fica só com o ícone");
+  assert.match(css, /\.q-nome > \.q-quem \{/, "a regra do nome não estica o avatar");
+  assert.match(css, /\.q-cheio \{\n  position: fixed; inset: 0;/, "a tela cheia cobre o topo e as abas");
+  assert.match(css, /html\.q-sem-rolagem, html\.q-sem-rolagem body \{ overflow: hidden; \}/);
+  const q = ler("painel-quadro.js");
+  assert.match(q, /requestFullscreen\(\{ navigationUI: "hide" \}\)/, "no Android, some também a barra do navegador");
+  assert.match(q, /window\.addEventListener\("hashchange", fecharTelaCheia\)/, "trocar de aba sai da tela cheia");
+  assert.match(q, /e\.key === "Escape"/);
+  assert.match(q, /cheioAtual\.doNavegador && !document\.fullscreenElement/, "voltar do Android sai da tela cheia");
+  assert.match(q, /document\.getElementById\(passo < 0 \? "diaAnt" : "diaProx"\)/, "as setas da tela cheia usam as do painel");
+});
+
 test("quadro nos dois painéis: Quadro | Lista, arrastar com confirmação e aviso, atrasar os próximos", () => {
   const q = ler("painel-quadro.js");
   assert.match(q, /acao: "remarcar", id: p\.id, dia: p\.dia, horario: para, duracao: duracao\(p\), avisar: avisar\.checked/);

@@ -327,7 +327,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     fecharFaixa();
     var passos;
     if(dentroDeApp)passos=["Toque no menu <b>⋯</b> no canto da tela.","Escolha <b>Abrir no navegador</b> (Safari ou Chrome).","No navegador, toque em <b>Colocar na tela do celular</b>, no fim da página."];
-    else if(ios)passos=["Toque em <b>Compartilhar</b> "+ICO_COMP+" (no Safari fica na barra de baixo ou no menu <b>⋯</b>).","Role a lista e toque em <b>Adicionar à Tela de Início</b>.","Toque em <b>Adicionar</b>. Pronto: o ícone da "+esc(nome)+" fica na tela do seu iPhone."];
+    else if(ios)passos=["Toque em <b>Compartilhar</b> "+ICO_COMP+" (no Safari fica na barra de baixo ou no menu <b>⋯</b>).","Role a lista e toque em <b>Adicionar à Tela de Início</b>.","Toque em <b>Adicionar</b>. Pronto: o ícone da "+esc(nome)+" fica na tela do seu iPhone.","Abra a "+esc(nome)+" pelo ícone novo e toque em <b>Permitir</b> quando pedir os avisos. No iPhone, os lembretes do horário só chegam assim."];
     else passos=["Toque no menu <b>⋮</b> do navegador (no canto de cima).","Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.","Confirme. Pronto: o ícone da "+esc(nome)+" fica na tela do celular."];
     var d=document.getElementById("appComo");
     if(!d){
@@ -356,7 +356,8 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
   function fecharFaixa(){if(faixa){faixa.remove();faixa=null}}
 
   // Avisos no celular (Web Push). No iPhone, só funcionam com o site aberto pelo ícone da tela de início.
-  function suportado(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window}
+  // Na vitrine da página de vendas (demonstração), os avisos não são oferecidos.
+  function suportado(){return C.demonstracao!=="vitrine"&&"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window}
   function permissao(){try{return Notification.permission}catch(e){return "denied"}}
   function bytesDe(b64u){var s=(b64u+"=".repeat((4-(b64u.length%4))%4)).replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0)})}
   function inscricao(pedir){
@@ -378,7 +379,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
       return fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){if(!r.ok)throw new Error("api");gravar({avisos:Date.now()});return true});
     });
   }
-  window.BioApp={podeInstalar:podeInstalar,instalar:instalar,instalado:function(){return instalado},avisos:{suportado:suportado,permissao:permissao,ligar:ligar}};
+  window.BioApp={podeInstalar:podeInstalar,instalar:instalar,instalado:function(){return instalado},ios:function(){return ios},avisos:{suportado:suportado,permissao:permissao,ligar:ligar}};
 
   // Aberto pelo ícone: pede os avisos uma vez (volta em 30 dias se recusar); quem já ligou só renova o vínculo
   function cartaoAvisos(){
@@ -718,7 +719,10 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
       if(perm==="granted"){if(ultimo.avisos!=="erro")h+='<p class="note ag-ok">'+(ultimo.avisos==="ok"?"✓ Avisos ligados neste celular: lembrete e confirmação do horário.":"Ligando os avisos deste celular…")+'</p>'}
       else if(perm==="default")h+='<button type="button" class="ag-op" data-ag="avisos"><b>Receber avisos no celular</b><small>Lembrete e confirmação do horário e novidades da '+esc(C.nome)+'</small></button>';
     }else if(ultimo.codigo&&!A&&podeLembrar())h+='<button type="button" class="ag-op" data-ag="lembrete"><b>Lembrete no celular</b><small>Aviso 30 min antes do horário</small></button>';
-    if(A&&A.podeInstalar())h+='<button type="button" class="ag-op" data-ag="instalar"><b>Colocar na tela do celular</b><small>Abra a '+esc(C.nome)+' como app e agende em 2 toques</small></button>';
+    // iPhone no Safari: os avisos só existem com o site na tela de início (regra da Apple); o botão explica e mostra como
+    if(A&&A.podeInstalar())h+=A.ios&&A.ios()&&!A.avisos.suportado()&&ultimo.codigo&&!demo
+      ?'<button type="button" class="ag-op" data-ag="instalar"><b>Receber os avisos no iPhone</b><small>Coloque a '+esc(C.nome)+' na tela de início e abra por lá: é assim que o iPhone libera o lembrete do horário</small></button>'
+      :'<button type="button" class="ag-op" data-ag="instalar"><b>Colocar na tela do celular</b><small>Abra a '+esc(C.nome)+' como app e agende em 2 toques</small></button>';
     return h;
   }
   function ligarAvisosAqui(b){

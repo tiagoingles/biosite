@@ -130,7 +130,7 @@ function clientesPrevia() {
   const conta = (seg) => lista.filter((c) => c.segmentos.includes(seg)).length;
   return {
     hoje, dono: !soDele, clientes: lista, equipe: [{ id: "b1", nome: "Bruno" }, { id: "b2", nome: "Rafael" }],
-    kpis: { total: lista.length, comWhats: lista.filter((c) => c.telefone).length, aceitam: lista.filter((c) => c.aceita).length, comApp: lista.filter((c) => c.app).length, appSemCadastro: soDele ? 0 : 2, ativos: lista.filter((c) => ["novo", "em_dia", "agendado"].includes(c.status)).length, novosMes: 3, taxaSegundaVisita: soDele ? null : 62, baseSegundaVisita: 8 },
+    kpis: { total: lista.length, comWhats: lista.filter((c) => c.telefone).length, aceitam: lista.filter((c) => c.aceita).length, comApp: lista.filter((c) => c.app).length, appSemCadastro: soDele ? 0 : 2, avisos: soDele ? null : { aparelhos: 7, comCadastro: 5, semCadastro: 2, novidades: 6, iphone: 2, android: 5, outros: 0 }, ativos: lista.filter((c) => ["novo", "em_dia", "agendado"].includes(c.status)).length, novosMes: 3, taxaSegundaVisita: soDele ? null : 62, baseSegundaVisita: 8 },
     segmentos: { chamar: conta("chamar"), segunda: conta("segunda"), sumidos: conta("sumidos"), aniversario: conta("aniversario") },
   };
 }

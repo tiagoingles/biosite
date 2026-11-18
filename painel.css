@@ -408,7 +408,9 @@ body.sem-abas { padding-bottom: 24px; }
 .arquivo input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 /* ---------- WhatsApp automático (painel-premium.js) ---------- */
 .premium h2 { display: inline-flex; align-items: center; gap: 8px; }
-.premium h2 svg { width: 20px; height: 20px; color: var(--acento); }
+.premium h2 svg, #cartaoAvisosCelular h2 svg { width: 20px; height: 20px; color: var(--acento); }
+.como-avisos summary { cursor: pointer; color: var(--acento); font-weight: 700; font-size: 14px; }
+.como-avisos p { margin-top: 6px; }
 .automacao { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--linha); border-radius: 14px; background: var(--cartao-2); }
 .automacao.desligada { opacity: 0.65; }
 .automacao-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }

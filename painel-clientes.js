@@ -115,6 +115,8 @@
       ferramentas.unshift(el.avisoTodos);
     }
     el.campanhas = h("div", { class: "lista" });
+    // Quantos ligaram os avisos da barbearia no celular (só o dono vê)
+    el.avisosCel = op.dono ? h("section", { class: "cartao", id: "cartaoAvisosCelular" }, h("div", { class: "esqueleto" })) : null;
     var colunaDireita = [
       op.dono ? h("section", { class: "cartao" }, [
         h("div", { class: "cartao-topo" }, [h("h2", { texto: "Campanhas" })]),
@@ -135,6 +137,7 @@
     P.trocar(raiz, [
       el.kpis,
       h("div", { class: "coluna" }, [
+        el.avisosCel,
         h("section", { class: "cartao" }, [
           h("div", { class: "cartao-topo" }, [h("h2", null, [op.dono ? "Clientes " : "Meus clientes ", el.qtd]), bNovo]),
           h("div", { class: "linha ferramentas" }, ferramentas),
@@ -142,6 +145,24 @@
         ]),
       ]),
       h("div", { class: "coluna" }, colunaDireita),
+    ]);
+  }
+
+  // Cartão "Avisos no celular": quantos aparelhos têm os avisos da barbearia ligados, quantos com cadastro
+  // (selo App na lista), quantos aceitam novidades (recebem o aviso para grupos) e se é Android ou iPhone
+  function desenharAvisosCelular(a) {
+    a = a || { aparelhos: 0, comCadastro: 0, semCadastro: 0, novidades: 0, iphone: 0, android: 0, outros: 0 };
+    var resumo = !a.aparelhos ? "Ninguém ligou os avisos da barbearia ainda."
+      : (a.aparelhos === 1 ? "1 celular com os avisos ligados" : a.aparelhos + " celulares com os avisos ligados") + ": " + a.comCadastro + " com cadastro (selo App na lista)" + (a.semCadastro ? " e " + a.semCadastro + " sem cadastro" : "") + ".";
+    var como = h("details", { class: "como-avisos" }, [
+      h("summary", { texto: "Como o cliente liga os avisos" }),
+      h("p", { class: "nota p", texto: "No Android: ao agendar pelo site, toca em \"Receber avisos no celular\" e em Permitir. No iPhone: a Apple só libera os avisos com o site colocado na tela de início e aberto pelo ícone; depois de agendar, o site mostra o passo a passo. Quem liga sem ter agendado com o WhatsApp aparece aqui como \"sem cadastro\" até o próximo agendamento." }),
+    ]);
+    P.trocar(el.avisosCel, [
+      h("div", { class: "cartao-topo" }, [h("h2", null, [P.icone("sino"), "Avisos no celular"]), h("span", { class: "contador", texto: String(a.aparelhos) })]),
+      h("p", { class: "nota", texto: resumo }),
+      a.aparelhos ? h("p", { class: "nota", texto: "Android: " + a.android + " · iPhone: " + a.iphone + (a.outros ? " · outros: " + a.outros : "") + " · " + a.novidades + " aceitam novidades (recebem os avisos para grupos)" }) : null,
+      como,
     ]);
   }
 
@@ -159,6 +180,7 @@
       kpi("Voltaram", k.taxaSegundaVisita == null ? "—" : k.taxaSegundaVisita + "%", k.taxaSegundaVisita == null ? "aparece com 5 clientes novos" : "dos novos voltaram"),
     ]);
     el.qtd.textContent = k.total;
+    if (el.avisosCel) desenharAvisosCelular(k.avisos);
     if (el.avisoTodos) {
       var nApp = comAppNoGrupo(dados.clientes).length + (k.appSemCadastro || 0);
       el.avisoTodos._n = nApp;

@@ -134,3 +134,14 @@ test("sites publicados não têm quadro de serviço vazio", () => {
     assert.ok(!ler(f).includes('<div class="svc-midia"></div>'), f);
   }
 });
+
+test("cartão de serviço: o nome nunca passa por cima do \"Agendar\" (gerador v16)", () => {
+  assert.ok(G.VERSAO >= 16);
+  for (const f of ["barbearia-modelo.html", "barbearia-exemplo.html", "gw-barbearia.html", "dom-manolo-barbearia.html"]) {
+    const t = ler(f);
+    assert.ok(t.includes(".svc-t b{overflow-wrap:break-word}"), f + ": palavra longa quebra em vez de vazar");
+    assert.ok(t.includes(".compacta .svc{display:flex;align-items:center;gap:12px;padding:8px;container-type:inline-size}"), f);
+    assert.ok(t.includes("@container (min-width:280px){"), f + ": o Agendar só vai para o lado quando o cartão é largo");
+    assert.ok(!/\.compacta \.svc-ag\{grid-column:2;grid-row:1\/span 2;margin:0\}\n/.test(t), f + ": fora da regra de largura, o Agendar fica embaixo");
+  }
+});

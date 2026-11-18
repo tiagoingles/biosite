@@ -575,6 +575,15 @@ html.q-sem-rolagem, html.q-sem-rolagem body { overflow: hidden; }
 .q-cheio .quadro { flex: 1; min-height: 0; max-height: none; }
 .q-barra.cheia .q-titulo { flex: 1; text-align: center; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .q-demo { flex: none; font-size: 12px; font-weight: 800; color: var(--info); background: var(--info-fundo); padding: 4px 10px; border-radius: 999px; }
+/* Tela cheia com o celular em pé: até 3 barbeiros cabem lado a lado (sem a bolinha, o nome fica com o espaço) */
+@media (max-width: 700px) {
+  .q-cheio .q-cab, .q-cheio .q-corpo { grid-template-columns: 44px repeat(var(--n), minmax(96px, 1fr)); min-width: calc(44px + var(--n) * 96px); }
+  .q-cheio .q-nome .avatar { display: none; }
+  .q-cheio .q-nome { padding: 6px 4px 6px 7px; }
+  .q-cheio .q-atrasar { padding: 5px; }
+  .q-cheio .q-bloco { padding: 3px 5px 3px 7px; }
+  .q-cheio .q-demo { padding: 4px 8px; }
+}
 .q-cheio ~ .lista { display: none; }
 
 /* Mudança de horário esperando o aceite do cliente (fase 24) */

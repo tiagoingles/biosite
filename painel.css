@@ -427,3 +427,7 @@ body.sem-abas { padding-bottom: 24px; }
 .passos li::before { counter-increment: passo; content: counter(passo); flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--acento-fundo); color: var(--acento-forte); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Gestão de atrasos: chegada e atraso no cartão do atendimento */
+.meta .chegou { color: var(--ok); font-weight: 700; }
+.meta .atrasado { color: var(--erro); font-weight: 700; }

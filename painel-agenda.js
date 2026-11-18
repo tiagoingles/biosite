@@ -32,6 +32,11 @@
       botao(primarias, "Realizado", "principal", "check", function (b) { encerrar(p, { status: "realizado" }, ctx, b); });
       botao(primarias, "Não realizado", "", null, function (b) { naoRealizado(p, ctx, b); });
     }
+    // Gestão de atrasos: no atendimento de hoje, "Chegou" para o aviso de atraso; atrasado, o WhatsApp vai pronto
+    var hojeAtivo = p.dia === hoje && (p.status === "confirmado" || p.status === "avulso");
+    var atraso = hojeAtivo && !p.chegou_em ? agoraMin() - P.min(P.hm(p.horario)) : 0;
+    if (hojeAtivo && !p.chegou_em) botao(secundarias, "Chegou", "ok", "check", function (b) { marcarChegada(p, ctx, b); });
+    if (hojeAtivo && !p.chegou_em && atraso >= 5) botao(secundarias, "Avisar atraso", "", "whats", function () { P.abrirWhats(textoAtraso(p, ctx), telefoneDe(p)); });
     if (editavel) botao(secundarias, "Remarcar", "", "relogio", function () { remarcar(p, ctx); });
     if (editavel && p.status !== "pendente") botao(secundarias, "Lembrete", "", "whats", function () { P.abrirWhats(P.mensagem("lembrete", p, ctx.barbearia), telefoneDe(p)); });
     // Atendimento sem cadastro do cliente: cadastrar (pelo celular dele, no painel ou ligando a um cadastro)
@@ -55,6 +60,7 @@
       h("span", { texto: clube ? (Number(p.valor) ? P.brl(p.valor) + " extra" : "pago no clube") : p.valor == null ? "sem preço" : P.brl(p.valor) }),
       clube && p.comissao_valor != null ? h("span", { texto: "comissão " + P.brl(p.comissao_valor) }) : null,
       p.codigo ? h("span", { texto: "código " + p.codigo }) : null,
+      p.chegou_em ? h("span", { class: "chegou", texto: "chegou " + horaBr(p.chegou_em) }) : atraso >= 5 ? h("span", { class: "atrasado", texto: atraso + " min atrasado" }) : null,
     ];
     return h("article", { class: classe + (clube ? " do-clube" : ""), dataset: { id: p.id } }, [
       h("div", { class: "hora" }, [h("b", { texto: P.hm(p.horario) }), opcoes.mostrarDia || p.dia !== hoje ? h("small", { texto: P.diaCurto(p.dia) }) : h("small", { texto: P.hm(p.horario_fim) ? "até " + P.hm(p.horario_fim) : "" })]),
@@ -68,6 +74,18 @@
   }
 
   function erro(e) { P.toast(e.message || "Não foi possível concluir.", "erro"); }
+  // Minutos desde a meia-noite em Brasília e a hora (HH:MM) de um instante, também em Brasília
+  function agoraMin() { var d = new Date(Date.now() - 3 * 36e5); return d.getUTCHours() * 60 + d.getUTCMinutes(); }
+  function horaBr(iso) { return new Date(Date.parse(iso) - 3 * 36e5).toISOString().slice(11, 16); }
+  function textoAtraso(p, ctx) {
+    return "Oi, " + P.primeiroNome(p.cliente) + "! Estamos te esperando para o seu horário das " + P.hm(p.horario) + " na " + (ctx.barbearia || "barbearia") + ". Vai conseguir vir? Se precisar, a gente remarca.";
+  }
+  function marcarChegada(p, ctx, botao) {
+    P.acao(botao, P.api("/api/pedido", { corpo: { acao: "chegou", id: p.id } }).then(function () {
+      P.toast(P.primeiroNome(p.cliente) + " chegou.", "ok");
+      ctx.recarregar();
+    }).catch(erro));
+  }
   // WhatsApp do cliente cadastrado ligado ao pedido (abre direto a conversa dele)
   function telefoneDe(p) { return (p && p.clientes && p.clientes.telefone) || ""; }
 

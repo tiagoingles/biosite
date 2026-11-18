@@ -20,16 +20,8 @@ const { falha, corpoDe } = require("../lib/seguranca");
 const FOTOS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const FOTO_MAX = 5 * 1024 * 1024;
 
-// Serviços de Web Push dos navegadores (Chrome/Android, Firefox, Edge/Windows, Safari/iPhone)
-const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /(^|\.)notify\.windows\.com$/, /^web\.push\.apple\.com$/];
-function endpointDePushValido(endpoint) {
-  try {
-    const u = new URL(endpoint);
-    return u.protocol === "https:" && PUSH_HOSTS.some((r) => r.test(u.hostname));
-  } catch (e) {
-    return false;
-  }
-}
+// Serviços de Web Push aceitos: lib/webpush.js (o mesmo teste vale para o lembrete do cliente)
+const { endpointDePushValido } = require("../lib/webpush");
 
 async function meuProfissional(userId) {
   return (await rest(`profissionais?perfil_user_id=eq.${userId}&select=id,barbearia_id,nome`))[0] || null;

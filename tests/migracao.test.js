@@ -94,7 +94,7 @@ test("importação: equipe da agenda, serviços com preço, produtos, clientes s
     bloqueios: [{ id: 700, inicio: amanha + "T12:40", fim: amanha + "T14:30", equipeId: 12, motivo: "" }],
   };
   const r = await migracao.importar(BARB, dados);
-  assert.deepEqual(r.equipe, { novos: 1, ligados: 1 }, "Manolo ligado pelo nome, Cleyton novo, recepção fora");
+  assert.deepEqual(r.equipe, { novos: 1, ligados: 1, jaEstavam: 0 }, "Manolo ligado pelo nome, Cleyton novo, recepção fora");
   assert.deepEqual(r.servicos, { novos: 1, existentes: 1, semPreco: 1 });
   assert.equal(r.produtos.novos, 1);
   assert.deepEqual(r.clientes, { novos: 2, atualizados: 1, jaEstavam: 0, ignorados: 2 });
@@ -116,6 +116,8 @@ test("importação: equipe da agenda, serviços com preço, produtos, clientes s
   const fone = clientes.find((c) => c.externo === "booksy:3");
   assert.equal(fone.nome, "Cliente (81) 97777-6666", "telefone no lugar do nome vira um nome legível");
   assert.equal(fone.aceita_novidades, false, "sem aceite no Booksy, sem aceite aqui");
+  // observação é NOT NULL no banco (padrão texto vazio): nulo derrubava a gravação de quem não tinha observação
+  assert.ok(clientes.every((c) => typeof c.observacao === "string"), "observação do cliente nunca nula");
   assert.ok(!clientes.some((c) => c.externo === "booksy:5"), "mesmo WhatsApp de outro cliente da coleta: não duplica");
   const patchAna = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("clientes?id=eq.c-ana"));
   assert.equal(patchAna.corpo.externo, "booksy:1", "quem já existia (mesmo WhatsApp) só ganha o vínculo e os campos vazios");
@@ -134,6 +136,7 @@ test("importação: equipe da agenda, serviços com preço, produtos, clientes s
   assert.equal(p901.slug, "dom-manolo");
   assert.equal(p901.codigo, "B" + (901).toString(36).toUpperCase());
   assert.equal(p901.simulado, false);
+  assert.ok(pedidos.every((p) => typeof p.observacao === "string"), "observação do agendamento nunca nula");
   const p902 = pedidos.find((p) => p.externo === "booksy:902");
   assert.equal(p902.status, "pendente");
   assert.equal(p902.cliente_id, null);
@@ -154,6 +157,27 @@ test("importação: um registro fora das regras do banco não derruba o lote int
   assert.equal(tentativas, 3, "um lote e depois um por um");
 });
 
+test("importação: erro que se repete para cedo, e sem tempo o resto fica para a próxima coleta (sem agendamento solto)", async () => {
+  // Todo cliente recusado (como a observação nula): não pode virar 1.000 tentativas e estourar os 60 segundos
+  let tentativas = 0;
+  A.instalarFetch([
+    ...rotasImportacao().filter((r) => !(r.metodo === "POST" && String(r.padrao).includes("clientes"))),
+    { metodo: "POST", padrao: /\/rest\/v1\/clientes/, resposta: () => { tentativas++; return { status: 400, corpo: { message: "null value in column" } }; } },
+  ]);
+  const muitos = Array.from({ length: 1200 }, (_, i) => ({ id: 5000 + i, nome: "Cliente Teste", telefone: "8198" + String(1000000 + i) }));
+  const r = await migracao.importar(BARB, { clientes: muitos });
+  assert.equal(r.clientes.novos, 0);
+  assert.equal(r.clientes.ignorados, 1200);
+  assert.ok(tentativas < 120, "parou de dividir: " + tentativas);
+
+  // Sem tempo: nada é gravado, a coleta avisa que é parcial e as etapas seguintes esperam a próxima vez
+  const chamadas = A.instalarFetch(rotasImportacao());
+  const r2 = await migracao.importar(BARB, { clientes: muitos.slice(0, 3), agendamentos: [{ id: 1, inicio: A.daquiA(1) + "T10:00", fim: A.daquiA(1) + "T10:30", status: "A", equipeId: 11 }] }, { prazo: Date.now() - 1 });
+  assert.equal(r2.parcial, true);
+  assert.equal(r2.agendamentos, undefined, "agendamento só entra depois dos clientes");
+  assert.equal(chamadas.filter((c) => c.metodo === "POST").length, 0);
+});
+
 test("admin: só a conta da plataforma gera o coletor; o /app mostra o favorito e o resultado", async () => {
   const barbearia = require("../api/barbearia");
   A.instalarFetch([...A.rotasDeConta()]);
@@ -163,7 +187,7 @@ test("admin: só a conta da plataforma gera o coletor; o /app mostra o favorito 
   assert.match(app, /id="secMigracao"/);
   assert.match(app, /acao: "migracao-criar", barbeariaId: id/);
   assert.match(app, /window\.__BIO_MIGRACAO=\{token:'/);
-  assert.match(app, /\/coletor-booksy\.js\?v=1/);
+  assert.match(app, /\/coletor-booksy\.js\?v=\d+/);
 });
 
 test("coletor: no Booksy só lê; manda para o barbeirotop como texto (sem pré-verificação) e devolve o XHR do site", () => {

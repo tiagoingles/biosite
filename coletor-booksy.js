@@ -166,21 +166,27 @@
       var prod = await produtos();
       var ag = await agenda();
       aviso("Enviando " + cli.length + " clientes, " + ag.agendamentos.length + " horários e " + prod.length + " produtos para o barbeirotop…", 92);
-      var r = await fetch(String(M.api).replace(/\/+$/, "") + "/api/config", {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=UTF-8" },
-        body: JSON.stringify({ tipo: "migracao", token: M.token, dados: { origem: "booksy", negocio: negocio, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios } }),
-      });
+      var r;
+      try {
+        r = await fetch(String(M.api).replace(/\/+$/, "") + "/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=UTF-8" },
+          body: JSON.stringify({ tipo: "migracao", token: M.token, dados: { origem: "booksy", negocio: negocio, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios } }),
+        });
+      } catch (e) {
+        throw new Error("A conexão com o barbeirotop caiu durante o envio. Parte dos dados pode ter entrado: veja em \"Ver o resultado\" no /app e toque no favorito de novo (nada é duplicado).");
+      }
       var j = await r.json().catch(function () { return {}; });
       if (!r.ok) throw new Error(j.message || "O barbeirotop respondeu " + r.status + ".");
       var s = j.resumo || {}, n = function (o, k) { return (o && o[k]) || 0; };
-      encerrar("Pronto! Entrou no barbeirotop:\n" +
-        "• Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados\n" +
-        "• Barbeiros: " + (n(s.equipe, "novos") + n(s.equipe, "ligados")) + "\n" +
+      var ja = function (o) { return n(o, "jaEstavam") ? ", " + n(o, "jaEstavam") + " já estavam" : ""; };
+      encerrar((s.parcial ? "Entrou uma parte. Toque no favorito de novo para completar (nada é duplicado):\n" : "Pronto! Entrou no barbeirotop:\n") +
+        "• Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados" + ja(s.clientes) + "\n" +
+        "• Barbeiros: " + n(s.equipe, "novos") + " novos, " + n(s.equipe, "ligados") + " ligados" + ja(s.equipe) + "\n" +
         "• Serviços: " + n(s.servicos, "novos") + " novos\n" +
-        "• Produtos: " + (n(s.produtos, "novos") + n(s.produtos, "atualizados")) + "\n" +
-        "• Agendamentos futuros: " + n(s.agendamentos, "novos") + "\n" +
-        "• Bloqueios de horário: " + n(s.bloqueios, "novos") + (s.erros && s.erros.length ? "\nCom problema: " + s.erros.join(", ") : ""), true);
+        "• Produtos: " + n(s.produtos, "novos") + " novos, " + n(s.produtos, "atualizados") + " atualizados\n" +
+        "• Agendamentos futuros: " + n(s.agendamentos, "novos") + " novos" + ja(s.agendamentos) + "\n" +
+        "• Bloqueios de horário: " + n(s.bloqueios, "novos") + " novos" + ja(s.bloqueios) + (s.erros && s.erros.length ? "\nCom problema: " + s.erros.join(", ") : ""), !s.parcial);
     } catch (e) {
       devolver();
       encerrar(e && e.message ? e.message : "Não deu para coletar agora. Tente de novo.");

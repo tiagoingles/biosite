@@ -154,7 +154,7 @@
   }
   function codigoDoColetor(j) {
     var api = String(j.api || location.origin).replace(/[^a-zA-Z0-9:/._-]/g, "");
-    return "javascript:(function(){window.__BIO_MIGRACAO={token:'" + String(j.token).replace(/[^0-9a-f]/g, "") + "',api:'" + api + "'};var s=document.createElement('script');s.src='" + api + "/coletor-booksy.js?v=1';document.body.appendChild(s);})();";
+    return "javascript:(function(){window.__BIO_MIGRACAO={token:'" + String(j.token).replace(/[^0-9a-f]/g, "") + "',api:'" + api + "'};var s=document.createElement('script');s.src='" + api + "/coletor-booksy.js?v=2';document.body.appendChild(s);})();";
   }
   $("migGerar").onclick = function () {
     var id = $("migBarbearia").value;
@@ -187,15 +187,17 @@
       var m = j.ultima;
       if (!m || !m.usado_em) { P.trocar(alvo, h("p", { class: "nota", texto: "Ainda não chegou nada. Toque no favorito com o Booksy aberto e espere o coletor dizer \"Pronto\"." })); return; }
       var s = m.resumo || {}, n = function (o, k) { return (o && o[k]) || 0; };
+      var ja = function (o, rotulo) { return n(o, "jaEstavam") ? ", " + n(o, "jaEstavam") + " " + rotulo : ""; };
       P.trocar(alvo, [
         h("p", { class: "nota", texto: "Coleta recebida em " + new Date(m.usado_em).toLocaleString("pt-BR") + ":" }),
+        s.parcial ? h("p", { class: "nota", texto: "Entrou uma parte. Toque no favorito de novo com o Booksy aberto para completar: nada é duplicado." }) : null,
         h("ul", { class: "mini-lista" }, [
-          h("li", { texto: "Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados, " + n(s.clientes, "jaEstavam") + " já estavam" + (n(s.clientes, "ignorados") ? ", " + n(s.clientes, "ignorados") + " sem nome nem WhatsApp" : "") }),
-          h("li", { texto: "Barbeiros: " + n(s.equipe, "novos") + " novos, " + n(s.equipe, "ligados") + " já existiam" }),
+          h("li", { texto: "Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados" + ja(s.clientes, "já estavam") + (n(s.clientes, "ignorados") ? ", " + n(s.clientes, "ignorados") + " ficaram de fora (sem nome ou repetidos)" : "") }),
+          h("li", { texto: "Barbeiros: " + n(s.equipe, "novos") + " novos, " + n(s.equipe, "ligados") + " ligados a quem já existia" + ja(s.equipe, "já tinham vindo antes") }),
           h("li", { texto: "Serviços: " + n(s.servicos, "novos") + " novos" + (n(s.servicos, "semPreco") ? ", " + n(s.servicos, "semPreco") + " sem preço ficaram de fora" : "") }),
           h("li", { texto: "Produtos: " + n(s.produtos, "novos") + " novos, " + n(s.produtos, "atualizados") + " atualizados" }),
           h("li", { texto: "Agendamentos futuros: " + n(s.agendamentos, "novos") + " novos" + (n(s.agendamentos, "jaEstavam") ? ", " + n(s.agendamentos, "jaEstavam") + " já estavam" : "") + (n(s.agendamentos, "semBarbeiro") ? ", " + n(s.agendamentos, "semBarbeiro") + " de quem não aparece na agenda" : "") }),
-          h("li", { texto: "Bloqueios de horário: " + n(s.bloqueios, "novos") }),
+          h("li", { texto: "Bloqueios de horário: " + n(s.bloqueios, "novos") + " novos" + ja(s.bloqueios, "já estavam") }),
           s.erros && s.erros.length ? h("li", { texto: "Com problema: " + s.erros.join(", ") + " (rode o coletor de novo)" }) : null,
         ]),
       ]);

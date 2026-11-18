@@ -8,7 +8,7 @@
 //   "foto-link" / "foto-salvar" / "foto-remover"  foto do barbeiro;
 //   "agenda-semana-salvar" { profissionalId, dias, confirmar }  publica dias da agenda de um barbeiro;
 //   "bloqueio-criar" / "bloqueio-remover" { profissionalId, ... }.
-// ?area=financeiro, ?area=assinatura, ?area=clube, ?area=clientes e ?area=produtos usam esta mesma função (limite de funções da Vercel no plano gratuito).
+// ?area=financeiro, ?area=assinatura, ?area=clube, ?area=clientes, ?area=produtos e ?area=protese usam esta mesma função (limite de funções da Vercel no plano gratuito).
 const crypto = require("crypto");
 const { rest, todas, linkDeEnvio, cfg } = require("../lib/supabase");
 const { usuarioDaRequisicao, perfilDoContexto, ehAdmin } = require("../lib/conta");
@@ -22,6 +22,7 @@ const assinatura = require("../lib/assinatura");
 const clube = require("../lib/clube");
 const clientes = require("../lib/clientes");
 const produtos = require("../lib/produtos");
+const protese = require("../lib/protese");
 
 const DIAS_CONVITE = 7;
 // Foto do barbeiro: JPG, PNG ou WebP até 5 MB, no bucket público "midia"
@@ -46,6 +47,7 @@ module.exports = async (req, res) => {
   if (req.query && req.query.area === "clube") return clube.area(req, res);
   if (req.query && req.query.area === "clientes") return clientes.area(req, res);
   if (req.query && req.query.area === "produtos") return produtos.area(req, res);
+  if (req.query && req.query.area === "protese") return protese.area(req, res);
   try {
     const u = await usuarioDaRequisicao(req);
     if (!u) return res.status(401).json({ message: "Entre na sua conta para continuar." });

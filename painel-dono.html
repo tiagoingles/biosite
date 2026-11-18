@@ -24,6 +24,7 @@
   <a href="#clientes" data-aba="clientes"></a>
   <a href="#equipe" data-aba="equipe"></a>
   <a href="#clube" data-aba="clube"></a>
+  <a href="#protese" data-aba="protese" hidden></a>
   <a href="#mais" data-aba="mais"></a>
 </nav>
 
@@ -155,6 +156,9 @@
     </div>
   </section>
 
+  <!-- ===== Prótese capilar (painel-protese.js) ===== -->
+  <section class="tela duas" data-tela="protese" id="telaProtese" hidden></section>
+
   <!-- ===== Mais ===== -->
   <section class="tela duas" data-tela="mais" hidden>
     <div class="coluna">
@@ -163,6 +167,11 @@
         <div class="cartao-topo"><h2>Avisos no celular</h2></div>
         <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
         <button type="button" class="botao principal" id="ativarAvisos"></button>
+      </section>
+      <section class="cartao" id="secProtese">
+        <div class="cartao-topo"><h2>Prótese capilar</h2></div>
+        <label class="check-linha"><input type="checkbox" id="proteseAtiva"> Mostrar a aba Prótese</label>
+        <p class="nota p">Ficha de cada cliente de prótese, próxima manutenção, lembrete pelo WhatsApp e histórico. No site, os serviços marcados como prótese ganham uma seção própria.</p>
       </section>
       <section class="cartao" id="secAgendamento" hidden>
         <div class="cartao-topo"><h2>Agendamentos do site</h2></div>
@@ -191,13 +200,14 @@
 <script src="/qr.js"></script>
 <script src="/painel-clientes.js"></script>
 <script src="/painel-premium.js"></script>
+<script src="/painel-protese.js"></script>
 <script>
 (function () {
   var P = window.Painel, h = P.h, $ = P.$;
   if (!P.exigirLogin()) return;
   P.monitorar();
 
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["equipe", "equipe", "Equipe"], ["clube", "clube", "Clube"], ["mais", "mais", "Mais"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["equipe", "equipe", "Equipe"], ["clube", "clube", "Clube"], ["protese", "protese", "Prótese"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
@@ -213,7 +223,7 @@
   P.trocar($("btnConvidar"), [P.icone("email"), "Gerar convite"]);
   P.trocar($("virarBarbeiro"), [P.icone("tesoura"), "Também atendo clientes"]);
 
-  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false;
+  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false, proteseMontada = false;
   var ctx = { barbearia: "", equipe: [], servicos: [], dono: true, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#equipe") carregarEquipe(); } };
 
   P.api("/api/eu").then(function (d) {
@@ -226,8 +236,10 @@
     $("sub").textContent = d.visaoAdmin ? "Visão da plataforma" : d.perfil.papel === "dono_barbeiro" ? "Você administra e atende" : "Você administra a barbearia";
     $("logo").textContent = P.iniciais(ctx.barbearia);
     montarMenu(d);
-    mostrarConfirmacao(!!(d.barbearia && d.barbearia.confirmacao_automatica));
     var siteBarbearia = d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "";
+    mostrarConfirmacao(!!(d.barbearia && d.barbearia.confirmacao_automatica));
+    mostrarProtese(!!(d.barbearia && d.barbearia.protese_ativa));
+    window.Protese.configurar({ barbearia: ctx.barbearia, site: siteBarbearia, ctx: ctx });
     window.Premium.configurar({ barbearia: ctx.barbearia, site: siteBarbearia });
     window.Clientes.configurar({ dono: true, barbearia: ctx.barbearia, site: siteBarbearia, extra: window.Premium.cartao() });
     P.abas(function (aba) {
@@ -235,6 +247,7 @@
       if (aba === "clientes") { if (!clientesMontado) { window.Clientes.montar($("telaClientes")); clientesMontado = true; } window.Clientes.carregar(); window.Premium.carregar(); }
       if (aba === "equipe") carregarEquipe();
       if (aba === "clube") carregarClube();
+      if (aba === "protese") { if (!proteseMontada) { window.Protese.montar($("telaProtese")); proteseMontada = true; } window.Protese.carregar(); }
       if (aba === "mais") { carregarSaude(); carregarAssinatura(); }
     });
     carregar();
@@ -279,6 +292,12 @@
       alertas.push(h("div", { class: "aviso-faixa " + (lembrar.some(function (x) { return x.dias < 0; }) ? "alerta" : "info") }, [h("span", { texto: textoClube }), h("a", { href: "#clube", class: "botao p principal", texto: "Lembrar" })]));
     }
     if (d.lembretesClube) P.bolinha("clube", lembrar.length);
+    // Prótese capilar: manutenções vencendo ou atrasadas (sem lembrete)
+    var prot = d.lembretesProtese || [];
+    if (prot.length) {
+      var nomesProt = prot.slice(0, 2).map(function (x) { return P.primeiroNome(x.nome) + (x.dias < 0 ? " (atrasada)" : x.dias === 0 ? " (hoje)" : " (em " + x.dias + " d)"); });
+      alertas.push(h("div", { class: "aviso-faixa " + (prot.some(function (x) { return x.dias < 0; }) ? "alerta" : "info") }, [h("span", { texto: "Prótese: manutenção de " + nomesProt.join(", ") + (prot.length > 2 ? " e mais " + (prot.length - 2) : "") + "." }), h("a", { href: "#protese", class: "botao p principal", texto: "Lembrar" })]));
+    }
     // Produtos acabando: hora de repor (Financeiro > Produtos e estoque)
     var repor = d.estoqueBaixo || [];
     if (repor.length) {
@@ -1045,6 +1064,20 @@
       mostrarConfirmacao(novo);
       P.toast(novo ? "Os agendamentos do site agora entram confirmados." : "Os pedidos do site voltam a esperar a sua confirmação.", "ok");
     }).catch(function (e) { caixa.checked = !novo; P.toast(e.message, "erro"); }).finally(function () { caixa.disabled = false; });
+  };
+
+  // Aba Prótese: aparece quando o dono liga (ou quando cria a primeira ficha)
+  function mostrarProtese(ligada) {
+    $("proteseAtiva").checked = ligada;
+    document.querySelector('[data-aba="protese"]').hidden = !ligada;
+  }
+  $("proteseAtiva").onchange = function () {
+    var caixa = $("proteseAtiva"), nova = caixa.checked;
+    caixa.disabled = true;
+    P.api("/api/equipe?area=protese", { corpo: { acao: "aba", ativa: nova } }).then(function () {
+      mostrarProtese(nova);
+      P.toast(nova ? "A aba Prótese apareceu no menu." : "A aba Prótese saiu do menu. As fichas continuam guardadas.", "ok");
+    }).catch(function (e) { caixa.checked = !nova; P.toast(e.message, "erro"); }).finally(function () { caixa.disabled = false; });
   };
 
   function carregarAssinatura() {

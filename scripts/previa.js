@@ -195,6 +195,13 @@ let produtosPrev = [
   { id: "pr3", nome: "Shampoo anticaspa", custo: null, preco: 30, estoque: 0, minimo: 1, foto: "", ativo: true },
 ];
 let vendasPrev = [];
+// Fichas de prótese falsas da prévia (lib/protese.js)
+const diasAtras = (n) => new Date(Date.now() - 3 * 36e5 - n * 864e5).toISOString().slice(0, 10);
+let protesePrev = [
+  { id: "pf1", nome: "Marcos Lima", telefone: "81999990009", profissional_id: "b1", modelo: "Full lace", aplicada_em: diasAtras(60), intervalo_dias: 21, ultima_manutencao: diasAtras(25), lembrete_em: null, observacao: "", ativo: true },
+  { id: "pf2", nome: "Paulo Henrique", telefone: "81999990010", profissional_id: "b2", modelo: "Base de tela", aplicada_em: diasAtras(30), intervalo_dias: 21, ultima_manutencao: diasAtras(19), lembrete_em: null, observacao: "", ativo: true },
+  { id: "pf3", nome: "Ana Prado", telefone: "", profissional_id: null, modelo: "", aplicada_em: diasAtras(5), intervalo_dias: 21, ultima_manutencao: null, lembrete_em: null, observacao: "", ativo: true },
+];
 let leads = [
   { id: "00000000-0000-4000-8000-000000000001", criado_em: new Date(Date.now() - 2 * 36e5).toISOString(), nome: "Marcos Lima", barbearia: "Barbearia do Marcos", cidade: "Olinda", whatsapp: "81988887777", barbeiros: "2-3", plano: "Barbearia", pagina: "/?utm_source=instagram", status: "novo" },
   { id: "00000000-0000-4000-8000-000000000002", criado_em: new Date(Date.now() - 30 * 36e5).toISOString(), nome: "Ana Souza", barbearia: "Studio Navalha", cidade: "Recife", whatsapp: "5581977776666", barbeiros: "1", plano: "Solo", pagina: "/", status: "contatado" },
@@ -314,7 +321,7 @@ const servidor = http.createServer(async (req, res) => {
       if (metodo === "GET") {
         return json(res, 200, papel === "barbeiro"
           ? { usuario: { id: "u2", email: "bruno@exemplo.com" }, perfil: { papel: "barbeiro", nome: "Bruno", barbearia_id: "x" }, barbearia: { id: "x", slug: "gw-barbearia", nome: "GW Barbearia" }, profissional: { id: "b1", nome: "Bruno Oliveira", foto_url: null, comissao_pct: 40 } }
-          : { usuario: { id: "u1", email: "dono@exemplo.com" }, perfil: { papel: "dono", nome: "Gustavo Wanderley", barbearia_id: "x" }, barbearia: { id: "x", slug: "gw-barbearia", nome: "GW Barbearia" }, profissional: null });
+          : { usuario: { id: "u1", email: "dono@exemplo.com" }, perfil: { papel: "dono", nome: "Gustavo Wanderley", barbearia_id: "x" }, barbearia: { id: "x", slug: "gw-barbearia", nome: "GW Barbearia", protese_ativa: true }, profissional: null });
       }
       if (b.acao === "lead-status") { const l = leads.find((x) => x.id === b.id); if (l) l.status = b.status; return json(res, 200, { ok: true }); }
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));
@@ -467,6 +474,27 @@ const servidor = http.createServer(async (req, res) => {
       if (q.area === "financeiro") {
         if (metodo === "GET") return json(res, 200, { ...financeiroPrevia(), plataforma: false });
         return json(res, 200, { ok: true });
+      }
+      // Prótese capilar (lib/protese.js): fichas em memória da prévia
+      if (q.area === "protese") {
+        const { situacao } = require("../lib/protese");
+        const listaP = () => {
+          const fichas = protesePrev.filter((f) => f.ativo).map((f) => ({ ...f, profissional: f.profissional_id === "b1" ? "Bruno Oliveira" : f.profissional_id === "b2" ? "Rafael Souza" : "", ...situacao(f, hoje) }));
+          const ordem = { atrasada: 0, vence: 1, em_dia: 2, sem_data: 3 };
+          fichas.sort((a, b) => ordem[a.status] - ordem[b.status]);
+          return { ativa: true, fichas, equipe: [{ id: "b1", nome: "Bruno Oliveira" }, { id: "b2", nome: "Rafael Souza" }], resumo: { total: fichas.length, atrasadas: fichas.filter((f) => f.status === "atrasada").length, vencem: fichas.filter((f) => f.status === "vence").length, semana: fichas.filter((f) => f.dias != null && f.dias >= 0 && f.dias <= 7).length } };
+        };
+        if (metodo === "GET") return json(res, 200, listaP());
+        if (b.acao === "aba") return json(res, 200, { ativa: b.ativa });
+        if (b.acao === "criar") { protesePrev.push({ id: "pf" + seq++, nome: b.nome, telefone: String(b.telefone || "").replace(/[^0-9]/g, ""), profissional_id: b.profissionalId, modelo: b.modelo || "", aplicada_em: b.aplicadaEm, intervalo_dias: b.intervaloDias || 21, ultima_manutencao: b.aplicadaEm, lembrete_em: null, observacao: b.observacao || "", ativo: true }); return json(res, 201, { ok: true }); }
+        const f = protesePrev.find((x) => x.id === b.id);
+        if (!f) return json(res, 404, { message: "Ficha não encontrada." });
+        if (b.acao === "manutencao") { f.ultima_manutencao = b.dia; return json(res, 201, { proxima: somaDias(b.dia, f.intervalo_dias) }); }
+        if (b.acao === "lembrar") { f.lembrete_em = new Date().toISOString(); return json(res, 200, { ok: true }); }
+        if (b.acao === "historico") return json(res, 200, { manutencoes: [{ dia: f.ultima_manutencao || hoje, tipo: "manutencao", observacao: "" }] });
+        if (b.acao === "desativar") { f.ativo = false; return json(res, 200, { ok: true }); }
+        if (b.acao === "editar") { Object.assign(f, { nome: b.nome, modelo: b.modelo, intervalo_dias: b.intervaloDias }); return json(res, 200, { ok: true }); }
+        return json(res, 400, { message: "Ação desconhecida." });
       }
       // Produtos e estoque (lib/produtos.js): estado em memória da prévia
       if (q.area === "produtos") {

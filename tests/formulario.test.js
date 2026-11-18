@@ -216,8 +216,9 @@ test("aplicar no painel: convites do dono e da equipe com a comissão, reaprovei
   const est = chamadas.find((c) => c.url.includes("produto_movimentar"));
   assert.deepEqual([est.corpo.p.tipo, est.corpo.p.quantidade, est.corpo.p.custo_unit], ["entrada", 12, 18], "estoque inicial do formulário");
   assert.equal(r.body.produtos, 1);
-  const conf = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("/rest/v1/barbearias?id=eq."));
-  assert.deepEqual(conf.corpo, { confirmacao_automatica: true }, "o dono escolheu confirmação automática no formulário");
+  const patches = chamadas.filter((c) => c.metodo === "PATCH" && c.url.includes("/rest/v1/barbearias?id=eq.")).map((c) => c.corpo);
+  assert.ok(patches.some((p) => p.confirmacao_automatica === true), "o dono escolheu confirmação automática no formulário");
+  assert.ok(patches.some((p) => p.protese_ativa === true), "serviço de prótese no formulário liga a aba Prótese");
   assert.equal(r.body.confirmacaoAutomatica, true);
 });
 

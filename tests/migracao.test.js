@@ -58,7 +58,7 @@ function rotasImportacao() {
     { metodo: "POST", padrao: /\/rest\/v1\/servicos_precos/, resposta: { status: 201 } },
     { metodo: "GET", padrao: /\/rest\/v1\/produtos\?barbearia_id=eq\./, resposta: { corpo: [] } },
     { metodo: "POST", padrao: /\/rest\/v1\/produtos/, resposta: { status: 201 } },
-    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&select=id,telefone/, resposta: { corpo: [{ id: "c-ana", telefone: "81999990000", cpf: null, externo: null, nascimento: null, observacao: null, ultima_visita_externa: null }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&select=id,nome,telefone/, resposta: { corpo: [{ id: "c-ana", nome: "Ana Lima", telefone: "81999990000", cpf: null, externo: null, nascimento: null, observacao: "", ultima_visita_externa: null }] } },
     { metodo: "POST", padrao: /\/rest\/v1\/clientes/, resposta: { status: 201 } },
     { metodo: "PATCH", padrao: /\/rest\/v1\/clientes\?id=eq\./, resposta: { status: 204 } },
     { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&externo=like\.booksy/, resposta: { corpo: [{ id: "c-bia", externo: "booksy:2", nome: "Bia Souza" }] } },
@@ -157,6 +157,26 @@ test("importação: um registro fora das regras do banco não derruba o lote int
   assert.equal(tentativas, 3, "um lote e depois um por um");
 });
 
+test("importação: na coleta seguinte, o nome de verdade entra no lugar do provisório; nome dado pelo dono não muda", async () => {
+  const chamadas = A.instalarFetch([
+    ...rotasImportacao().filter((r) => !(r.metodo === "GET" && String(r.padrao).includes("select=id,nome,telefone"))),
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&select=id,nome,telefone/, resposta: { corpo: [
+      { id: "c-prov", nome: "Cliente (81) 97777-6666", telefone: "81977776666", externo: "booksy:3", observacao: "" },
+      { id: "c-dono", nome: "Seu Zé da Esquina", telefone: "81966665555", externo: "booksy:4", observacao: "" },
+    ] } },
+  ]);
+  const r = await migracao.importar(BARB, { clientes: [
+    { id: 3, nome: "Paulo Lima", telefone: "81977776666" },
+    { id: 4, nome: "José Carlos", telefone: "81966665555" },
+  ] });
+  assert.equal(r.clientes.atualizados, 1);
+  assert.equal(r.clientes.jaEstavam, 1);
+  const patch = chamadas.filter((c) => c.metodo === "PATCH" && c.url.includes("/clientes?id=eq."));
+  assert.equal(patch.length, 1);
+  assert.ok(patch[0].url.includes("c-prov"));
+  assert.equal(patch[0].corpo.nome, "Paulo Lima");
+});
+
 test("importação: erro que se repete para cedo, e sem tempo o resto fica para a próxima coleta (sem agendamento solto)", async () => {
   // Todo cliente recusado (como a observação nula): não pode virar 1.000 tentativas e estourar os 60 segundos
   let tentativas = 0;
@@ -199,6 +219,10 @@ test("coletor: no Booksy só lê; manda para o barbeirotop como texto (sem pré-
   assert.match(c, /"Content-Type": "text\/plain;charset=UTF-8"/);
   assert.match(c, /function devolver\(\) \{ XMLHttpRequest\.prototype\.open = abrir;/);
   assert.ok(!/email/.test(c.replace(/\/\/.*$/gm, "")), "o e-mail do cliente não é coletado");
+  // Cliente do app do Booksy: nome e telefone ficam no perfil combinado; o id continua o da ficha da barbearia
+  assert.match(c, /var b = c\.business_customer \|\| \{\}, m = c\.merged_data \|\| \{\};/);
+  assert.match(c, /id: b\.id \|\| m\.id \|\| c\._id/);
+  assert.match(c, /var tela = \/\\\/customers\(\\\/\|\$\)\/\.test\(location\.pathname\) \? "calendar" : "customers";/);
   const sql = ler("supabase/fase26-migracao.sql").replace(/--.*$/gm, "").toLowerCase().replace(/on delete cascade/g, "");
   assert.doesNotMatch(sql, /\bdrop\b|\bdelete\b|\btruncate\b/);
   assert.match(sql, /token_hash text not null unique/);

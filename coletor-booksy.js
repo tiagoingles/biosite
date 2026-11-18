@@ -60,21 +60,24 @@
   function devolver() { XMLHttpRequest.prototype.open = abrir; XMLHttpRequest.prototype.setRequestHeader = porCab; XMLHttpRequest.prototype.send = enviar; }
 
   function pausa(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  // Faz o próprio Booksy buscar a lista de clientes (troca de tela dentro do site) para os cabeçalhos aparecerem
+  // Faz o próprio Booksy buscar dados (troca de tela dentro do site) para os cabeçalhos aparecerem. Se a tela já
+  // é a de clientes, o Booksy não busca de novo: aí vai para a agenda (e vice-versa).
   function provocar() {
     try {
-      history.pushState({}, "", "/pro/" + idioma + "/" + negocio + "/customers");
+      var tela = /\/customers(\/|$)/.test(location.pathname) ? "calendar" : "customers";
+      history.pushState({}, "", "/pro/" + idioma + "/" + negocio + "/" + tela);
       window.dispatchEvent(new PopStateEvent("popstate", { state: {} }));
     } catch (e) {}
   }
   function esperarSessao() {
     aviso("Conectando à sessão do Booksy…", 2);
     provocar();
-    var inicio = Date.now(), pediu = false;
+    var inicio = Date.now(), tentou = false, pediu = false;
     return new Promise(function (ok, falhou) {
       (function olhar() {
         if (cab) return ok();
-        if (!pediu && Date.now() - inicio > 4000) { pediu = true; aviso("Toque em Clientes no menu do Booksy para eu começar.", 2); }
+        if (!tentou && Date.now() - inicio > 3000) { tentou = true; provocar(); }
+        if (!pediu && Date.now() - inicio > 7000) { pediu = true; aviso("Toque em Calendário ou em Clientes no menu do Booksy para eu começar.", 2); }
         if (Date.now() - inicio > 90000) return falhou(new Error("Não consegui usar a sessão do Booksy. Recarregue a página do Booksy e toque de novo no favorito."));
         setTimeout(olhar, 300);
       })();
@@ -91,14 +94,19 @@
   function diaLocal(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 
   // ---------- leitura ----------
+  // Quem se cadastrou pelo app do Booksy tem nome e telefone no perfil combinado (merged_data), não na ficha da
+  // barbearia (business_customer): vale o que estiver preenchido, primeiro o combinado. O id é sempre o da ficha.
   function cliente(c) {
-    var b = c.business_customer || c.merged_data || {};
-    var nasc = /^\d{4}-\d{2}-\d{2}$/.test(String(b.birthday || "")) ? b.birthday : "";
-    var curto = /^(\d{2})(\d{2})$/.exec(String(b.short_birthday || ""));
+    var b = c.business_customer || {}, m = c.merged_data || {};
+    var v = function (k) { return m[k] != null && m[k] !== "" ? m[k] : b[k]; };
+    var nasc = /^\d{4}-\d{2}-\d{2}$/.test(String(v("birthday") || "")) ? v("birthday") : "";
+    var curto = /^(\d{2})(\d{2})$/.exec(String(v("short_birthday") || ""));
     if (!nasc && curto) nasc = curto[2] + "/" + curto[1]; // MMDD -> DD/MM (aniversário sem o ano)
+    var obs = String(v("business_secret_note") || "");
+    if (c.blacklisted || v("blacklisted")) obs = (obs ? obs + " · " : "") + "Bloqueado no Booksy";
     return {
-      id: b.id || c._id, nome: b.full_name || [b.first_name, b.last_name].filter(Boolean).join(" "), telefone: b.cell_phone || "",
-      nascimento: nasc, cpf: b.tax_id || "", obs: b.business_secret_note || "", aceita: !!(b.web_communication_agreement || c.web_communication_agreement) && !c.blasts_unsubscribed,
+      id: b.id || m.id || c._id, nome: v("full_name") || [v("first_name"), v("last_name")].filter(Boolean).join(" "), telefone: v("cell_phone") || "",
+      nascimento: nasc, cpf: v("tax_id") || "", obs: obs, aceita: !!(v("web_communication_agreement") || c.web_communication_agreement) && !c.blasts_unsubscribed,
       ultimaVisita: c.recent_visit || "", visitas: Number(c.booking_count) || 0,
     };
   }

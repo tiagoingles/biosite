@@ -148,3 +148,11 @@ Cada fase termina com um checkpoint: você testa antes da próxima.
 - ID do cliente OAuth do Google.
 - Regra de suspensão por inadimplência.
 - Confirmar se um dono pode ter mais de uma barbearia.
+
+## 14. Migração do Booksy (admin)
+
+- No /app, o card "Migrar do Booksy" gera, para a barbearia escolhida, um favorito com um código que vale 2 horas (só o hash fica no banco).
+- Com o Booksy Biz aberto e logado no navegador, um toque no favorito abre o coletor: ele usa a sessão já aberta, só lê (equipe, serviços, clientes, produtos e estoque, agenda dos próximos 90 dias e bloqueios) e manda tudo para o barbeirotop. A senha do Booksy não passa pelo barbeirotop e nada é alterado no Booksy.
+- Entram: barbeiros que aparecem na agenda, serviços com preço, produtos com preço e estoque, clientes (WhatsApp, aniversário, CPF válido, observação, última visita e aceite de comunicações), agendamentos de hoje em diante (confirmados e pendentes) e bloqueios de horário. E-mail do cliente não é coletado.
+- Rodar de novo não duplica: cada registro guarda de onde veio (`externo`), quem já existia só tem os campos vazios completados, e agendamentos que entraram antes do cliente ficam ligados a ele. Se a coleta for grande, entra uma parte e o coletor pede para tocar no favorito de novo.
+- "Ver o resultado" no card mostra o que entrou na última coleta.

@@ -61,7 +61,7 @@ function rotasImportacao() {
     { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&select=id,nome,telefone/, resposta: { corpo: [{ id: "c-ana", nome: "Ana Lima", telefone: "81999990000", cpf: null, externo: null, nascimento: null, observacao: "", ultima_visita_externa: null }] } },
     { metodo: "POST", padrao: /\/rest\/v1\/clientes/, resposta: { status: 201 } },
     { metodo: "PATCH", padrao: /\/rest\/v1\/clientes\?id=eq\./, resposta: { status: 204 } },
-    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&externo=like\.booksy/, resposta: { corpo: [{ id: "c-bia", externo: "booksy:2", nome: "Bia Souza" }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&select=id,externo,nome/, resposta: { corpo: [{ id: "c-bia", externo: "booksy:2", nome: "Bia Souza" }, { id: "c-ana", externo: null, nome: "Ana Lima" }, { id: "c-carla", externo: "booksy:6", nome: "Carla Dias" }] } },
     { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?barbearia_id=eq\.[^&]+&externo=like\.booksy/, resposta: { corpo: [{ id: "ped-900", externo: "booksy:900", cliente_id: "c-bia" }] } },
     { metodo: "PATCH", padrao: /\/rest\/v1\/pedidos\?id=eq\./, resposta: { status: 204 } },
     { metodo: "POST", padrao: /\/rest\/v1\/pedidos/, resposta: { status: 201 } },
@@ -176,6 +176,28 @@ test("importação: na coleta seguinte, o nome de verdade entra no lugar do prov
   assert.equal(patch.length, 1);
   assert.ok(patch[0].url.includes("c-prov"));
   assert.equal(patch[0].corpo.nome, "Paulo Lima");
+});
+
+test("importação: ficha repetida no Booksy (mesmo WhatsApp) não vira outro cliente, e o agendamento dela acha quem ficou", async () => {
+  const chamadas = A.instalarFetch(rotasImportacao());
+  const amanha = A.daquiA(1);
+  const r = await migracao.importar(BARB, {
+    equipe: [{ id: 11, nome: "Manolo", visivel: true }],
+    clientes: [
+      { id: 1, nome: "Ana L.", telefone: "81999990000" }, // mesma pessoa que já estava na barbearia (c-ana)
+      { id: 6, nome: "Carla Dias", telefone: "81955554444" },
+      { id: 7, nome: "Carla D. (app)", telefone: "+55 81 95555-4444" }, // segunda ficha da Carla no Booksy
+    ],
+    agendamentos: [
+      { id: 950, inicio: amanha + "T10:00", fim: amanha + "T10:30", status: "A", clienteId: 7, equipeId: 11 },
+      { id: 951, inicio: amanha + "T11:00", fim: amanha + "T11:30", status: "A", clienteId: 1, equipeId: 11 },
+    ],
+  });
+  assert.equal(r.clientes.novos, 1, "só a primeira ficha da Carla");
+  assert.equal(r.clientes.ignorados, 1);
+  const pedidos = chamadas.filter((c) => c.metodo === "POST" && c.url.includes("/rest/v1/pedidos")).map((c) => c.corpo).flat();
+  assert.equal(pedidos.find((p) => p.externo === "booksy:950").cliente_id, "c-carla", "agendamento da ficha repetida vai para a que ficou");
+  assert.equal(pedidos.find((p) => p.externo === "booksy:951").cliente_id, "c-ana", "agendamento de quem já estava na barbearia");
 });
 
 test("importação: agendamento que veio antes sem cliente fica ligado a ele quando o cliente entra", async () => {

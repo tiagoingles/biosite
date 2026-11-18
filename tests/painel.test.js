@@ -190,3 +190,17 @@ test("bloqueio pontual: valida horário e só apaga bloqueio do próprio barbeir
   const del = chamadas.find((c) => c.metodo === "DELETE");
   assert.ok(del.url.includes(`profissional_id=eq.${UUIDS.bruno}`) && del.url.includes("tipo=eq.pontual"), del.url);
 });
+
+test("dono liga e desliga a confirmação automática; barbeiro não muda", async () => {
+  const eu = require("../api/eu");
+  const chamadas = A.instalarFetch([{ metodo: "PATCH", padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { status: 204 } }, ...A.rotasDeConta()]);
+  let r = await A.chamar(eu, { metodo: "POST", token: "token-dono", corpo: { acao: "config-barbearia", confirmacaoAutomatica: true } });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  const patch = chamadas.find((c) => c.metodo === "PATCH");
+  assert.ok(patch.url.includes(A.UUIDS.barbearia));
+  assert.deepEqual(patch.corpo, { confirmacao_automatica: true });
+  r = await A.chamar(eu, { metodo: "POST", token: "token-dono", corpo: { acao: "config-barbearia", confirmacaoAutomatica: "sim" } });
+  assert.equal(r.statusCode, 400);
+  r = await A.chamar(eu, { metodo: "POST", token: "token-bruno", corpo: { acao: "config-barbearia", confirmacaoAutomatica: true } });
+  assert.equal(r.statusCode, 403);
+});

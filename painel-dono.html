@@ -75,6 +75,7 @@
       <div class="kpis" id="kpisDia"></div>
       <div class="linha">
         <button type="button" class="botao principal" id="btnEncaixe"></button>
+        <button type="button" class="botao" id="btnHorarios"></button>
         <button type="button" class="botao" id="btnHoje">Hoje</button>
         <button type="button" class="botao fantasma" id="btnCsvDia"></button>
       </div>
@@ -162,6 +163,11 @@
         <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
         <button type="button" class="botao principal" id="ativarAvisos"></button>
       </section>
+      <section class="cartao" id="secAgendamento" hidden>
+        <div class="cartao-topo"><h2>Agendamentos do site</h2></div>
+        <label class="check-linha"><input type="checkbox" id="confirmacaoAuto"> Confirmar sozinho</label>
+        <p class="nota p" id="notaConfirmacao"></p>
+      </section>
     </div>
     <div class="coluna">
       <section class="cartao" id="secAssinatura" hidden>
@@ -199,6 +205,7 @@
   P.trocar($("diaAnt"), P.icone("seta_esq"));
   P.trocar($("diaProx"), P.icone("seta_dir"));
   P.trocar($("btnEncaixe"), [P.icone("mais_um"), "Encaixe"]);
+  P.trocar($("btnHorarios"), [P.icone("whats"), "Mandar horários"]);
   P.trocar($("btnCsvDia"), [P.icone("baixar"), "Planilha do dia"]);
   $("linkFin").href = P.link("financeiro.html");
   P.trocar($("btnConvidar"), [P.icone("email"), "Gerar convite"]);
@@ -212,10 +219,12 @@
     if (d.perfil.papel === "barbeiro") { location.replace(P.link("painel-barbeiro.html")); return; }
     eu = d;
     ctx.barbearia = d.barbearia ? d.barbearia.nome : "";
+    ctx.slug = d.barbearia ? d.barbearia.slug : "";
     $("titulo").textContent = ctx.barbearia || "Painel do dono";
     $("sub").textContent = d.visaoAdmin ? "Visão da plataforma" : d.perfil.papel === "dono_barbeiro" ? "Você administra e atende" : "Você administra a barbearia";
     $("logo").textContent = P.iniciais(ctx.barbearia);
     montarMenu(d);
+    mostrarConfirmacao(!!(d.barbearia && d.barbearia.confirmacao_automatica));
     var siteBarbearia = d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "";
     window.Premium.configurar({ barbearia: ctx.barbearia, site: siteBarbearia });
     window.Clientes.configurar({ dono: true, barbearia: ctx.barbearia, site: siteBarbearia, extra: window.Premium.cartao() });
@@ -317,6 +326,7 @@
   $("diaProx").onclick = function () { dia = P.somaDias(dia, 1); $("dia").value = dia; carregarDia(); };
   $("btnHoje").onclick = function () { dia = P.hoje(); $("dia").value = dia; carregarDia(); };
   $("btnEncaixe").onclick = function () { P.encaixe(ctx, { dia: dia, profissionalId: filtro }); };
+  $("btnHorarios").onclick = function () { P.oferecerHorarios(ctx, { dia: dia, profissionalId: filtro }); };
   function carregarDia() {
     $("rotuloDia").textContent = P.dataLonga(dia);
     return P.api("/api/pedido?painel=1&dia=" + dia).then(function (d) {
@@ -1011,6 +1021,23 @@
   var VIGENTES_ASS = ["em_teste", "ativa", "atrasada", "pausada"];
   var avisouRetorno = false;
   function dataCurta(iso) { return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—"; }
+  // Agendamentos do site: confirmados sozinhos ou esperando o dono/barbeiro confirmar
+  function mostrarConfirmacao(ligado) {
+    $("secAgendamento").hidden = false;
+    $("confirmacaoAuto").checked = ligado;
+    $("notaConfirmacao").textContent = ligado
+      ? "Ligado: o horário que o cliente marca pelo site já fica garantido. Você e o barbeiro recebem o aviso do mesmo jeito."
+      : "Desligado: cada pedido do site chega em \"Pedidos para confirmar\" e você ou o barbeiro confirmam.";
+  }
+  $("confirmacaoAuto").onchange = function () {
+    var caixa = $("confirmacaoAuto"), novo = caixa.checked;
+    caixa.disabled = true;
+    P.api("/api/eu", { corpo: { acao: "config-barbearia", confirmacaoAutomatica: novo } }).then(function () {
+      mostrarConfirmacao(novo);
+      P.toast(novo ? "Os agendamentos do site agora entram confirmados." : "Os pedidos do site voltam a esperar a sua confirmação.", "ok");
+    }).catch(function (e) { caixa.checked = !novo; P.toast(e.message, "erro"); }).finally(function () { caixa.disabled = false; });
+  };
+
   function carregarAssinatura() {
     return P.api("/api/equipe?area=assinatura").then(function (j) {
       if (!j.configurado) { $("secAssinatura").hidden = true; return; }

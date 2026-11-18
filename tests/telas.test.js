@@ -85,7 +85,7 @@ test("painéis: toda aba tem a sua tela", () => {
     for (const a of abas) assert.ok(telas.includes(a), `${p}: aba ${a} sem tela`);
   }
   const barbeiro = ler("painel-barbeiro.html");
-  assert.deepEqual([...barbeiro.matchAll(/data-aba="([a-z]+)"/g)].map((m) => m[1]), ["hoje", "agenda", "clientes", "horarios", "mais"], "mesma estrutura do painel do dono");
+  assert.deepEqual([...barbeiro.matchAll(/data-aba="([a-z]+)"/g)].map((m) => m[1]), ["hoje", "agenda", "horarios", "mais"], "sem a carteira de clientes (só do dono)");
   assert.match(barbeiro, /"\?barbeiro=" \+ encodeURIComponent\(d\.profissional\.id\)/, "barbeiro tem link pessoal de agendamento");
 });
 
@@ -199,5 +199,20 @@ test("nenhuma expressão regular perdeu a barra invertida", () => {
       const t = fs.readFileSync(path.join(raiz, pasta, f), "utf8");
       for (const s of suspeitos) assert.ok(!s.test(t), `${pasta}/${f} tem ${s}`);
     }
+  }
+});
+
+// Pedido dos donos (17/11): ao passar a agenda pelo WhatsApp, escolher quais horários mandar
+test("mandar horários livres: botão nos dois painéis, escolha dos horários e sugestão ao recusar", () => {
+  const agenda = ler("painel-agenda.js");
+  assert.match(agenda, /P\.oferecerHorarios = oferecerHorarios;/);
+  assert.match(agenda, /"\/api\/horarios" \+ q/, "busca os horários livres de verdade");
+  assert.match(agenda, /Toque em pelo menos um horário\./, "não abre o WhatsApp sem horário escolhido");
+  assert.match(agenda, /Sugerir outros horários/, "ao recusar, sugere outros horários");
+  for (const p of ["painel-dono.html", "painel-barbeiro.html"]) {
+    const html = ler(p);
+    assert.match(html, /id="btnHorarios"/, p);
+    assert.match(html, /P\.oferecerHorarios\(ctx/, p);
+    assert.match(html, /ctx\.slug = d\.barbearia \? d\.barbearia\.slug : ""/, p);
   }
 });

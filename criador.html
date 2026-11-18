@@ -445,7 +445,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
 
 <script src="/conta.js"></script>
 <script>
-const GERADOR_VERSAO = 7;
+const GERADOR_VERSAO = 8;
 const FONTS = {
   "Poppins":"Poppins:wght@400;600;700",
   "Montserrat":"Montserrat:wght@400;600;800",
@@ -885,11 +885,17 @@ function agendaRuntime(){
       var blocoNovidades=semCadastro?"":'<label class="check"><input type="checkbox" id="agNovidades"><span>Quero receber promoções e novidades da '+esc(C.nome)+' pelo WhatsApp</span></label>';
       h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80" value="'+esc(salvo("nome"))+'"></label>'+blocoZap+blocoClube+blocoNovidades+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
     }else{
-      titulo="Pedido enviado";
+      // Barbearia com confirmação automática: o horário já está garantido e o WhatsApp é só para falar com ela
+      titulo=ultimo.confirmado?"Horário confirmado":"Pedido enviado";
       var cal=linkCalendario();
       h+='<p class="cobertura"><b>'+esc(ultimo.servico)+'</b> com '+esc(ultimo.quem)+'<br>'+esc(ultimo.diaTxt)+' às '+esc(ultimo.hora)+(ultimo.codigo?'<br>Código do pedido: <b>'+esc(ultimo.codigo)+'</b>':'')+(ultimo.clube?'<br><b>Pelo clube de assinatura</b>':'')+'</p>';
-      h+='<p class="note">A barbearia confirma pelo WhatsApp. Se o WhatsApp não abriu sozinho, toque abaixo.</p>';
-      h+='<a class="ag-op" href="'+esc(ultimo.link)+'" target="_blank" rel="noopener"><b>Abrir o WhatsApp</b><small>Enviar a mensagem com o pedido</small></a>';
+      if(ultimo.confirmado){
+        h+='<p class="note">Seu horário está garantido. Se precisar mudar alguma coisa, fale com a barbearia.</p>';
+        h+='<a class="ag-op" href="'+esc(ultimo.link)+'" target="_blank" rel="noopener"><b>Falar com a barbearia</b><small>Pelo WhatsApp, se precisar mudar</small></a>';
+      }else{
+        h+='<p class="note">A barbearia confirma pelo WhatsApp. Se o WhatsApp não abriu sozinho, toque abaixo.</p>';
+        h+='<a class="ag-op" href="'+esc(ultimo.link)+'" target="_blank" rel="noopener"><b>Abrir o WhatsApp</b><small>Enviar a mensagem com o pedido</small></a>';
+      }
       if(cal)h+='<a class="ag-op" href="'+cal+'" download="agendamento.ics"><b>Salvar na agenda do celular</b><small>Com lembrete 1 hora antes</small></a>';
     }
     $("agTitulo").textContent=titulo;
@@ -962,7 +968,7 @@ function agendaRuntime(){
     if(peloClube){corpo.clube=true;corpo.clubeWhatsapp=zap}
     var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
     enviando=true;botao.disabled=true;if(rotulo)rotulo.textContent="Enviando…";
-    // Grava o pedido como pendente e recebe o código; se o horário já foi ocupado, avisa e volta à escolha da hora
+    // Grava o pedido (pendente, ou já confirmado quando a barbearia confirma sozinha) e recebe o código; se o horário já foi ocupado, avisa e volta à escolha da hora
     fetch("/api/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {status:r.status,ok:r.ok,j:j}})}).catch(function(){return {status:0,ok:false,j:{}}}).then(function(res){
       enviando=false;botao.disabled=false;if(rotulo)rotulo.textContent=original;
       if(res.status===409){$("agErro").textContent=res.j.message||"Este horário não está mais livre. Escolha outro.";sel.hora=null;cacheHoras={};etapa="dia";render();return}
@@ -984,9 +990,11 @@ function agendaRuntime(){
     var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(sel.servico.nome).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
     if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
     if(j.clube)txt+="\n*Assinante do clube*";
-    ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),clube:!!j.clube,link:linkWhats(txt)};
+    if(j.confirmado){txt=txt.replace("Olá! Quero agendar:","Olá! Agendei pelo site:");txt+="\nHorário já confirmado pelo site."}
+    ultimo={servico:sel.servico.nome,quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoDe(sel.servico),clube:!!j.clube,confirmado:!!j.confirmado,link:linkWhats(txt)};
     pilha=[];etapa="ok";render();
-    abrirLink(ultimo.link);
+    // Pedido que espera confirmação: o WhatsApp abre com a mensagem pronta. Confirmado: não precisa mandar nada
+    if(!ultimo.confirmado)abrirLink(ultimo.link);
   }
 }
 

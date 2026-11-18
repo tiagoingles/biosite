@@ -145,14 +145,15 @@ test("aba Clientes do dono: retorno, segmentos, números e CPF mascarado", async
   assert.ok(chamadas.every((c) => !c.url.includes("/rest/v1/clientes?") || c.url.includes(`barbearia_id=eq.${UUIDS.barbearia}`)), "só a barbearia do dono");
 });
 
-test("barbeiro vê a própria carteira, sem CPF nem ano de nascimento", async () => {
-  A.instalarFetch(rotasDaCarteira());
-  const r = await A.chamar(equipe, { query: { area: "clientes" }, token: "token-bruno" });
-  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
-  assert.deepEqual(r.body.clientes.map((c) => c.nome), ["Ana Souza", "Bia Lima"], "cadastrou ou atendeu");
-  assert.ok(r.body.clientes.every((c) => c.cpfMascarado === "" && c.nascimento === null));
-  assert.equal(r.body.clientes[0].aniversario.dia, "20/05", "aniversário sem o ano");
-  assert.equal(r.body.dono, false);
+// Pedido dos donos (reunião de 17/11): o barbeiro que não é dono não vê a carteira de clientes
+test("barbeiro não vê a carteira de clientes: nem a lista, nem a ficha, nem campanhas", async () => {
+  const chamadas = A.instalarFetch(rotasDaCarteira());
+  for (const query of [{ area: "clientes" }, { area: "clientes", id: CL1 }, { area: "clientes", campanhas: "1" }, { area: "clientes", premium: "1" }]) {
+    const r = await A.chamar(equipe, { query, token: "token-bruno" });
+    assert.equal(r.statusCode, 403, JSON.stringify(query));
+    assert.match(r.body.message, /só do dono/);
+  }
+  assert.ok(!chamadas.some((c) => c.url.includes("/rest/v1/clientes")), "nem consulta os clientes");
   const semLogin = await A.chamar(equipe, { query: { area: "clientes" } });
   assert.equal(semLogin.statusCode, 401);
 });
@@ -198,7 +199,7 @@ test("cadastro: WhatsApp ou CPF repetido vira mensagem clara", async () => {
   assert.deepEqual([cpf.statusCode, cpf.body.message], [409, "Já existe um cliente com este CPF."]);
 });
 
-test("barbeiro: cadastra na própria carteira, sem CPF nem aceite, e não mexe em cliente de outro", async () => {
+test("barbeiro não cadastra nem edita cliente pelo painel (a carteira é do dono)", async () => {
   const chamadas = A.instalarFetch([
     ...A.rotasDeConta(),
     { metodo: "POST", padrao: /\/rest\/v1\/clientes$/, resposta: (u, o, corpo) => ({ status: 201, corpo: [{ id: CL2, ...corpo }] }) },
@@ -206,19 +207,12 @@ test("barbeiro: cadastra na própria carteira, sem CPF nem aceite, e não mexe e
     { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?cliente_id=eq\./, resposta: { corpo: [] } },
     { metodo: "PATCH", padrao: /\/rest\/v1\/clientes\?id=eq\./, resposta: (u, o, corpo) => ({ corpo: [{ id: CL1, ...corpo }] }) },
   ]);
-  const novo = await A.chamar(equipe, { metodo: "POST", query: { area: "clientes" }, token: "token-bruno", corpo: { acao: "salvar", nome: "Bia Lima", cpf: "52998224725", aceita: true } });
-  assert.equal(novo.statusCode, 201, JSON.stringify(novo.body));
-  const post = chamadas.find((c) => c.metodo === "POST").corpo;
-  assert.equal(post.profissional_id, UUIDS.bruno);
-  assert.equal(post.cpf, undefined, "barbeiro não grava CPF");
-  assert.equal(post.aceita_novidades, undefined, "aceite só pelo dono ou pelo próprio cliente");
-
-  const alheio = await A.chamar(equipe, { metodo: "POST", query: { area: "clientes" }, token: "token-bruno", corpo: { acao: "salvar", id: CL3, nome: "Caio" } });
-  assert.equal(alheio.statusCode, 403);
-  const meu = await A.chamar(equipe, { metodo: "POST", query: { area: "clientes" }, token: "token-bruno", corpo: { acao: "salvar", id: CL1, nome: "Ana S.", nascimento: "" } });
-  assert.equal(meu.statusCode, 200, JSON.stringify(meu.body));
-  const patch = chamadas.find((c) => c.metodo === "PATCH").corpo;
-  assert.equal("nascimento" in patch, false, "não apaga a data que o dono cadastrou");
+  // O barbeiro não cadastra nem edita: no atendimento ele manda o convite e o próprio cliente preenche
+  for (const corpo of [{ acao: "salvar", nome: "Bia Lima", cpf: "52998224725", aceita: true }, { acao: "salvar", id: CL3, nome: "Caio" }, { acao: "salvar", id: CL1, nome: "Ana S." }]) {
+    const r = await A.chamar(equipe, { metodo: "POST", query: { area: "clientes" }, token: "token-bruno", corpo });
+    assert.equal(r.statusCode, 403, JSON.stringify(corpo));
+  }
+  assert.ok(!chamadas.some((c) => c.metodo === "POST" || c.metodo === "PATCH"), "nada gravado");
 });
 
 // ---------- importação ----------
@@ -380,7 +374,7 @@ test("agendamento: WhatsApp é opcional, mas tem que ser válido; falha do cadas
 });
 
 // ---------- vínculo, campanhas e LGPD ----------
-test("vincular: dono em qualquer atendimento; barbeiro só nos dele; cliente de outra barbearia não", async () => {
+test("vincular: só o dono, em qualquer atendimento; cliente de outra barbearia não", async () => {
   const chamadas = A.instalarFetch([
     ...A.rotasDeConta(),
     { metodo: "GET", padrao: /\/rest\/v1\/clientes\?id=eq\./, resposta: (url) => ({ corpo: url.includes(CL1) ? [{ id: CL1 }] : [] }) },
@@ -389,8 +383,8 @@ test("vincular: dono em qualquer atendimento; barbeiro só nos dele; cliente de 
   const ligar = (token, clienteId = CL1) => A.chamar(equipe, { metodo: "POST", query: { area: "clientes" }, token, corpo: { acao: "vincular", pedidoId: UUIDS.pedido, clienteId } });
   assert.equal((await ligar("token-dono")).statusCode, 200);
   assert.ok(!chamadas.filter((c) => c.metodo === "PATCH")[0].url.includes("profissional_id"));
-  assert.equal((await ligar("token-bruno")).statusCode, 200);
-  assert.ok(chamadas.filter((c) => c.metodo === "PATCH")[1].url.includes(`profissional_id=eq.${UUIDS.bruno}`));
+  assert.equal((await ligar("token-bruno")).statusCode, 403, "o barbeiro não escolhe na carteira");
+  assert.equal(chamadas.filter((c) => c.metodo === "PATCH").length, 1);
   assert.equal((await ligar("token-dono", CL2)).statusCode, 404);
 });
 
@@ -429,12 +423,14 @@ test("LGPD: só o dono apaga os dados do cliente, sempre da própria barbearia",
 });
 
 // ---------- telas, site e banco ----------
-test("telas: aba Clientes nos dois painéis, Cadastrar no atendimento e página de cadastro", () => {
+test("telas: aba Clientes só no painel do dono, Cadastrar no atendimento e página de cadastro", () => {
   for (const p of ["painel-dono.html", "painel-barbeiro.html"]) {
     const html = ler(p);
-    assert.match(html, /data-aba="clientes"/);
+    // O barbeiro continua com o "Cadastrar" do atendimento (QR code), mas sem a aba da carteira
+    assert.equal(/data-aba="clientes"/.test(html), p === "painel-dono.html", p);
     assert.match(html, /<script src="\/qr\.js"><\/script>\s*<script src="\/painel-clientes\.js"><\/script>/);
   }
+  assert.match(ler("painel-clientes.js"), /op\.dono \? \[/, "o barbeiro só vê a opção do QR code ao cadastrar");
   assert.match(ler("painel-agenda.js"), /window\.Clientes\.cadastrarDoAtendimento\(p, ctx\)/);
   const cadastro = ler("cadastro.html");
   assert.match(cadastro, /<input type="checkbox" id="novidades">/, "aceite começa desmarcado");

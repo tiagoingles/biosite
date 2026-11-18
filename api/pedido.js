@@ -77,9 +77,11 @@ module.exports = async (req, res) => {
   if (temZap && !zapCliente) return erro(res, 400, "Confira seu WhatsApp: DDD e número.");
 
   try {
-    const barb = await rest(`barbearias?slug=eq.${slug}&select=id`);
+    const barb = await rest(`barbearias?slug=eq.${slug}&select=id,confirmacao_automatica`);
     if (!barb.length) return erro(res, 404, "Barbearia não encontrada.");
     const barbearia_id = barb[0].id;
+    // A barbearia escolhe: o agendamento do site entra confirmado sozinho ou espera o dono/barbeiro confirmar
+    const automatico = barb[0].confirmacao_automatica === true;
 
     // Assinante do clube. Número não encontrado conta como tentativa errada (ninguém fica testando números à toa).
     let assinante = null;
@@ -120,7 +122,8 @@ module.exports = async (req, res) => {
     // Valor do atendimento já no agendamento: preço cadastrado pelo dono, ou o preço que o site mostrou
     const valor = await precoDoServico(barbearia_id, servico, b.preco);
     const origem = origemDe(req);
-    const limiteBarbearia = Math.max(40, LIMITE_DIA_POR_BARBEIRO * equipe.length);
+    // Com a confirmação automática, a trava conta também os confirmados do site: limite um pouco maior
+    const limiteBarbearia = automatico ? Math.max(60, (LIMITE_DIA_POR_BARBEIRO + 4) * equipe.length) : Math.max(40, LIMITE_DIA_POR_BARBEIRO * equipe.length);
 
     // Grava de forma atômica. Se o código sorteado já existir na mesma barbearia, tenta outro.
     for (let tentativa = 0; tentativa < 4; tentativa++) {
@@ -143,7 +146,7 @@ module.exports = async (req, res) => {
               observacao,
               duracao_min: duracao,
               valor,
-              status: "pendente",
+              status: automatico ? "confirmado" : "pendente",
               origem,
               limite_hora_origem: LIMITE_HORA_ORIGEM,
               limite_dia_origem: LIMITE_DIA_ORIGEM,
@@ -170,10 +173,10 @@ module.exports = async (req, res) => {
       }
 
       // Aviso no celular do dono e do barbeiro; se falhar, o pedido já foi gravado
-      await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico: assinante ? servicoPedido + " · Clube" : servico, dia, horario }).catch((e) =>
+      await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico: assinante ? servicoPedido + " · Clube" : servico, dia, horario, confirmado: automatico }).catch((e) =>
         console.error("aviso de pedido:", e.message)
       );
-      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado, clube: !!assinante });
+      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado, clube: !!assinante, confirmado: automatico });
     }
     throw new Error("Não foi possível gerar um código livre para o pedido.");
   } catch (e) {

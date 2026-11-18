@@ -169,3 +169,37 @@ test("métodos não permitidos e ações do painel sem login", async () => {
   r = await A.chamar(pedido, { metodo: "GET", query: { painel: "1" } });
   assert.equal(r.statusCode, 401);
 });
+
+// ---------- confirmação automática (fase 18) ----------
+function rotasAutomatica(ligada) {
+  return [
+    { padrao: /\/rest\/v1\/barbearias\?slug=eq\.gw-teste/, resposta: { corpo: [{ id: UUIDS.barbearia, confirmacao_automatica: ligada }] } },
+    ...rotasDoSite(),
+  ];
+}
+
+test("barbearia com confirmação automática: o pedido do site já entra confirmado e o site é avisado", async () => {
+  const chamadas = A.instalarFetch(rotasAutomatica(true));
+  const r = await A.chamar(pedido, { metodo: "POST", corpo: base() });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  assert.equal(r.body.confirmado, true);
+  const rpc = chamadas.find((c) => c.url.includes("criar_pedido"));
+  assert.equal(rpc.corpo.p.status, "confirmado");
+  assert.ok(rpc.corpo.p.limite_dia_barbearia >= 60, "trava diária um pouco maior, contando os confirmados do site");
+});
+
+test("sem a confirmação automática, o pedido continua pendente", async () => {
+  const chamadas = A.instalarFetch(rotasAutomatica(false));
+  const r = await A.chamar(pedido, { metodo: "POST", corpo: base() });
+  assert.equal(r.statusCode, 201);
+  assert.equal(r.body.confirmado, false);
+  assert.equal(chamadas.find((c) => c.url.includes("criar_pedido")).corpo.p.status, "pendente");
+});
+
+test("site: confirmado mostra \"Horário confirmado\" e não abre o WhatsApp sozinho", () => {
+  // O site publicado da GW (gerado com a versão atual) já traz o comportamento novo
+  const fonte = require("fs").readFileSync(require("path").join(__dirname, "..", "gw-barbearia.html"), "utf8");
+  assert.match(fonte, /Horário confirmado/);
+  assert.match(fonte, /if\(!ultimo\.confirmado\)abrirLink\(ultimo\.link\)/);
+  assert.match(fonte, /confirmado:!!j\.confirmado/);
+});

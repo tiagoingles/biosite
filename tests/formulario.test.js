@@ -185,6 +185,7 @@ test("aplicar no painel: convites do dono e da equipe com a comissão, reaprovei
   const SITE = A.UUIDS.barbearia;
   const chamadas = A.instalarFetch([
     { padrao: /\/rest\/v1\/barbearias\?slug=eq\.barbearia-modelo/, resposta: { corpo: [{ id: SITE, nome: "Barbearia Modelo", slug: "barbearia-modelo" }] } },
+    { metodo: "PATCH", padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { status: 204 } },
     { padrao: /\/rest\/v1\/rpc\/conta_por_email/, resposta: (u, op, corpo) => ({ corpo: corpo.p_email === "carlos@exemplo.com" ? [{ id: A.UUIDS.donoUser, confirmado: true }] : [] }) },
     { padrao: /\/rest\/v1\/perfis\?user_id=eq\.[^&]+&barbearia_id=eq\./, resposta: (url) => ({ corpo: url.includes(A.UUIDS.donoUser) ? [{ user_id: A.UUIDS.donoUser }] : [] }) },
     { metodo: "GET", padrao: /\/rest\/v1\/convites\?barbearia_id=eq\./, resposta: (url) => ({ corpo: url.includes("rafael%40exemplo.com") ? [{ id: "c1", token: "aa".repeat(24), papel: "barbeiro" }] : [] }) },
@@ -207,6 +208,9 @@ test("aplicar no painel: convites do dono e da equipe com a comissão, reaprovei
   assert.deepEqual([mov.corpo.tipo, mov.corpo.quantidade, mov.corpo.valor_total], ["entrada", 100, 50]);
   assert.equal(r.body.insumos, 1);
   assert.equal(f.estado.status, "importado");
+  const conf = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("/rest/v1/barbearias?id=eq."));
+  assert.deepEqual(conf.corpo, { confirmacao_automatica: true }, "o dono escolheu confirmação automática no formulário");
+  assert.equal(r.body.confirmacaoAutomatica, true);
 });
 
 test("aplicar exige formulário respondido e site publicado", async () => {

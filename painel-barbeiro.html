@@ -18,11 +18,11 @@
   </div>
 </header>
 
-<!-- Mesma estrutura do painel do dono: Hoje, Agenda (qualquer dia), Horários (o que vai para o site) e Mais -->
+<!-- Hoje, Agenda (qualquer dia), Horários (o que vai para o site) e Mais. A carteira de clientes é só do dono:
+     o barbeiro vê nome, serviço e WhatsApp na agenda e cadastra o cliente pelo QR code no atendimento. -->
 <nav class="abas" aria-label="Seções">
   <a href="#hoje" data-aba="hoje"></a>
   <a href="#agenda" data-aba="agenda"></a>
-  <a href="#clientes" data-aba="clientes"></a>
   <a href="#horarios" data-aba="horarios"></a>
   <a href="#mais" data-aba="mais"></a>
 </nav>
@@ -41,7 +41,7 @@
         <div class="lista" id="listaPend"><div class="esqueleto"></div></div>
       </section>
       <section class="cartao">
-        <div class="cartao-topo"><h2 id="tituloHoje">Hoje</h2><button type="button" class="botao p principal" id="btnEncaixe"></button></div>
+        <div class="cartao-topo"><h2 id="tituloHoje">Hoje</h2><div class="linha"><button type="button" class="botao p" id="btnHorarios"></button><button type="button" class="botao p principal" id="btnEncaixe"></button></div></div>
         <div class="lista" id="listaHoje"><div class="esqueleto"></div></div>
       </section>
     </div>
@@ -83,8 +83,6 @@
   </section>
 
   <!-- ===== Horários (o que aparece no site) ===== -->
-  <!-- ===== Meus clientes (painel-clientes.js) ===== -->
-  <section class="tela duas" data-tela="clientes" id="telaClientes" hidden></section>
 
   <section class="tela duas" data-tela="horarios" hidden>
     <section class="cartao">
@@ -149,13 +147,14 @@
   P.monitorar();
 
   // Ícones e rótulos fixos
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["horarios", "relogio", "Horários"], ["mais", "mais", "Mais"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["horarios", "relogio", "Horários"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
   P.trocar($("sairTopo"), [P.icone("sair"), h("span", { texto: "Sair" })]);
   $("sairTopo").onclick = P.sair;
   P.trocar($("btnEncaixe"), [P.icone("mais_um"), "Encaixe"]);
+  P.trocar($("btnHorarios"), [P.icone("whats"), "Mandar horários"]);
   P.trocar($("btnEncaixeDia"), [P.icone("mais_um"), "Encaixe"]);
   P.trocar($("diaAnt"), P.icone("seta_esq"));
   P.trocar($("diaProx"), P.icone("seta_dir"));
@@ -163,7 +162,7 @@
   P.trocar($("btnCsv"), [P.icone("baixar"), "Planilha"]);
   P.trocar($("trocarFoto"), [P.icone("foto"), "Enviar foto"]);
 
-  var eu = null, painel = null, dia = P.hoje(), diaDados = null, realizados = [], todos = false, clientesMontado = false;
+  var eu = null, painel = null, dia = P.hoje(), diaDados = null, realizados = [], todos = false;
   var ctx = { barbearia: "", equipe: [], servicos: [], dono: false, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#mais") carregarGanhos(); } };
 
   // Quem é: só barbeiro usa esta tela; dono e dono-barbeiro vão para o painel do dono
@@ -172,6 +171,9 @@
     if (d.perfil.papel !== "barbeiro") { location.replace(P.link("painel-dono.html")); return; }
     eu = d;
     ctx.barbearia = d.barbearia ? d.barbearia.nome : "";
+    // Para mandar os horários livres pelo WhatsApp (escolhendo quais)
+    ctx.slug = d.barbearia ? d.barbearia.slug : "";
+    ctx.eu = d.profissional ? { id: d.profissional.id, nome: d.profissional.nome } : null;
     var prof = d.profissional || { nome: d.perfil.nome };
     $("titulo").textContent = prof.nome || "Minha agenda";
     $("sub").textContent = ctx.barbearia;
@@ -184,7 +186,6 @@
     window.Clientes.configurar({ dono: false, barbearia: ctx.barbearia, site: d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "" });
     P.abas(function (aba) {
       if (aba === "agenda") carregarDia();
-      if (aba === "clientes") { if (!clientesMontado) { window.Clientes.montar($("telaClientes")); clientesMontado = true; } window.Clientes.carregar(); }
       if (aba === "horarios") abrirHorarios();
       if (aba === "mais") carregarGanhos();
     });
@@ -194,6 +195,7 @@
 
   $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); if (location.hash === "#agenda") carregarDia(); };
   $("btnEncaixe").onclick = function () { P.encaixe(ctx); };
+  $("btnHorarios").onclick = function () { P.oferecerHorarios(ctx); };
 
   function kpi(rotulo, valor, detalhe, barra) {
     return h("div", { class: "kpi" }, [h("span", { texto: rotulo }), h("b", { texto: valor }), detalhe ? h("small", { texto: detalhe }) : null, barra != null ? h("div", { class: "barra" }, h("i", { style: "width:" + Math.max(0, Math.min(100, barra)) + "%" })) : null]);

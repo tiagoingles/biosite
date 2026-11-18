@@ -11,7 +11,7 @@
 //   "virar-barbeiro"  o dono passa a atender também (vira dono-barbeiro).
 const crypto = require("crypto");
 const { rest, linkDeEnvio, cfg } = require("../lib/supabase");
-const { usuarioDaRequisicao, perfilDe, perfilDoContexto, barbeariaDe, ehAdminDaPlataforma } = require("../lib/conta");
+const { usuarioDaRequisicao, perfilDe, perfilDoContexto, barbeariaDe, ehAdminDaPlataforma, ehAdmin } = require("../lib/conta");
 const { dataValida, hojeBr } = require("../lib/horarios");
 const { agendaDoDia, agendaDaSemana, salvarDia, salvarSemana, criarBloqueio, removerBloqueio } = require("../lib/agenda-dia");
 const { falha, corpoDe } = require("../lib/seguranca");
@@ -162,6 +162,15 @@ module.exports = async (req, res) => {
         if (b.acao === "bloqueio-criar") return res.status(201).json({ bloqueio: await criarBloqueio(meu.id, b) });
         await removerBloqueio(meu.id, b.id);
         return res.status(200).json({ ok: true });
+      }
+
+      // Dono (ou o admin vendo o site): os agendamentos do site entram confirmados sozinhos ou não
+      if (b.acao === "config-barbearia") {
+        const ctx = await perfilDoContexto(u, req);
+        if (!ehAdmin(ctx)) return res.status(403).json({ message: "Só o dono muda isso." });
+        if (typeof b.confirmacaoAutomatica !== "boolean") return res.status(400).json({ message: "Pedido inválido." });
+        await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { confirmacao_automatica: b.confirmacaoAutomatica } });
+        return res.status(200).json({ ok: true, confirmacaoAutomatica: b.confirmacaoAutomatica });
       }
 
       // Conta da plataforma: andamento de um interessado da página de vendas

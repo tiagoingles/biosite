@@ -383,11 +383,13 @@
       h("p", { class: "nota", texto: "Peça os dados agora, no balcão, e conte que cadastrado ele não perde as promoções e novidades." }),
     ]);
     function recarregar() { if (ctx && ctx.recarregar) ctx.recarregar(); }
-    var opcoes = h("div", { class: "menu opcoes-cadastro" }, [
-      opcao("qr", "Pelo celular dele", "Mostra um QR code ou manda o link no WhatsApp. Ele mesmo preenche.", function () { j.fechar(); convite({ pedidoId: p.id, nome: p.cliente, aoUsar: recarregar }); }),
+    var pelaCelular = opcao("qr", "Pelo celular dele", "Mostra um QR code ou manda o link no WhatsApp. Ele mesmo preenche.", function () { j.fechar(); convite({ pedidoId: p.id, nome: p.cliente, aoUsar: recarregar }); });
+    // A carteira é do dono: o barbeiro só manda o convite; preencher e ligar a um cadastro ficam com o dono
+    var opcoes = h("div", { class: "menu opcoes-cadastro" }, op.dono ? [
+      pelaCelular,
       opcao("lapis", "Preencher agora", "Você digita os dados que ele passar.", function () { j.fechar(); garantirDados().then(function () { formulario(null, { pedidoId: p.id, nome: p.cliente, aoSalvar: recarregar }); }); }),
       opcao("perfil", "Já tem cadastro", "Liga este atendimento ao cadastro que já existe.", function () { j.fechar(); escolherExistente(p, recarregar); }),
-    ]);
+    ] : [pelaCelular]);
     j.corpo.appendChild(opcoes);
   }
   function opcao(icone, titulo, texto, fn) {

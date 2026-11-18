@@ -73,14 +73,100 @@
 
   // Depois de decidir, oferece mandar a resposta ao cliente pelo WhatsApp (o número não é guardado)
   function oferecerWhats(tipo, p, ctx, titulo) {
+    // Recusou: dá para sugerir outros horários livres em vez de só avisar
+    var sugerir = tipo === "recusado" && ctx.slug;
     return P.janela({
       titulo: titulo,
       conteudo: h("div", { class: "grade" }, [
         h("p", { class: "nota", texto: telefoneDe(p) ? "Quer avisar o cliente pelo WhatsApp? A mensagem já vai pronta para a conversa dele." : "Quer avisar o cliente pelo WhatsApp? A mensagem já vai pronta: é só escolher a conversa." }),
         h("p", { class: "obs", style: "white-space:pre-line", texto: P.mensagem(tipo, p, ctx.barbearia) }),
       ]),
-      acoes: [{ texto: "Agora não", valor: "cancelar" }, { texto: "Abrir WhatsApp", classe: "whats", valor: "ok" }],
-    }).then(function (r) { if (r.valor === "ok") P.abrirWhats(P.mensagem(tipo, p, ctx.barbearia), telefoneDe(p)); });
+      acoes: [{ texto: "Agora não", valor: "cancelar" }].concat(sugerir ? [{ texto: "Sugerir outros horários", valor: "sugerir" }] : [], [{ texto: "Abrir WhatsApp", classe: "whats", valor: "ok" }]),
+    }).then(function (r) {
+      if (r.valor === "ok") P.abrirWhats(P.mensagem(tipo, p, ctx.barbearia), telefoneDe(p));
+      if (r.valor === "sugerir") oferecerHorarios(ctx, { profissionalId: p.profissional_id, cliente: p.cliente, telefone: telefoneDe(p), duracao: p.duracao_min, servico: p.servico, dia: p.dia });
+    });
+  }
+
+  // ---------- mandar horários livres pelo WhatsApp ----------
+  // Pedido dos donos: ao passar a agenda para o cliente, escolher QUAIS horários mandar.
+  // ctx.slug + ctx.equipe (dono) ou ctx.eu (barbeiro); o: { profissionalId, cliente, telefone, duracao, servico, dia }
+  var DURACOES = [20, 30, 40, 50, 60, 90, 120];
+  function listaHoras(hs) { return hs.length < 2 ? hs.join("") : hs.slice(0, -1).join(", ") + " e " + hs[hs.length - 1]; }
+  function oferecerHorarios(ctx, o) {
+    o = o || {};
+    var equipe = ctx.equipe && ctx.equipe.length ? ctx.equipe : ctx.eu ? [ctx.eu] : [];
+    if (!ctx.slug || !equipe.length) { P.toast("Ainda não dá para mandar horários: a agenda da equipe não carregou.", "erro"); return; }
+    var est = {
+      prof: equipe.some(function (e) { return e.id === o.profissionalId; }) ? o.profissionalId : equipe[0].id,
+      duracao: DURACOES.indexOf(Number(o.duracao)) > -1 ? Number(o.duracao) : 30,
+      dia: "", dias: [], horas: [], escolhidas: [],
+    };
+    var selProf = h("select", { "aria-label": "Barbeiro" }, equipe.map(function (e) { var op = h("option", { value: e.id, texto: e.nome }); if (e.id === est.prof) op.selected = true; return op; }));
+    var selDur = h("select", { "aria-label": "Duração" }, DURACOES.map(function (m) { var op = h("option", { value: String(m), texto: m + " min" }); if (m === est.duracao) op.selected = true; return op; }));
+    var caixaDias = h("div", { class: "segmentos" });
+    var caixaHoras = h("div", { class: "linha", style: "flex-wrap:wrap" });
+    var previa = h("p", { class: "obs", style: "white-space:pre-line" });
+    function nomeProf() { var e = equipe.filter(function (x) { return x.id === est.prof; })[0]; return e ? e.nome : ""; }
+    function texto() {
+      var hs = est.escolhidas.slice().sort();
+      if (!hs.length) return "";
+      var ola = o.cliente ? "Olá, " + P.primeiroNome(o.cliente) + "! " : "Olá! ";
+      var dia = P.dataLonga(est.dia).replace(/^Hoje, /, "hoje, ").replace(/^Amanhã, /, "amanhã, ");
+      var link = location.origin + "/" + ctx.slug + "?barbeiro=" + encodeURIComponent(est.prof);
+      return ola + "Tenho " + (hs.length === 1 ? "este horário livre" : "estes horários livres") + " na " + (ctx.barbearia || "barbearia") + " " + (/^(hoje|amanhã)/.test(dia) ? "" : "na ") + dia + ", com " + nomeProf() + ":\n" +
+        hs.map(function (x) { return "• " + x; }).join("\n") + (o.servico ? "\n(" + o.servico + ")" : "") +
+        "\n\nQual fica melhor? É só responder aqui ou marcar pelo site: " + link;
+    }
+    function desenharPrevia() { var t = texto(); previa.textContent = t || "Toque nos horários que você quer oferecer."; }
+    function desenharHoras() {
+      if (!est.dia) { P.trocar(caixaHoras, h("p", { class: "nota p", texto: "Nenhum dia com agenda publicada nos próximos 30 dias." })); desenharPrevia(); return; }
+      if (est.horas === null) { P.trocar(caixaHoras, h("div", { class: "esqueleto" })); return; }
+      if (!est.horas.length) { P.trocar(caixaHoras, h("p", { class: "nota p", texto: "Sem horário livre de " + est.duracao + " min neste dia. Escolha outro dia ou outra duração." })); desenharPrevia(); return; }
+      P.trocar(caixaHoras, est.horas.map(function (x) {
+        var marcado = est.escolhidas.indexOf(x) > -1;
+        var b = h("button", { type: "button", class: "botao p" + (marcado ? " principal" : ""), "aria-pressed": marcado ? "true" : "false", texto: x });
+        b.onclick = function () { var i = est.escolhidas.indexOf(x); if (i > -1) est.escolhidas.splice(i, 1); else est.escolhidas.push(x); desenharHoras(); };
+        return b;
+      }));
+      desenharPrevia();
+    }
+    function carregarHoras() {
+      est.escolhidas = []; est.horas = null; desenharHoras();
+      if (!est.dia) return;
+      var q = "?slug=" + encodeURIComponent(ctx.slug) + "&profissional=" + encodeURIComponent(est.prof) + "&dia=" + est.dia + "&duracao=" + est.duracao;
+      fetch("/api/horarios" + q).then(function (r) { return r.json(); }).then(function (j) { est.horas = j.horarios || []; desenharHoras(); })
+        .catch(function () { est.horas = []; desenharHoras(); P.toast("Não consegui ver os horários livres.", "erro"); });
+    }
+    function desenharDias() {
+      P.trocar(caixaDias, est.dias.slice(0, 10).map(function (d) {
+        var b = h("button", { type: "button", class: "botao p" + (d === est.dia ? " principal" : ""), "aria-pressed": d === est.dia ? "true" : "false", texto: d === P.hoje() ? "Hoje" : d === P.somaDias(P.hoje(), 1) ? "Amanhã" : P.diaCurto(d) });
+        b.onclick = function () { est.dia = d; desenharDias(); carregarHoras(); };
+        return b;
+      }));
+    }
+    function carregarDias() {
+      P.trocar(caixaDias, h("div", { class: "esqueleto" }));
+      fetch("/api/horarios?slug=" + encodeURIComponent(ctx.slug) + "&profissional=" + encodeURIComponent(est.prof) + "&dias=1").then(function (r) { return r.json(); }).then(function (j) {
+        est.dias = j.dias || [];
+        est.dia = est.dias.indexOf(est.dia || o.dia) > -1 ? (est.dia || o.dia) : est.dias[0] || "";
+        desenharDias(); carregarHoras();
+      }).catch(function () { est.dias = []; est.dia = ""; desenharDias(); desenharHoras(); });
+    }
+    selProf.onchange = function () { est.prof = selProf.value; carregarDias(); };
+    selDur.onchange = function () { est.duracao = Number(selDur.value); carregarHoras(); };
+    P.janela({
+      titulo: o.cliente ? "Horários para " + P.primeiroNome(o.cliente) : "Mandar horários livres",
+      conteudo: h("div", { class: "grade" }, [
+        h("div", { class: "linha" }, [equipe.length > 1 ? h("label", { class: "campo", style: "flex:1;min-width:140px" }, ["Barbeiro", selProf]) : null, h("label", { class: "campo", style: "flex:1;min-width:110px" }, ["Duração", selDur])]),
+        h("div", { class: "campo" }, [h("span", { texto: "Dia" }), caixaDias]),
+        h("div", { class: "campo" }, [h("span", { texto: "Horários que vão na mensagem" }), caixaHoras]),
+        previa,
+      ]),
+      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Abrir WhatsApp", classe: "whats", valor: "ok" }],
+      validar: function (v) { return v === "ok" && !est.escolhidas.length ? "Toque em pelo menos um horário." : ""; },
+    }).then(function (r) { if (r.valor === "ok") P.abrirWhats(texto(), o.telefone || ""); });
+    carregarDias();
   }
 
   function decidir(p, status, ctx, botao) {
@@ -307,6 +393,7 @@
 
   P.cartaoPedido = cartaoPedido;
   P.encaixe = encaixe;
+  P.oferecerHorarios = oferecerHorarios;
   P.remarcar = remarcar;
   P.editorSemana = editorSemana;
   P.editorBloqueios = editorBloqueios;

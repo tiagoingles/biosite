@@ -160,6 +160,13 @@ module.exports = async (req, res) => {
       if (b.acao === "config-barbearia") {
         const ctx = await perfilDoContexto(u, req);
         if (!ehAdmin(ctx)) return res.status(403).json({ message: "Só o dono muda isso." });
+        // Sinal no Pix (fase 22): a configuração inteira vem junto
+        if (b.sinal !== undefined) {
+          const lido = require("../lib/sinal").lerConfig(b.sinal, { validar: true });
+          if (lido.erro) return res.status(400).json({ message: lido.erro });
+          await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { sinal: lido.cfg } });
+          return res.status(200).json({ ok: true, sinal: lido.cfg });
+        }
         if (typeof b.confirmacaoAutomatica !== "boolean") return res.status(400).json({ message: "Pedido inválido." });
         await rest(`barbearias?id=eq.${ctx.barbearia_id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { confirmacao_automatica: b.confirmacaoAutomatica } });
         return res.status(200).json({ ok: true, confirmacaoAutomatica: b.confirmacaoAutomatica });

@@ -605,8 +605,12 @@ const servidor = http.createServer(async (req, res) => {
           n.cliente_id = c.id;
           n.clientes = { nome: c.nome, telefone: c.telefone };
         }
+        // Sinal no Pix na prévia: os serviços de barba pedem sinal de R$ 10 (lib/sinal.js)
+        const comSinal = !a && /barba/i.test(b.servico || "");
+        if (comSinal) { n.sinal_valor = 10; n.sinal_status = "aguardando"; }
         pedidos.push(n);
-        return json(res, 201, { codigo: n.codigo, profissional: b.profissional || "Bruno", verificado: true, clube: !!a });
+        const sinalPrevia = comSinal ? require("../lib/sinal").pixDoPedido({ ativo: true, tipo: "fixo", valor: 10, prazoMin: 30, tipoChave: "celular", chave: "(81) 99999-8888", nome: "GW Barbearia", cidade: "Recife" }, 10, n.codigo) : null;
+        return json(res, 201, { codigo: n.codigo, profissional: b.profissional || "Bruno", verificado: true, clube: !!a, sinal: sinalPrevia });
       }
       return json(res, 400, { message: "Ação desconhecida." });
     }

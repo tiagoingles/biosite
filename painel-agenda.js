@@ -24,6 +24,10 @@
       return b;
     }
 
+    // Sinal no Pix: o dono confere no banco e toca em "Recebi o sinal" (o pedido fica confirmado)
+    if (p.sinal_status === "aguardando" && ctx.dono && (p.status === "pendente" || p.status === "confirmado")) {
+      botao(primarias, "Recebi o sinal", "ok", "dinheiro", function (b) { sinalRecebido(p, ctx, b); });
+    }
     if (p.status === "pendente") {
       botao(primarias, "Confirmar", "ok", "check", function (b) { decidir(p, "confirmado", ctx, b); });
       botao(primarias, "Recusar", "perigo", "x", function (b) { decidir(p, "recusado", ctx, b); });
@@ -61,6 +65,7 @@
       clube && p.comissao_valor != null ? h("span", { texto: "comissão " + P.brl(p.comissao_valor) }) : null,
       p.codigo ? h("span", { texto: "código " + p.codigo }) : null,
       p.chegou_em ? h("span", { class: "chegou", texto: "chegou " + horaBr(p.chegou_em) }) : atraso >= 5 ? h("span", { class: "atrasado", texto: atraso + " min atrasado" }) : null,
+      p.sinal_valor ? h("span", { class: p.sinal_status === "pago" ? "chegou" : "atrasado", texto: "sinal " + P.brl(p.sinal_valor) + (p.sinal_status === "pago" ? " pago" : p.sinal_status === "expirado" ? " não pago" : " aguardando") }) : null,
     ];
     return h("article", { class: classe + (clube ? " do-clube" : ""), dataset: { id: p.id } }, [
       h("div", { class: "hora" }, [h("b", { texto: P.hm(p.horario) }), opcoes.mostrarDia || p.dia !== hoje ? h("small", { texto: P.diaCurto(p.dia) }) : h("small", { texto: P.hm(p.horario_fim) ? "até " + P.hm(p.horario_fim) : "" })]),
@@ -79,6 +84,13 @@
   function horaBr(iso) { return new Date(Date.parse(iso) - 3 * 36e5).toISOString().slice(11, 16); }
   function textoAtraso(p, ctx) {
     return "Oi, " + P.primeiroNome(p.cliente) + "! Estamos te esperando para o seu horário das " + P.hm(p.horario) + " na " + (ctx.barbearia || "barbearia") + ". Vai conseguir vir? Se precisar, a gente remarca.";
+  }
+  function sinalRecebido(p, ctx, botao) {
+    P.acao(botao, P.api("/api/pedido", { corpo: { acao: "sinal-pago", id: p.id } }).then(function (r) {
+      P.toast("Sinal recebido. Horário confirmado.", "ok");
+      ctx.recarregar();
+      return oferecerWhats("confirmado", Object.assign({}, p, r.pedido || {}), ctx, "Sinal recebido!");
+    }).catch(erro));
   }
   function marcarChegada(p, ctx, botao) {
     P.acao(botao, P.api("/api/pedido", { corpo: { acao: "chegou", id: p.id } }).then(function () {

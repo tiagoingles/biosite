@@ -17,6 +17,7 @@ const { disponibilidadeDoDia, escolherLivre } = require("../lib/disponibilidade"
 const { precoDoServico } = require("../lib/precos");
 const { dataValida, horaValida, hojeBr, somaDias } = require("../lib/horarios");
 const { origemDe, falha, corpoDe, UUID, bloqueadoPorTentativas, registrarErroDeSenha } = require("../lib/seguranca");
+const sinal = require("../lib/sinal");
 const clube = require("../lib/clube");
 const clientes = require("../lib/clientes");
 
@@ -77,7 +78,7 @@ module.exports = async (req, res) => {
   if (temZap && !zapCliente) return erro(res, 400, "Confira seu WhatsApp: DDD e número.");
 
   try {
-    const barb = await rest(`barbearias?slug=eq.${slug}&select=id,confirmacao_automatica`);
+    const barb = await rest(`barbearias?slug=eq.${slug}&select=id,confirmacao_automatica,sinal`);
     if (!barb.length) return erro(res, 404, "Barbearia não encontrada.");
     const barbearia_id = barb[0].id;
     // A barbearia escolhe: o agendamento do site entra confirmado sozinho ou espera o dono/barbeiro confirmar
@@ -121,6 +122,10 @@ module.exports = async (req, res) => {
 
     // Valor do atendimento já no agendamento: preço cadastrado pelo dono, ou o preço que o site mostrou
     const valor = await precoDoServico(barbearia_id, servico, b.preco);
+    // Sinal no Pix (fase 22): o pedido fica aguardando o sinal; o dono confirma ao tocar em "Recebi o sinal".
+    // Assinante do clube não paga sinal (a mensalidade já garante).
+    const valorSinal = peloClube ? 0 : sinal.valorDoSinal(barb[0].sinal, { dia, servico, preco: valor });
+    const confirmaSozinho = automatico && !valorSinal;
     const origem = origemDe(req);
     // Com a confirmação automática, a trava conta também os confirmados do site: limite um pouco maior
     const limiteBarbearia = automatico ? Math.max(60, (LIMITE_DIA_POR_BARBEIRO + 4) * equipe.length) : Math.max(40, LIMITE_DIA_POR_BARBEIRO * equipe.length);
@@ -146,7 +151,8 @@ module.exports = async (req, res) => {
               observacao,
               duracao_min: duracao,
               valor,
-              status: automatico ? "confirmado" : "pendente",
+              status: confirmaSozinho ? "confirmado" : "pendente",
+              sinal_valor: valorSinal || null,
               origem,
               limite_hora_origem: LIMITE_HORA_ORIGEM,
               limite_dia_origem: LIMITE_DIA_ORIGEM,
@@ -173,10 +179,10 @@ module.exports = async (req, res) => {
       }
 
       // Aviso no celular do dono e do barbeiro; se falhar, o pedido já foi gravado
-      await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico: assinante ? servicoPedido + " · Clube" : servico, dia, horario, confirmado: automatico }).catch((e) =>
+      await avisarNovoPedido({ barbearia_id, profissional_id: escolhido ? escolhido.id : null, cliente, servico: assinante ? servicoPedido + " · Clube" : servico, dia, horario, confirmado: confirmaSozinho }).catch((e) =>
         console.error("aviso de pedido:", e.message)
       );
-      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado, clube: !!assinante, confirmado: automatico });
+      return res.status(201).json({ codigo, profissional: escolhido ? escolhido.nome : profissionalNome, verificado, clube: !!assinante, confirmado: confirmaSozinho, sinal: valorSinal ? sinal.pixDoPedido(barb[0].sinal, valorSinal, codigo) : null });
     }
     throw new Error("Não foi possível gerar um código livre para o pedido.");
   } catch (e) {

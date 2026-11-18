@@ -168,6 +168,11 @@
         <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
         <button type="button" class="botao principal" id="ativarAvisos"></button>
       </section>
+      <section class="cartao" id="secSinal">
+        <div class="cartao-topo"><h2>Sinal no Pix</h2></div>
+        <p class="nota p">O cliente paga um sinal no Pix para garantir o horário. Você confere no app do banco e toca em "Recebi o sinal". Sem pagamento no prazo, o pedido é cancelado e o horário volta a ficar livre.</p>
+        <div id="formSinal" class="grade"></div>
+      </section>
       <section class="cartao" id="secProtese">
         <div class="cartao-topo"><h2>Prótese capilar</h2></div>
         <label class="check-linha"><input type="checkbox" id="proteseAtiva"> Mostrar a aba Prótese</label>
@@ -248,7 +253,7 @@
       if (aba === "equipe") carregarEquipe();
       if (aba === "clube") carregarClube();
       if (aba === "protese") { if (!proteseMontada) { window.Protese.montar($("telaProtese")); proteseMontada = true; } window.Protese.carregar(); }
-      if (aba === "mais") { carregarSaude(); carregarAssinatura(); }
+      if (aba === "mais") { carregarSaude(); carregarAssinatura(); montarSinal(); }
     });
     carregar();
     P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); }, 30000);
@@ -1065,6 +1070,46 @@
       P.toast(novo ? "Os agendamentos do site agora entram confirmados." : "Os pedidos do site voltam a esperar a sua confirmação.", "ok");
     }).catch(function (e) { caixa.checked = !novo; P.toast(e.message, "erro"); }).finally(function () { caixa.disabled = false; });
   };
+
+  // ---------- Sinal no Pix (lib/sinal.js) ----------
+  var DIAS_SINAL = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  var CHAVES = [["cpf_cnpj", "CPF ou CNPJ"], ["celular", "Celular"], ["email", "E-mail"], ["aleatoria", "Chave aleatória"]];
+  function montarSinal() {
+    var s = (eu && eu.barbearia && eu.barbearia.sinal) || {};
+    var ativo = h("input", { type: "checkbox" }); ativo.checked = s.ativo === true;
+    var valor = h("input", { type: "text", inputmode: "decimal", maxlength: 8, placeholder: "10,00", value: s.valor ? String(s.valor).replace(".", ",") : "" });
+    var tipo = h("select", null, [h("option", { value: "fixo", texto: "R$ (valor fixo)" }), h("option", { value: "percentual", texto: "% do serviço" })]); tipo.value = s.tipo === "percentual" ? "percentual" : "fixo";
+    var prazo = h("select", null, [15, 30, 60, 120].map(function (m) { return h("option", { value: String(m), texto: m < 60 ? m + " min" : m / 60 + " h" }); })); prazo.value = String(s.prazoMin || 30);
+    var dias = DIAS_SINAL.map(function (n, i) { var c = h("input", { type: "checkbox", value: String(i) }); c.checked = (s.dias || []).indexOf(i) > -1; return h("label", { class: "check-linha", style: "min-height:36px;font-weight:600" }, [c, n]); });
+    var nomes = (ctx.servicos || []).map(function (x) { return x.nome; });
+    (s.servicos || []).forEach(function (n) { if (nomes.indexOf(n) < 0) nomes.push(n); });
+    var servs = nomes.map(function (n) { var c = h("input", { type: "checkbox", value: n }); c.checked = (s.servicos || []).indexOf(n) > -1; return h("label", { class: "check-linha", style: "min-height:36px;font-weight:600" }, [c, n]); });
+    var tipoChave = h("select", null, [h("option", { value: "", texto: "Tipo da chave" })].concat(CHAVES.map(function (c) { return h("option", { value: c[0], texto: c[1] }); }))); tipoChave.value = s.tipoChave || "";
+    var chave = h("input", { type: "text", maxlength: 120, placeholder: "A chave do jeito que está no banco", value: s.chaveDigitada || s.chave || "" });
+    var nome = h("input", { type: "text", maxlength: 60, placeholder: "Nome de quem recebe", value: s.nome || "" });
+    var cidade = h("input", { type: "text", maxlength: 40, placeholder: "Cidade", value: s.cidade || "" });
+    var salvar = h("button", { type: "button", class: "botao principal" }, [P.icone("check"), "Salvar sinal"]);
+    salvar.onclick = function () {
+      var corpo = { ativo: ativo.checked, tipo: tipo.value, valor: valor.value, prazoMin: Number(prazo.value),
+        dias: dias.map(function (l) { return l.querySelector("input"); }).filter(function (c) { return c.checked; }).map(function (c) { return Number(c.value); }),
+        servicos: servs.map(function (l) { return l.querySelector("input"); }).filter(function (c) { return c.checked; }).map(function (c) { return c.value; }),
+        tipoChave: tipoChave.value, chave: chave.value, nome: nome.value, cidade: cidade.value };
+      P.acao(salvar, P.api("/api/eu", { corpo: { acao: "config-barbearia", sinal: corpo } }).then(function (j) {
+        eu.barbearia.sinal = j.sinal;
+        P.toast(j.sinal.ativo ? "Sinal ligado: o site já pede o Pix nos agendamentos." : "Sinal salvo (desligado).", "ok");
+      }).catch(function (e) { P.toast(e.message, "erro"); }));
+    };
+    P.trocar($("formSinal"), [
+      h("label", { class: "check-linha" }, [ativo, "Cobrar sinal para agendar pelo site"]),
+      h("div", { class: "linha" }, [h("label", { class: "campo", style: "flex:1;min-width:110px" }, ["Valor", valor]), h("label", { class: "campo", style: "flex:1;min-width:140px" }, ["Como", tipo]), h("label", { class: "campo", style: "flex:1;min-width:110px" }, ["Prazo para pagar", prazo])]),
+      h("div", { class: "campo" }, [h("span", { texto: "Em que dias (nenhum marcado = todos)" }), h("div", { class: "linha", style: "flex-wrap:wrap" }, dias)]),
+      servs.length ? h("div", { class: "campo" }, [h("span", { texto: "Em que serviços (nenhum marcado = todos)" }), h("div", { class: "linha", style: "flex-wrap:wrap" }, servs)]) : null,
+      h("div", { class: "linha" }, [h("label", { class: "campo", style: "flex:1;min-width:140px" }, ["Chave Pix", tipoChave]), h("label", { class: "campo", style: "flex:2;min-width:180px" }, [" ", chave])]),
+      h("div", { class: "linha" }, [h("label", { class: "campo", style: "flex:2;min-width:160px" }, ["Recebedor", nome]), h("label", { class: "campo", style: "flex:1;min-width:120px" }, ["Cidade", cidade])]),
+      h("p", { class: "nota p", texto: "Assinante do clube não paga sinal. O sinal de quem falta fica com a barbearia e entra no Financeiro." }),
+      salvar,
+    ]);
+  }
 
   // Aba Prótese: aparece quando o dono liga (ou quando cria a primeira ficha)
   function mostrarProtese(ligada) {

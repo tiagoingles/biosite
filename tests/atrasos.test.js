@@ -84,11 +84,12 @@ test("relógio dos avisos: barbeiro com login recebe 'chegando'; sem login, o do
   }
 });
 
-test("relógio dos avisos: sem Web Push configurado não consulta nada; chamadas demais são barradas", async () => {
-  let chamadas = A.instalarFetch(rotas());
+test("relógio dos avisos: sem Web Push não procura os atendimentos do dia (só expira sinal vencido); chamadas demais são barradas", async () => {
+  let chamadas = A.instalarFetch([{ padrao: /\/rest\/v1\/pedidos\?sinal_status=eq\.aguardando/, resposta: { corpo: [] } }, ...rotas()]);
   let r = await A.chamar(config, { query: { lembretes: "proximos" } });
   assert.equal(r.statusCode, 200);
-  assert.ok(!chamadas.some((c) => c.url.includes("/rest/v1/pedidos")));
+  assert.ok(!chamadas.some((c) => c.url.includes("/rest/v1/pedidos?dia=eq.")), "sem push, nem lista os atendimentos");
+  assert.ok(chamadas.some((c) => c.url.includes("sinal_status=eq.aguardando")), "o sinal vencido expira mesmo sem push");
   chamadas = A.instalarFetch(rotas({ tentativas: 7 }));
   r = await A.chamar(config, { query: { lembretes: "proximos" } });
   assert.equal(r.statusCode, 429);

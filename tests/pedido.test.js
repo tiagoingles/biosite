@@ -200,6 +200,6 @@ test("site: confirmado mostra \"Horário confirmado\" e não abre o WhatsApp soz
   // O site publicado da GW (gerado com a versão atual) já traz o comportamento novo
   const fonte = require("fs").readFileSync(require("path").join(__dirname, "..", "gw-barbearia.html"), "utf8");
   assert.match(fonte, /Horário confirmado/);
-  assert.match(fonte, /if\(!ultimo\.confirmado\)abrirLink\(ultimo\.link\)/);
+  assert.match(fonte, /if\(!ultimo\.confirmado&&!ultimo\.sinal\)abrirLink\(ultimo\.link\)/, "confirmado ou com sinal a pagar não abre o WhatsApp sozinho");
   assert.match(fonte, /confirmado:!!j\.confirmado/);
 });

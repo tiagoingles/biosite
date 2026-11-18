@@ -407,7 +407,9 @@ test("site gerado tem a seção do clube escondida e o \"Sou assinante\" no agen
 
 test("painéis mostram o selo do clube e usam a comissão fixa", () => {
   const ler = (p) => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
-  assert.match(ler("painel-dono.html"), /data-aba="clube"/);
+  // O Clube fica no Mais (ícone que abre a tela do clube, com "‹ Mais" para voltar)
+  assert.match(ler("painel-dono.html"), /data-tela="clube" data-pai="mais"/);
+  assert.match(ler("painel-dono.html"), /tile\("clube", "Clube"/);
   assert.match(ler("painel-agenda.js"), /Clube · não cobrar/);
   const barbeiro = ler("painel-barbeiro.html");
   assert.ok(!/valor\) \|\| 0\) \* \(Number\(p\.comissao_pct\)/.test(barbeiro), "nada de comissão calculada só pela porcentagem");

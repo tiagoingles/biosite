@@ -277,11 +277,13 @@ test("migração da fase 13 só acrescenta", () => {
   assert.ok(!/drop (table|column|index|function|constraint)|alter column|rename/.test(sql), "nada existente muda");
 });
 
-test("painel do dono: lista Para lembrar, aviso na tela Hoje e número na aba Clube", () => {
+test("painel do dono: lista Para lembrar, aviso na tela Hoje e número no Mais e no ícone do Clube", () => {
   const dono = ler("painel-dono.html");
   assert.match(dono, /id="secLembrar"/);
   assert.match(dono, /acao: "assinante-lembrete", id: a\.id/);
-  assert.match(dono, /P\.bolinha\("clube", k\.paraLembrar/);
+  // O Clube fica no Mais: o número vai na bolinha do Mais e no ícone do Clube
+  assert.match(dono, /lembretesDoClube = k\.paraLembrar/);
+  assert.match(dono, /P\.bolinha\("mais", lembretesDoClube\)/);
   assert.match(dono, /d\.lembretesClube/);
   // O WhatsApp abre no toque, antes da chamada ao servidor (senão o navegador bloqueia a janela)
   const lembrar = dono.slice(dono.indexOf("function lembrarAssinante"));

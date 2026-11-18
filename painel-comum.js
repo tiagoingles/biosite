@@ -263,11 +263,32 @@
       var alvo = (location.hash || "").slice(1) || padrao;
       if (!document.querySelector('[data-tela="' + alvo + '"]')) alvo = padrao;
       document.querySelectorAll("[data-tela]").forEach(function (s) { s.hidden = s.dataset.tela !== alvo; });
-      document.querySelectorAll("[data-aba]").forEach(function (a) { a.setAttribute("aria-current", a.dataset.aba === alvo ? "page" : "false"); });
+      // Tela aberta pelo Mais (data-pai): a aba de origem continua marcada
+      var tela = document.querySelector('[data-tela="' + alvo + '"]');
+      var aba = (tela && tela.dataset.pai) || alvo;
+      document.querySelectorAll("[data-aba]").forEach(function (a) { a.setAttribute("aria-current", a.dataset.aba === aba ? "page" : "false"); });
       if (aoTrocar) aoTrocar(alvo);
     }
     window.addEventListener("hashchange", function () { mostrar(); window.scrollTo(0, 0); });
     mostrar();
+  };
+  // Telas abertas pelo Mais: cabeçalho com "‹ Mais" (volta para a aba de origem) e o título
+  P.subtopos = function () {
+    document.querySelectorAll(".subtopo[data-titulo]").forEach(function (s) {
+      var tela = s.closest("[data-tela]");
+      var pai = (tela && tela.dataset.pai) || "mais";
+      var rotulo = (document.querySelector('[data-aba="' + pai + '"] span') || {}).textContent || "Voltar";
+      P.trocar(s, [h("a", { class: "voltar", href: "#" + pai }, [P.icone("seta_esq"), rotulo]), h("h1", { texto: s.dataset.titulo })]);
+    });
+  };
+  // Atalho grande da tela Hoje (ícone + nome): faz uma ação ou abre um endereço (#aba ou página)
+  P.atalho = function (icone, texto, acao, classe) {
+    var link = typeof acao === "string";
+    var attrs = { class: "atalho" + (classe ? " " + classe : "") };
+    if (link) attrs.href = acao; else attrs.type = "button";
+    var el = h(link ? "a" : "button", attrs, [h("span", { class: "ic" }, P.icone(icone)), h("span", { texto: texto })]);
+    if (!link) el.addEventListener("click", acao);
+    return el;
   };
   P.bolinha = function (aba, n) {
     var a = document.querySelector('[data-aba="' + aba + '"]');

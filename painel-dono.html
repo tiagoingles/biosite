@@ -22,8 +22,6 @@
   <a href="#hoje" data-aba="hoje"></a>
   <a href="#agenda" data-aba="agenda"></a>
   <a href="#clientes" data-aba="clientes"></a>
-  <a href="#equipe" data-aba="equipe"></a>
-  <a href="#clube" data-aba="clube"></a>
   <a href="#protese" data-aba="protese" hidden></a>
   <a href="#mais" data-aba="mais"></a>
 </nav>
@@ -32,6 +30,7 @@
   <!-- ===== Hoje ===== -->
   <section class="tela duas" data-tela="hoje">
     <div class="ola larga" id="ola"></div>
+    <nav class="atalhos larga" id="atalhos" aria-label="Atalhos"></nav>
     <div class="larga" id="alertas"></div>
     <div class="kpis larga" id="kpis"><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div></div>
     <div class="coluna">
@@ -89,7 +88,8 @@
   <section class="tela duas" data-tela="clientes" id="telaClientes" hidden></section>
 
   <!-- ===== Equipe ===== -->
-  <section class="tela duas" data-tela="equipe" hidden>
+  <section class="tela duas" data-tela="equipe" data-pai="mais" hidden>
+    <div class="subtopo larga" data-titulo="Equipe e convites"></div>
     <div class="coluna">
       <section class="cartao">
         <div class="cartao-topo"><h2>Equipe <span class="contador" id="qtdEquipe">0</span></h2></div>
@@ -119,7 +119,8 @@
   </section>
 
   <!-- ===== Clube de assinatura (você recebe a mensalidade e registra aqui) ===== -->
-  <section class="tela duas" data-tela="clube" hidden>
+  <section class="tela duas" data-tela="clube" data-pai="mais" hidden>
+    <div class="subtopo larga" data-titulo="Clube de assinatura"></div>
     <div class="kpis larga" id="kpisClube"><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div></div>
     <div class="larga" id="avisoClube"></div>
     <div class="coluna">
@@ -159,52 +160,68 @@
   <!-- ===== Prótese capilar (painel-protese.js) ===== -->
   <section class="tela duas" data-tela="protese" id="telaProtese" hidden></section>
 
-  <!-- ===== Mais ===== -->
-  <section class="tela duas" data-tela="mais" hidden>
-    <div class="coluna">
-      <div class="menu" id="menu"></div>
-      <section class="cartao" id="secAvisos" hidden>
-        <div class="cartao-topo"><h2>Avisos no celular</h2></div>
-        <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
-        <button type="button" class="botao principal" id="ativarAvisos"></button>
-      </section>
-      <section class="cartao" id="secSinal">
-        <div class="cartao-topo"><h2>Sinal no Pix</h2></div>
-        <p class="nota p">O cliente paga um sinal no Pix para garantir o horário. Você confere no app do banco e toca em "Recebi o sinal". Sem pagamento no prazo, o pedido é cancelado e o horário volta a ficar livre.</p>
-        <div id="formSinal" class="grade"></div>
-      </section>
-      <section class="cartao" id="secProtese">
-        <div class="cartao-topo"><h2>Prótese capilar</h2></div>
-        <label class="check-linha"><input type="checkbox" id="proteseAtiva"> Mostrar a aba Prótese</label>
-        <p class="nota p">Ficha de cada cliente de prótese, próxima manutenção, lembrete pelo WhatsApp e histórico. No site, os serviços marcados como prótese ganham uma seção própria.</p>
-      </section>
-      <section class="cartao" id="secAgendamento" hidden>
-        <div class="cartao-topo"><h2>Agendamentos do site</h2></div>
-        <label class="check-linha"><input type="checkbox" id="confirmacaoAuto"> Confirmar sozinho</label>
-        <p class="nota p" id="notaConfirmacao"></p>
-        <label class="campo">Pedir ao cliente que confirme a presença
-          <select id="pedirConfirmacao">
-            <option value="">Não pedir</option>
-            <option value="60">1 hora antes</option>
-            <option value="120">2 horas antes</option>
-            <option value="180">3 horas antes</option>
-            <option value="1440">1 dia antes</option>
-          </select>
-        </label>
-        <p class="nota p">Vai no celular de quem ligou os avisos da barbearia no site, com os botões "Confirmo" e "Não vou poder ir" (só entre 7h e 22h). Quem confirma ganha o selo na agenda; quem cancela libera o horário e você recebe o aviso.</p>
-      </section>
-    </div>
-    <div class="coluna">
-      <section class="cartao" id="secAssinatura" hidden>
-        <div class="cartao-topo"><h2>Assinatura do Bio Site</h2><span id="seloAssinatura"></span></div>
-        <div id="assinatura" class="grade"></div>
-      </section>
-      <section class="cartao" id="secSaude" hidden>
-        <div class="cartao-topo"><h2>Saúde do sistema</h2><span class="selo selo-neutro">24 h</span></div>
-        <div id="saude"></div>
-      </section>
-      <p class="rodape" id="versao"></p>
-    </div>
+  <!-- ===== Mais: o que não é do dia a dia, em ícones. Cada ícone abre a sua tela, com "‹ Mais" para voltar ===== -->
+  <section class="tela" data-tela="mais" hidden>
+    <div class="mais" id="maisGrade"></div>
+    <p class="rodape" id="versao"></p>
+  </section>
+
+  <section class="tela estreita" data-tela="ajuste-agendamento" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Agendamentos do site"></div>
+    <section class="cartao" id="secAgendamento">
+      <label class="check-linha"><input type="checkbox" id="confirmacaoAuto"> Confirmar sozinho</label>
+      <p class="nota p" id="notaConfirmacao"></p>
+      <label class="campo">Pedir ao cliente que confirme a presença
+        <select id="pedirConfirmacao">
+          <option value="">Não pedir</option>
+          <option value="60">1 hora antes</option>
+          <option value="120">2 horas antes</option>
+          <option value="180">3 horas antes</option>
+          <option value="1440">1 dia antes</option>
+        </select>
+      </label>
+      <p class="nota p">Vai no celular de quem ligou os avisos da barbearia no site, com os botões "Confirmo" e "Não vou poder ir" (só entre 7h e 22h). Quem confirma ganha o selo na agenda; quem cancela libera o horário e você recebe o aviso.</p>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="ajuste-sinal" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Sinal no Pix"></div>
+    <section class="cartao" id="secSinal">
+      <p class="nota p">O cliente paga um sinal no Pix para garantir o horário. Você confere no app do banco e toca em "Recebi o sinal". Sem pagamento no prazo, o pedido é cancelado e o horário volta a ficar livre.</p>
+      <div id="formSinal" class="grade"></div>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="ajuste-protese" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Prótese capilar"></div>
+    <section class="cartao" id="secProtese">
+      <label class="check-linha"><input type="checkbox" id="proteseAtiva"> Mostrar a aba Prótese</label>
+      <p class="nota p">Ficha de cada cliente de prótese, próxima manutenção, lembrete pelo WhatsApp e histórico. No site, os serviços marcados como prótese ganham uma seção própria.</p>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="ajuste-avisos" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Avisos no celular"></div>
+    <section class="cartao" id="secAvisos" hidden>
+      <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
+      <button type="button" class="botao principal" id="ativarAvisos"></button>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="ajuste-assinatura" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Assinatura do Bio Site"></div>
+    <section class="cartao" id="secAssinatura" hidden>
+      <div class="cartao-topo"><h2>Seu plano</h2><span id="seloAssinatura"></span></div>
+      <div id="assinatura" class="grade"></div>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="ajuste-saude" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Saúde do sistema"></div>
+    <section class="cartao" id="secSaude" hidden>
+      <div class="cartao-topo"><h2>Últimas 24 horas</h2><span class="selo selo-neutro">24 h</span></div>
+      <div id="saude"></div>
+    </section>
   </section>
 </main>
 
@@ -222,7 +239,7 @@
   if (!P.exigirLogin()) return;
   P.monitorar();
 
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["equipe", "equipe", "Equipe"], ["clube", "clube", "Clube"], ["protese", "protese", "Prótese"], ["mais", "mais", "Mais"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["protese", "protese", "Prótese"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
@@ -238,7 +255,7 @@
   P.trocar($("btnConvidar"), [P.icone("email"), "Gerar convite"]);
   P.trocar($("virarBarbeiro"), [P.icone("tesoura"), "Também atendo clientes"]);
 
-  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false, proteseMontada = false;
+  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false, proteseMontada = false, lembretesDoClube = 0;
   var ctx = { barbearia: "", equipe: [], servicos: [], dono: true, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#equipe") carregarEquipe(); } };
 
   P.api("/api/eu").then(function (d) {
@@ -250,7 +267,9 @@
     $("titulo").textContent = ctx.barbearia || "Painel do dono";
     $("sub").textContent = d.visaoAdmin ? "Visão da plataforma" : d.perfil.papel === "dono_barbeiro" ? "Você administra e atende" : "Você administra a barbearia";
     $("logo").textContent = P.iniciais(ctx.barbearia);
-    montarMenu(d);
+    montarMais();
+    montarAtalhos();
+    P.subtopos();
     var siteBarbearia = d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "";
     mostrarConfirmacao(!!(d.barbearia && d.barbearia.confirmacao_automatica));
     $("pedirConfirmacao").value = d.barbearia && d.barbearia.pedir_confirmacao_min ? String(d.barbearia.pedir_confirmacao_min) : "";
@@ -264,7 +283,10 @@
       if (aba === "equipe") carregarEquipe();
       if (aba === "clube") carregarClube();
       if (aba === "protese") { if (!proteseMontada) { window.Protese.montar($("telaProtese")); proteseMontada = true; } window.Protese.carregar(); }
-      if (aba === "mais") { carregarSaude(); carregarAssinatura(); montarSinal(); }
+      if (aba === "mais") { montarMais(); carregarSaude(); carregarAssinatura(); }
+      if (aba === "ajuste-sinal") montarSinal();
+      if (aba === "ajuste-assinatura") carregarAssinatura();
+      if (aba === "ajuste-saude") carregarSaude();
     });
     carregar();
     P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); }, 30000);
@@ -307,7 +329,8 @@
         : "Clube: " + lembrar.length + " assinantes para lembrar da mensalidade: " + nomes.join(", ") + (lembrar.length > 2 ? " e mais " + (lembrar.length - 2) : "") + ".";
       alertas.push(h("div", { class: "aviso-faixa " + (lembrar.some(function (x) { return x.dias < 0; }) ? "alerta" : "info") }, [h("span", { texto: textoClube }), h("a", { href: "#clube", class: "botao p principal", texto: "Lembrar" })]));
     }
-    if (d.lembretesClube) P.bolinha("clube", lembrar.length);
+    // O Clube fica no Mais: a bolinha vai no Mais e o ícone do Clube diz quantos lembrar
+    if (d.lembretesClube) { lembretesDoClube = lembrar.length; P.bolinha("mais", lembrar.length); }
     // Prótese capilar: manutenções vencendo ou atrasadas (sem lembrete)
     var prot = d.lembretesProtese || [];
     if (prot.length) {
@@ -662,7 +685,8 @@
     P.trocar($("avisoClube"), avisos);
     $("verClubeSite").hidden = !(j.slug && j.planos.some(function (pl) { return pl.ativo; }));
     if (j.slug) $("verClubeSite").href = "/" + j.slug + "#clube";
-    P.bolinha("clube", k.paraLembrar || 0);
+    lembretesDoClube = k.paraLembrar || 0;
+    P.bolinha("mais", lembretesDoClube);
     desenharLembretes();
     desenharPlanos();
     desenharAssinantes();
@@ -1022,25 +1046,68 @@
     l.remove();
   }
 
-  // ---------- Mais ----------
-  function itemMenu(icone, titulo, detalhe, props) {
-    return h(props && props.href ? "a" : "button", Object.assign({ type: props && props.href ? null : "button" }, props || {}), [P.icone(icone), h("span", null, [titulo, detalhe ? h("small", { texto: detalhe }) : null])]);
+  // ---------- Mais: grade de ícones em grupos (cada um abre a sua tela ou a página) ----------
+  function tile(icone, titulo, detalhe, props, tom) {
+    props = props || {};
+    var link = !!props.href;
+    var attrs = { class: "tile" + (tom ? " " + tom : "") };
+    if (link) { attrs.href = props.href; if (props.target) { attrs.target = props.target; attrs.rel = "noopener"; } } else attrs.type = "button";
+    var el = h(link ? "a" : "button", attrs, [h("span", { class: "ic" }, P.icone(icone)), h("b", { texto: titulo }), detalhe ? h("small", { texto: detalhe }) : null]);
+    if (props.onclick) el.addEventListener("click", props.onclick);
+    if (props.id) el.id = props.id;
+    if (props.hidden) el.hidden = true;
+    return el;
   }
-  function montarMenu(d) {
-    var slug = d.barbearia ? d.barbearia.slug : "";
+  function grupoMais(titulo, tiles) { return h("section", { class: "mais-grupo" }, [h("h2", { texto: titulo }), h("div", { class: "mais-grade" }, tiles.filter(Boolean))]); }
+  function copiarLinkSite() {
+    var slug = eu && eu.barbearia ? eu.barbearia.slug : "";
     var linkSite = slug ? location.origin + "/" + slug : "";
-    var itens = [
-      itemMenu("grafico", "Financeiro", "Faturamento, comissões, gastos e insumos", { href: P.link("financeiro.html") }),
-      itemMenu("equipe", "Equipe e convites", "Convidar barbeiros, fotos e links de cada um", { href: "#equipe" }),
-      itemMenu("clube", "Clube de assinatura", "Planos mensais, assinantes e pagamentos", { href: "#clube" }),
-      slug ? itemMenu("site", "Ver o site", linkSite.replace(/^https?:\/\//, ""), { href: "/" + slug, target: "_blank", rel: "noopener" }) : null,
-      slug ? itemMenu("link", "Copiar link de agendamento", "Para colocar no Instagram e no WhatsApp", { onclick: function () {
-        (navigator.clipboard ? navigator.clipboard.writeText(linkSite) : Promise.reject()).then(function () { P.toast("Link copiado: " + linkSite, "ok"); }).catch(function () { P.janela({ titulo: "Link de agendamento", conteudo: h("p", { class: "obs", texto: linkSite }), acoes: [{ texto: "OK", classe: "principal", valor: "ok" }] }); });
-      } }) : null,
-      itemMenu("baixar", "Planilha dos últimos 60 dias", "Atendimentos encerrados (abre no Excel)", { onclick: exportar60 }),
-      itemMenu("sair", "Sair", "Encerrar a sessão neste aparelho", { onclick: P.sair }),
-    ];
-    P.trocar($("menu"), itens);
+    if (!linkSite) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(linkSite) : Promise.reject()).then(function () { P.toast("Link copiado: " + linkSite, "ok"); }).catch(function () { P.janela({ titulo: "Link de agendamento", conteudo: h("p", { class: "obs", texto: linkSite }), acoes: [{ texto: "OK", classe: "principal", valor: "ok" }] }); });
+  }
+  function montarMais() {
+    var b = (eu && eu.barbearia) || {};
+    var slug = b.slug || "";
+    var sinal = b.sinal || {};
+    var agendamentos = b.confirmacao_automatica ? "Confirma sozinho" : "Você confirma";
+    P.trocar($("maisGrade"), [
+      grupoMais("Gestão", [
+        tile("grafico", "Financeiro", "Faturamento e gastos", { href: P.link("financeiro.html") }),
+        tile("equipe", "Equipe", "Agendas e convites", { href: "#equipe" }),
+        tile("clube", "Clube", lembretesDoClube ? lembretesDoClube + " para lembrar" : "Planos e assinantes", { href: "#clube" }, lembretesDoClube ? "erro" : "info"),
+        tile("dinheiro", "Produtos", "Estoque e vendas", { href: P.link("financeiro.html") + "#produtos" }, "ok"),
+        b.protese_ativa ? tile("protese", "Prótese", "Fichas e manutenções", { href: "#protese" }) : null,
+      ]),
+      grupoMais("Clientes e site", [
+        tile("sino", "Avisar clientes", "Celular e WhatsApp", { href: "#clientes" }, "info"),
+        slug ? tile("site", "Ver o site", "Como o cliente vê", { href: "/" + slug, target: "_blank" }) : null,
+        slug ? tile("link", "Copiar link", "Instagram e WhatsApp", { onclick: copiarLinkSite }) : null,
+        tile("baixar", "Planilha", "Últimos 60 dias", { onclick: exportar60 }, "neutro"),
+      ]),
+      grupoMais("Ajustes", [
+        tile("relogio", "Agendamentos", agendamentos, { href: "#ajuste-agendamento" }),
+        tile("dinheiro", "Sinal no Pix", sinal.ativo ? "Ligado" : "Desligado", { href: "#ajuste-sinal" }, sinal.ativo ? "ok" : "neutro"),
+        tile("protese", "Prótese capilar", b.protese_ativa ? "Aba ligada" : "Aba desligada", { href: "#ajuste-protese" }, "neutro"),
+        window.Avisos && Avisos.suportado() ? tile("sino", "Avisos no celular", "Pedido novo aqui", { href: "#ajuste-avisos" }) : null,
+        tile("trava", "Assinatura", "Plano do Bio Site", { href: "#ajuste-assinatura", id: "tileAssinatura", hidden: $("secAssinatura").hidden }, "neutro"),
+        tile("saude", "Saúde", "Do sistema", { href: "#ajuste-saude", id: "tileSaude", hidden: $("secSaude").hidden }, "neutro"),
+      ]),
+      grupoMais("Conta", [tile("sair", "Sair", "Deste aparelho", { onclick: P.sair }, "erro")]),
+    ]);
+  }
+  // Assinatura e saúde só aparecem no Mais quando têm o que mostrar
+  function mostrarTile(id, secId) { var t = $(id); if (t) t.hidden = $(secId).hidden; }
+
+  // ---------- Atalhos da tela Hoje: o que o dono mais faz, a um toque ----------
+  function montarAtalhos() {
+    P.trocar($("atalhos"), [
+      P.atalho("mais_um", "Encaixe", function () { P.encaixe(ctx, {}); }, "principal"),
+      P.atalho("whats", "Mandar horários", function () { P.oferecerHorarios(ctx, {}); }),
+      P.atalho("dinheiro", "Vender produto", function () { P.venderProduto(ctx); }),
+      P.atalho("agenda", "Agenda do dia", "#agenda"),
+      P.atalho("clientes", "Clientes sumidos", function () { location.hash = "#clientes"; window.Clientes.filtrar("sumidos"); }),
+      P.atalho("grafico", "Financeiro", P.link("financeiro.html")),
+    ]);
   }
   function exportar60() {
     P.api("/api/pedido?realizados=1").then(function (j) {
@@ -1077,6 +1144,7 @@
     var caixa = $("confirmacaoAuto"), novo = caixa.checked;
     caixa.disabled = true;
     P.api("/api/eu", { corpo: { acao: "config-barbearia", confirmacaoAutomatica: novo } }).then(function () {
+      if (eu && eu.barbearia) eu.barbearia.confirmacao_automatica = novo;
       mostrarConfirmacao(novo);
       P.toast(novo ? "Os agendamentos do site agora entram confirmados." : "Os pedidos do site voltam a esperar a sua confirmação.", "ok");
     }).catch(function (e) { caixa.checked = !novo; P.toast(e.message, "erro"); }).finally(function () { caixa.disabled = false; });
@@ -1133,6 +1201,7 @@
 
   // Aba Prótese: aparece quando o dono liga (ou quando cria a primeira ficha)
   function mostrarProtese(ligada) {
+    if (eu && eu.barbearia) eu.barbearia.protese_ativa = ligada;
     $("proteseAtiva").checked = ligada;
     document.querySelector('[data-aba="protese"]').hidden = !ligada;
   }
@@ -1147,8 +1216,9 @@
 
   function carregarAssinatura() {
     return P.api("/api/equipe?area=assinatura").then(function (j) {
-      if (!j.configurado) { $("secAssinatura").hidden = true; return; }
+      if (!j.configurado) { $("secAssinatura").hidden = true; mostrarTile("tileAssinatura", "secAssinatura"); return; }
       $("secAssinatura").hidden = false;
+      mostrarTile("tileAssinatura", "secAssinatura");
       var a = j.assinatura, o = j.oferta;
       var vigente = a && VIGENTES_ASS.indexOf(a.status) > -1;
       var s = a ? (SITUACAO_ASS[a.status] || [a.status, "neutro"]) : ["Não contratada", "neutro"];
@@ -1197,6 +1267,7 @@
     window.Conta.api("/api/config?saude=1&resumo=1").then(function (s) {
       var r = s.resumo || {}, v = r.vitais || {};
       $("secSaude").hidden = false;
+      mostrarTile("tileSaude", "secSaude");
       var vit = function (n, un, bom) { var x = v[n]; return x ? (x.p75 + un + (x.p75 <= bom ? " ✅" : " ⚠️") + " (" + x.amostras + ")") : "sem dados"; };
       P.trocar($("saude"), [
         h("div", { class: "kpis", style: "grid-template-columns:repeat(2,minmax(0,1fr))" }, [

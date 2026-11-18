@@ -431,3 +431,51 @@ body.sem-abas { padding-bottom: 24px; }
 /* Gestão de atrasos: chegada e atraso no cartão do atendimento */
 .meta .chegou { color: var(--ok); font-weight: 700; }
 .meta .atrasado { color: var(--erro); font-weight: 700; }
+
+/* ---------- Mais em ícones, telas abertas pelo Mais e atalhos da tela Hoje ---------- */
+.mais { display: grid; gap: 22px; }
+.mais-grupo h2 { margin: 0 2px 10px; font-size: 12px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fraco); }
+.mais-grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 640px) { .mais-grade { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 980px) { .mais-grade { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.tile {
+  display: grid; justify-items: center; align-content: start; gap: 7px; min-height: 118px; padding: 14px 6px 12px;
+  border-radius: var(--raio); background: var(--cartao); border: 1px solid var(--linha); box-shadow: var(--sombra);
+  color: var(--texto); text-decoration: none; text-align: center; font: inherit; cursor: pointer; transition: transform 0.15s;
+}
+.tile:active { transform: scale(0.97); }
+.tile[hidden] { display: none; }
+.tile .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--tile-fundo, var(--acento-fundo)); color: var(--tile-cor, var(--acento-forte)); }
+.tile .ic svg { width: 24px; height: 24px; }
+.tile b { font-size: 13.5px; line-height: 1.2; }
+.tile small { font-size: 11.5px; line-height: 1.25; color: var(--suave); overflow-wrap: anywhere; }
+.tile.ok .ic { --tile-fundo: var(--ok-fundo); --tile-cor: var(--ok); }
+.tile.info .ic { --tile-fundo: var(--info-fundo); --tile-cor: var(--info); }
+.tile.erro .ic { --tile-fundo: var(--erro-fundo); --tile-cor: var(--erro); }
+.tile.neutro .ic { --tile-fundo: var(--neutro-fundo); --tile-cor: var(--suave); }
+.tela.estreita { max-width: 680px; width: 100%; }
+.subtopo { display: flex; align-items: center; gap: 12px; }
+.subtopo h1 { margin: 0; font-size: 21px; line-height: 1.2; }
+.voltar {
+  flex: none; display: inline-flex; align-items: center; gap: 2px; min-height: 40px; padding: 6px 14px 6px 8px; border-radius: 999px;
+  background: var(--cartao); border: 1px solid var(--linha); color: var(--texto); text-decoration: none; font-weight: 700; font-size: 14px;
+}
+.voltar svg { width: 18px; height: 18px; }
+.atalhos { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.atalhos::-webkit-scrollbar { display: none; }
+.atalhos:empty { display: none; }
+.atalho {
+  flex: 0 0 auto; display: grid; justify-items: center; align-content: start; gap: 6px; width: 86px; min-height: 92px; padding: 12px 4px 10px;
+  border-radius: var(--raio); background: var(--cartao); border: 1px solid var(--linha); box-shadow: var(--sombra);
+  color: var(--texto); text-decoration: none; font: inherit; font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center; cursor: pointer;
+}
+.atalho:active { transform: scale(0.97); }
+.atalho .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--acento-fundo); color: var(--acento-forte); }
+.atalho .ic svg { width: 22px; height: 22px; }
+.atalho.principal .ic { background: var(--acento); color: var(--acento-texto); }
+/* Aviso no celular: como a notificação aparece */
+.previa-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 14px; background: var(--cartao-2); border: 1px solid var(--linha); }
+.previa-aviso .previa-icone { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--acento); color: var(--acento-texto); font-weight: 800; font-size: 13px; }
+.previa-aviso div { display: grid; gap: 2px; min-width: 0; font-size: 14px; }
+.previa-aviso span { color: var(--suave); overflow-wrap: anywhere; }
+.tile small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

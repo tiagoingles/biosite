@@ -361,7 +361,7 @@ button.perigo{color:var(--erro)}
   function caminhoProdutos() { return "/api/equipe?area=produtos" + (q ? "&barbearia=" + encodeURIComponent(q) : ""); }
   function apiProdutos(corpo) { return Conta.api(caminhoProdutos(), corpo ? { corpo: corpo } : undefined); }
   function carregarProdutos() {
-    apiProdutos().then(function (j) { $("secProdutos").hidden = false; desenharProdutos(j); })
+    apiProdutos().then(function (j) { $("secProdutos").hidden = false; desenharProdutos(j); if (location.hash === "#produtos") setTimeout(function () { $("secProdutos").scrollIntoView({ behavior: "smooth", block: "start" }); }, 60); })
       .catch(function (err) { $("secProdutos").hidden = false; msg("msgProdutos", err.message, "erro"); });
   }
   function ocupado(botao, promessa) {

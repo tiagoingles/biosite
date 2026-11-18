@@ -118,6 +118,8 @@ function clientesPrevia() {
       aniversario: CL.aniversario(c.nascimento, hoje), observacao: c.observacao, origem: c.origem, aceita: !!c.aceita && !c.saiu, saiu: !!c.saiu,
       profissional_id: c.profissional_id, barbeiro: c.profissional_id === "b2" ? "Rafael" : c.profissional_id === "b1" ? "Bruno" : "",
       ...r, gasto, ticket: vs.length ? Math.round((gasto / vs.length) * 100) / 100 : 0, criado_em: somaDias(hoje, -100) + "T12:00:00Z",
+      // App da barbearia (fase 23): quem ligou os avisos no celular
+      app: !soDele && ["c1", "c2", "c4", "c8", "c13"].includes(c.id), appNovidades: !soDele && ["c1", "c2", "c8", "c13"].includes(c.id),
     };
     item.segmentos = CL.segmentosDe(item, mes);
     return item;
@@ -127,7 +129,7 @@ function clientesPrevia() {
   const conta = (seg) => lista.filter((c) => c.segmentos.includes(seg)).length;
   return {
     hoje, dono: !soDele, clientes: lista, equipe: [{ id: "b1", nome: "Bruno" }, { id: "b2", nome: "Rafael" }],
-    kpis: { total: lista.length, comWhats: lista.filter((c) => c.telefone).length, aceitam: lista.filter((c) => c.aceita).length, ativos: lista.filter((c) => ["novo", "em_dia", "agendado"].includes(c.status)).length, novosMes: 3, taxaSegundaVisita: soDele ? null : 62, baseSegundaVisita: 8 },
+    kpis: { total: lista.length, comWhats: lista.filter((c) => c.telefone).length, aceitam: lista.filter((c) => c.aceita).length, comApp: lista.filter((c) => c.app).length, appSemCadastro: soDele ? 0 : 2, ativos: lista.filter((c) => ["novo", "em_dia", "agendado"].includes(c.status)).length, novosMes: 3, taxaSegundaVisita: soDele ? null : 62, baseSegundaVisita: 8 },
     segmentos: { chamar: conta("chamar"), segunda: conta("segunda"), sumidos: conta("sumidos"), aniversario: conta("aniversario") },
   };
 }
@@ -415,6 +417,12 @@ const servidor = http.createServer(async (req, res) => {
           });
           if (!b.simular) novos.forEach((x) => clientesPrev.push({ id: "cn" + seq++, origem: "importacao", aceita: b.aceitaram === true, profissional_id: null, ...x }));
           return json(res, 200, { simulado: !!b.simular, inseridos: novos.length, atualizados: 0, ignorados, totalIgnorados: ignorados.length });
+        }
+        if (b.acao === "aviso") {
+          if (papel === "barbeiro") return json(res, 403, { message: "Só o dono pode fazer isso." });
+          if (String(b.mensagem || "").trim().length < 3) return json(res, 400, { message: "Escreva a mensagem do aviso." });
+          const n = b.clienteId ? 1 : b.segmento === "todos" ? 6 : 2;
+          return json(res, 200, { aparelhos: n, entregues: n });
         }
         if (b.acao === "campanha-criar") {
           const c = { id: "cp" + seq++, nome: b.nome, segmento: b.segmento, mensagem: b.mensagem, criado_em: new Date().toISOString(), enviados: 0, voltaram: 0, faturou: 0 };

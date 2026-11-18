@@ -31,6 +31,7 @@
   <!-- ===== Hoje ===== -->
   <section class="tela duas" data-tela="hoje">
     <div class="ola larga" id="ola"></div>
+    <nav class="atalhos larga" id="atalhos" aria-label="Atalhos"></nav>
     <div class="larga" id="faixaAgenda"></div>
     <div class="kpis larga" id="kpis"><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div><div class="esqueleto"></div></div>
     <div class="coluna">
@@ -53,7 +54,7 @@
         <div class="lista" id="listaEncerrar"></div>
       </section>
       <section class="cartao">
-        <div class="cartao-topo"><h2>Seus números</h2><a class="botao p" href="#mais">Ganhos</a></div>
+        <div class="cartao-topo"><h2>Seus números</h2><a class="botao p" href="#ganhos">Ganhos</a></div>
         <div class="kpis" id="numeros" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>
       </section>
       <section class="cartao" id="secLinkHoje" hidden>
@@ -98,40 +99,49 @@
     </section>
   </section>
 
-  <!-- ===== Mais ===== -->
-  <section class="tela duas" data-tela="mais" hidden>
-    <div class="coluna">
-      <section class="cartao">
-        <div class="cartao-topo"><h2>Meus ganhos</h2><button type="button" class="botao p" id="btnCsv"></button></div>
-        <div class="kpis" id="resumoHist" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="esqueleto"></div><div class="esqueleto"></div></div>
-        <h3>Atendimentos encerrados (60 dias)</h3>
-        <div class="lista" id="listaRealizados"></div>
-        <button type="button" class="botao fantasma" id="verTodos" hidden></button>
-      </section>
-    </div>
-    <div class="coluna">
-      <section class="cartao" id="secLink" hidden>
-        <div class="cartao-topo"><h2>Meu link de agendamento</h2></div>
-        <div class="link-pessoal">
-          <p class="nota p">Abre o site da barbearia já com você escolhido: o cliente só escolhe o serviço e o horário.</p>
-          <p class="copiavel" id="meuLink"></p>
-          <div class="linha" id="acoesLink"></div>
-        </div>
-      </section>
-      <section class="cartao">
-        <div class="cartao-topo"><h2>Minha foto</h2></div>
-        <p class="nota p">Aparece para os clientes na hora de escolher o barbeiro. Sem foto, aparecem suas iniciais.</p>
-        <div class="linha"><span class="avatar g" id="fotoAtual"></span><button type="button" class="botao principal" id="trocarFoto"></button></div>
-        <input type="file" id="arquivoFoto" accept="image/jpeg,image/png,image/webp" hidden>
-      </section>
-      <section class="cartao" id="secAvisos" hidden>
-        <div class="cartao-topo"><h2>Avisos no celular</h2></div>
-        <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
-        <button type="button" class="botao principal" id="ativarAvisos"></button>
-      </section>
-      <div class="menu" id="menu"></div>
-      <p class="rodape" id="versao"></p>
-    </div>
+  <!-- ===== Mais: em ícones. Cada ícone abre a sua tela, com "‹ Mais" para voltar ===== -->
+  <section class="tela" data-tela="mais" hidden>
+    <div class="mais" id="maisGrade"></div>
+    <p class="rodape" id="versao"></p>
+  </section>
+
+  <section class="tela estreita" data-tela="ganhos" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Meus ganhos"></div>
+    <section class="cartao">
+      <div class="cartao-topo"><h2>Últimos 60 dias</h2><button type="button" class="botao p" id="btnCsv"></button></div>
+      <div class="kpis" id="resumoHist" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="esqueleto"></div><div class="esqueleto"></div></div>
+      <h3>Atendimentos encerrados</h3>
+      <div class="lista" id="listaRealizados"></div>
+      <button type="button" class="botao fantasma" id="verTodos" hidden></button>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="meu-link" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Meu link de agendamento"></div>
+    <section class="cartao" id="secLink" hidden>
+      <div class="link-pessoal">
+        <p class="nota p">Abre o site da barbearia já com você escolhido: o cliente só escolhe o serviço e o horário.</p>
+        <p class="copiavel" id="meuLink"></p>
+        <div class="linha" id="acoesLink"></div>
+      </div>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="minha-foto" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Minha foto"></div>
+    <section class="cartao">
+      <p class="nota p">Aparece para os clientes na hora de escolher o barbeiro. Sem foto, aparecem suas iniciais.</p>
+      <div class="linha"><span class="avatar g" id="fotoAtual"></span><button type="button" class="botao principal" id="trocarFoto"></button></div>
+      <input type="file" id="arquivoFoto" accept="image/jpeg,image/png,image/webp" hidden>
+    </section>
+  </section>
+
+  <section class="tela estreita" data-tela="ajuste-avisos" data-pai="mais" hidden>
+    <div class="subtopo" data-titulo="Avisos no celular"></div>
+    <section class="cartao" id="secAvisos" hidden>
+      <p class="nota p">Receba um aviso quando chegar um pedido novo, mesmo com o painel fechado. No iPhone, adicione o painel à tela inicial e abra por ela.</p>
+      <button type="button" class="botao principal" id="ativarAvisos"></button>
+    </section>
   </section>
 </main>
 
@@ -165,7 +175,7 @@
   P.trocar($("trocarFoto"), [P.icone("foto"), "Enviar foto"]);
 
   var eu = null, painel = null, dia = P.hoje(), diaDados = null, realizados = [], todos = false;
-  var ctx = { barbearia: "", equipe: [], servicos: [], dono: false, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#mais") carregarGanhos(); } };
+  var ctx = { barbearia: "", equipe: [], servicos: [], dono: false, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#ganhos") carregarGanhos(); } };
 
   // Quem é: só barbeiro usa esta tela; dono e dono-barbeiro vão para o painel do dono
   P.api("/api/eu").then(function (d) {
@@ -184,12 +194,14 @@
     $("avatarTopo").replaceWith(topo);
     mostrarFoto(prof);
     montarLink(d);
-    montarMenu(d);
+    montarMais(d);
+    montarAtalhos(d);
+    P.subtopos();
     window.Clientes.configurar({ dono: false, barbearia: ctx.barbearia, site: d.barbearia && d.barbearia.slug ? location.origin + "/" + d.barbearia.slug : "" });
     P.abas(function (aba) {
       if (aba === "agenda") carregarDia();
       if (aba === "horarios") abrirHorarios();
-      if (aba === "mais") carregarGanhos();
+      if (aba === "ganhos") carregarGanhos();
     });
     carregar();
     P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); }, 30000);
@@ -374,11 +386,41 @@
   }
 
   // ---------- Mais: menu, foto e avisos ----------
-  function montarMenu(d) {
-    var itens = [];
-    if (d.barbearia) itens.push(h("a", { href: "/" + d.barbearia.slug, target: "_blank", rel: "noopener" }, [P.icone("site"), h("span", null, ["Ver o site da barbearia", h("small", { texto: location.host + "/" + d.barbearia.slug })])]));
-    itens.push(h("button", { type: "button", onclick: P.sair }, [P.icone("sair"), h("span", null, ["Sair", h("small", { texto: "Encerrar a sessão neste aparelho" })])]));
-    P.trocar($("menu"), itens);
+  function tile(icone, titulo, detalhe, props, tom) {
+    props = props || {};
+    var link = !!props.href;
+    var attrs = { class: "tile" + (tom ? " " + tom : "") };
+    if (link) { attrs.href = props.href; if (props.target) { attrs.target = props.target; attrs.rel = "noopener"; } } else attrs.type = "button";
+    var el = h(link ? "a" : "button", attrs, [h("span", { class: "ic" }, P.icone(icone)), h("b", { texto: titulo }), detalhe ? h("small", { texto: detalhe }) : null]);
+    if (props.onclick) el.addEventListener("click", props.onclick);
+    return el;
+  }
+  function grupoMais(titulo, tiles) { return h("section", { class: "mais-grupo" }, [h("h2", { texto: titulo }), h("div", { class: "mais-grade" }, tiles.filter(Boolean))]); }
+  function montarMais(d) {
+    var slug = d.barbearia ? d.barbearia.slug : "";
+    P.trocar($("maisGrade"), [
+      grupoMais("Meu trabalho", [
+        tile("dinheiro", "Meus ganhos", "Comissão e atendimentos", { href: "#ganhos" }, "ok"),
+        d.profissional ? tile("link", "Meu link", "Clientes agendam com você", { href: "#meu-link" }) : null,
+        tile("foto", "Minha foto", "Aparece no site", { href: "#minha-foto" }, "info"),
+      ]),
+      grupoMais("Site e avisos", [
+        slug ? tile("site", "Ver o site", "Como o cliente vê", { href: "/" + slug, target: "_blank" }) : null,
+        window.Avisos && Avisos.suportado() ? tile("sino", "Avisos no celular", "Pedido novo aqui", { href: "#ajuste-avisos" }) : null,
+      ]),
+      grupoMais("Conta", [tile("sair", "Sair", "Deste aparelho", { onclick: P.sair }, "erro")]),
+    ]);
+  }
+  // Atalhos da tela Hoje: o que o barbeiro mais faz, a um toque
+  function montarAtalhos(d) {
+    P.trocar($("atalhos"), [
+      P.atalho("mais_um", "Encaixe", function () { P.encaixe(ctx); }, "principal"),
+      P.atalho("whats", "Mandar horários", function () { P.oferecerHorarios(ctx); }),
+      P.atalho("dinheiro", "Vender produto", function () { P.venderProduto(ctx); }),
+      P.atalho("agenda", "Minha agenda", "#agenda"),
+      P.atalho("relogio", "Meus horários", "#horarios"),
+      d.profissional ? P.atalho("link", "Meu link", "#meu-link") : null,
+    ].filter(Boolean));
   }
   function mostrarFoto(p) {
     var a = P.avatar(p, "g");

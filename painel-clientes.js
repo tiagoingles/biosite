@@ -110,6 +110,9 @@
       var bExportar = h("button", { type: "button", class: "botao p" }, [P.icone("baixar"), "Exportar"]);
       bExportar.onclick = exportar;
       ferramentas.push(bImportar, bExportar);
+      el.avisoTodos = h("button", { type: "button", class: "botao p", hidden: true });
+      el.avisoTodos.onclick = function () { avisoNoCelular({ segmento: "todos", n: el.avisoTodos._n || 0 }); };
+      ferramentas.unshift(el.avisoTodos);
     }
     el.campanhas = h("div", { class: "lista" });
     var colunaDireita = [
@@ -156,6 +159,12 @@
       kpi("Voltaram", k.taxaSegundaVisita == null ? "—" : k.taxaSegundaVisita + "%", k.taxaSegundaVisita == null ? "aparece com 5 clientes novos" : "dos novos voltaram"),
     ]);
     el.qtd.textContent = k.total;
+    if (el.avisoTodos) {
+      var nApp = comAppNoGrupo(dados.clientes).length + (k.appSemCadastro || 0);
+      el.avisoTodos._n = nApp;
+      el.avisoTodos.hidden = !nApp;
+      P.trocar(el.avisoTodos, [P.icone("sino"), "Aviso no celular (" + nApp + ")"]);
+    }
     P.trocar(el.seg, SEGMENTOS.map(function (s) {
       var n = s[0] ? dados.segmentos[s[0]] : k.total;
       var b = h("button", { type: "button", class: "botao p" + (seg === s[0] ? " principal" : ""), "aria-pressed": seg === s[0] ? "true" : "false" }, [s[1], h("span", { class: "n", texto: String(n) })]);
@@ -191,6 +200,12 @@
         b.onclick = function () { campanha(seg, comZap); };
         acoes.push(b);
       }
+      var comApp = comAppNoGrupo(lista);
+      if (op.dono && comApp.length) {
+        var bApp = h("button", { type: "button", class: "botao p" }, [P.icone("sino"), "Aviso no celular (" + comApp.length + ")"]);
+        bApp.onclick = function () { avisoNoCelular({ segmento: seg, n: comApp.length }); };
+        acoes.push(bApp);
+      }
       faixa = h("div", { class: "aviso-faixa info" }, acoes);
     }
     P.trocar(el.faixa, faixa);
@@ -212,6 +227,7 @@
   function cartao(c) {
     var s = STATUS[c.status] || [c.status, "neutro"];
     var selos = [h("span", { class: "selo selo-" + s[1], texto: s[0] })];
+    if (c.app) selos.push(h("span", { class: "selo selo-info", texto: "App", title: "Ligou os avisos da barbearia no celular" }));
     if (c.aniversario && c.aniversario.diasAte <= 7) selos.unshift(h("span", { class: "selo selo-clube", texto: c.aniversario.diasAte === 0 ? "🎂 Hoje" : "🎂 " + c.aniversario.dia }));
     var det = [c.telefone ? whatsBr(c.telefone) : "sem WhatsApp"];
     if (c.aniversario) det.push("aniversário " + c.aniversario.dia);
@@ -222,6 +238,8 @@
     if (bZap) bZap.onclick = function () { abrirLink(linkZap(c.telefone, sugestao(c))); };
     var bFicha = h("button", { type: "button", class: "botao p" }, [P.icone("perfil"), "Ficha"]);
     bFicha.onclick = function () { ficha(c.id); };
+    var bAviso = op.dono && c.app ? h("button", { type: "button", class: "botao p" }, [P.icone("sino"), "Aviso"]) : null;
+    if (bAviso) bAviso.onclick = function () { avisoNoCelular({ cliente: c }); };
     return h("div", { class: "cliente" }, [
       h("div", { class: "assinante-topo" }, [
         h("div", { class: "cresce" }, [h("div", { class: "nome", texto: c.nome }), h("div", { class: "det", texto: det.join(" · ") })]),
@@ -229,7 +247,7 @@
       ]),
       h("p", { class: "nota p", texto: linhaRetorno(c) }),
       h("p", { class: "nota p", texto: uso.join(" · ") + (c.saiu ? " · pediu para não receber mensagens" : c.aceita ? " · aceita novidades" : "") }),
-      h("div", { class: "linha" }, [bZap, bFicha]),
+      h("div", { class: "linha" }, [bZap, bAviso, bFicha]),
     ]);
   }
 
@@ -266,6 +284,7 @@
       if (op.dono) acoes.push({ texto: "Apagar dados", classe: "perigo", icone: "lixo", fn: function () { j.fechar(); apagar(c); } });
       acoes.push({ texto: "Editar", icone: "lapis", fn: function () { j.fechar(); formulario(c); } });
       if (c.telefone) acoes.push({ texto: "WhatsApp", classe: "whats", icone: "whats", fn: function () { abrirLink(linkZap(c.telefone, sugestao(Object.assign({}, resumo, c)))); } });
+      if (op.dono && resumo.app) acoes.push({ texto: "Aviso", icone: "sino", fn: function () { j.fechar(); avisoNoCelular({ cliente: Object.assign({}, resumo, c) }); } });
       j.acoes(acoes);
     }).catch(function (e) { P.toast(e.message, "erro"); });
   }
@@ -606,6 +625,53 @@
     tela();
   }
 
+  // ---------- aviso no celular (app da barbearia) ----------
+  var MODELOS_AVISO = {
+    cliente: "Olá, {nome}! ",
+    chamar: "Olá, {nome}! Já está na hora de dar um trato no visual. Toque para agendar.",
+    segunda: "Olá, {nome}! Gostou da primeira visita? Agende a próxima por aqui.",
+    sumidos: "Olá, {nome}! Sentimos sua falta. Que tal voltar esta semana? Toque para agendar.",
+    aniversario: "Feliz aniversário, {nome}! Venha comemorar de visual novo.",
+    todos: "Novidade na barbearia: ",
+  };
+  // alvo: { cliente } para um cliente, ou { segmento, n } para um grupo ("todos" = todos com o app)
+  function avisoNoCelular(alvo) {
+    var umCliente = !!alvo.cliente;
+    var chave = umCliente ? "cliente" : alvo.segmento;
+    var msg = h("textarea", { rows: "3", maxlength: "180" });
+    msg.value = MODELOS_AVISO[chave] || "";
+    var abrir = h("select", null, [h("option", { value: "agendar", texto: "O agendamento (já abre para marcar o horário)" }), h("option", { value: "site", texto: "O site da barbearia" })]);
+    var titulo = h("b", { texto: op.barbearia || "Barbearia" });
+    var corpo = h("span");
+    var conta = h("small", { class: "nota" });
+    var exemplo = umCliente ? P.primeiroNome(alvo.cliente.nome) : "Ana";
+    function atualizar() { corpo.textContent = msg.value.split("{nome}").join(exemplo); conta.textContent = msg.value.length + " de 180"; }
+    msg.oninput = atualizar;
+    atualizar();
+    var quem = umCliente ? alvo.cliente.nome : (alvo.segmento === "todos" ? "todos com o app" : (SEGMENTOS.filter(function (s) { return s[0] === alvo.segmento; })[0] || ["", ""])[1].toLowerCase()) + " (" + alvo.n + (alvo.n === 1 ? " pessoa)" : " pessoas)");
+    var j = janela("Aviso no celular", [
+      h("p", { class: "nota p", texto: "Para " + quem + ". Chega como notificação, no celular de quem ligou os avisos da barbearia no site." }),
+      h("div", { class: "previa-aviso", "aria-label": "Como o aviso aparece" }, [h("span", { class: "previa-icone", texto: P.iniciais(op.barbearia || "B") }), h("div", null, [titulo, corpo])]),
+      h("label", { class: "campo" }, ["Mensagem", msg]),
+      conta,
+      h("label", { class: "campo" }, ["Ao tocar no aviso, abre", abrir]),
+      h("p", { class: "nota p", texto: umCliente ? "{nome} vira o primeiro nome do cliente." : "{nome} vira o primeiro nome de cada cliente. Vai só para quem aceitou receber novidades; quem pediu para sair nunca recebe. No máximo 2 avisos para grupos por dia." }),
+    ]);
+    j.acoes([{ texto: "Voltar", fn: j.fechar }, {
+      texto: "Enviar aviso", classe: "principal", icone: "sino", fn: function (b) {
+        if (msg.value.trim().length < 3) { P.toast("Escreva a mensagem do aviso.", "erro"); return; }
+        var corpoApi = { acao: "aviso", mensagem: msg.value.trim(), abrir: abrir.value };
+        if (umCliente) corpoApi.clienteId = alvo.cliente.id; else corpoApi.segmento = alvo.segmento;
+        P.acao(b, api(corpoApi).then(function (r) {
+          j.fechar();
+          P.toast(r.entregues ? "Aviso enviado para " + r.entregues + (r.entregues === 1 ? " celular." : " celulares.") : "Nenhum celular respondeu agora. Tente mais tarde ou use o WhatsApp.", r.entregues ? "ok" : "erro");
+        })).catch(function (e) { P.toast(e.message, "erro"); });
+      },
+    }]);
+  }
+  function comAppNoGrupo(lista) { return lista.filter(function (c) { return c.appNovidades && !c.saiu; }); }
+  function filtrar(s) { seg = s || ""; limite = LOTE; if (dados && raiz) desenhar(); }
+
   function carregarCampanhas() {
     if (campanhasCache) return desenharCampanhas();
     P.api("/api/equipe?area=clientes&campanhas=1").then(function (r) { campanhasCache = r.campanhas; desenharCampanhas(); }).catch(function () {});
@@ -622,5 +688,5 @@
     }) : P.vazio("📣", "Nenhuma campanha ainda."));
   }
 
-  window.Clientes = { configurar: configurar, montar: montar, carregar: carregar, cadastrarDoAtendimento: cadastrarDoAtendimento, convite: convite, _: { lerTabela: lerTabela, mapear: mapear, preencher: preencher } };
+  window.Clientes = { configurar: configurar, montar: montar, carregar: carregar, filtrar: filtrar, avisoNoCelular: avisoNoCelular, cadastrarDoAtendimento: cadastrarDoAtendimento, convite: convite, _: { lerTabela: lerTabela, mapear: mapear, preencher: preencher } };
 })();

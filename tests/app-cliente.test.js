@@ -190,7 +190,6 @@ test("confirmação: 'Não vou poder ir' cancela, libera o horário e avisa o do
     assert.equal(r.body.status, "cancelado");
     const patch = chamadas.find((c) => c.metodo === "PATCH");
     assert.deepEqual([patch.corpo.status, patch.corpo.cliente_resposta], ["cancelado", "nao"]);
-    await new Promise((ok) => setTimeout(ok, 30));
     const busca = chamadas.find((c) => c.url.includes("push_inscricoes?user_id=in."));
     assert.ok(busca && busca.url.includes(UUIDS.donoUser) && busca.url.includes(UUIDS.brunoUser), "dono e barbeiro");
     assert.ok(chamadas.some((c) => c.url.startsWith("https://fcm.googleapis.com/")), "aviso saiu");

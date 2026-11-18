@@ -441,11 +441,13 @@ test("telas: aba Clientes só no painel do dono, Cadastrar no atendimento e pág
   assert.match(painel, /acao: "importar", simular: true/, "importação confere antes de gravar");
 });
 
-test("site (gerador v6): WhatsApp opcional, aceite desmarcado e nada disso no site sem cadastro", () => {
+test("site: WhatsApp obrigatório (com o motivo), aceite desmarcado e nada disso no site sem cadastro", () => {
   assert.ok(G.VERSAO >= 6, "recurso existe desde o gerador v6");
   const cfg = { modelo: "cartao", nome: "GW", slug: "gw-teste", tipo: "barbearia", whatsapp: "81999999999", cor: "#111111", fundo: "#ffffff", texto: "#111111", fonteTitulo: "Poppins", fonteTexto: "Poppins", agenda: { ativo: true, servicos: [{ id: "s1", nome: "Corte", duracao: "30 min", preco: "40,00" }], profissionais: [{ id: "p1", nome: "Bruno", servicos: ["s1"], dias: [1, 2, 3] }] } };
   const html = G.bioHTML(cfg, (u) => u);
-  assert.ok(html.includes("Seu WhatsApp <small>(opcional"));
+  // Desde o gerador v14 o WhatsApp é obrigatório: a barbearia precisa dele para avisar mudanças no horário
+  assert.ok(html.includes('id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" required'));
+  assert.ok(html.includes("avisar você se ele precisar mudar"));
   assert.ok(html.includes('<input type="checkbox" id="agNovidades">'), "aceite desmarcado");
   assert.ok(html.includes('var blocoZap=semCadastro?"":'), "site sem cadastro não pergunta o número");
   assert.ok(html.includes("if(digitos){corpo.whatsapp=zap;corpo.novidades=novidades}"));

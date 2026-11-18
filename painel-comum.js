@@ -222,7 +222,8 @@
     var t = String(telefone || "").replace(/\D/g, "");
     return "https://wa.me/" + (t.length === 10 || t.length === 11 ? "55" + t : "") + "?text=" + encodeURIComponent(texto);
   };
-  P.mensagem = function (tipo, p, barbearia) {
+  // extra (remarcado, fase 24): { link } para o cliente aceitar ou recusar o novo horário e { era } o horário de antes
+  P.mensagem = function (tipo, p, barbearia, extra) {
     var nome = P.primeiroNome(p.cliente);
     var quando = P.dataLonga(p.dia).replace(/^Hoje, /, "hoje, ").replace(/^Amanhã, /, "amanhã, ") + " às " + P.hm(p.horario);
     var com = p.profissional ? " com " + p.profissional : "";
@@ -230,9 +231,17 @@
     var casa = barbearia || "barbearia";
     if (tipo === "confirmado") return "Olá, " + nome + "! Seu horário na " + casa + " está confirmado ✅\n" + p.servico + com + "\n" + quando + cod + "\nAté lá!";
     if (tipo === "recusado") return "Olá, " + nome + ". Infelizmente não conseguimos atender no horário pedido (" + quando + "). Quer escolher outro horário?";
+    if (tipo === "remarcado" && extra && extra.link) return "Olá, " + nome + "! Precisamos mudar o seu horário na " + casa + ".\nAgora: " + quando + " (" + p.servico + com + ")" + (extra.era ? "\nAntes: " + extra.era : "") + "\n\nVocê pode no novo horário? Toque no link para aceitar ou recusar:\n" + extra.link + cod;
     if (tipo === "remarcado") return "Olá, " + nome + "! Seu horário na " + casa + " foi remarcado para " + quando + " (" + p.servico + com + ")." + cod;
     if (tipo === "cancelado") return "Olá, " + nome + ". Seu horário na " + casa + " (" + quando + ") foi cancelado. Se quiser, escolha outro horário.";
     return "Olá, " + nome + "! Lembrete do seu horário na " + casa + ": " + p.servico + com + ", " + quando + "." + cod;
+  };
+  // Horário de antes da mudança (o último que o cliente aceitou), em texto para a mensagem
+  P.horarioAnterior = function (p, novoDia) {
+    var semResposta = p.remarcado_em && !p.cliente_resposta;
+    var dia = semResposta && p.dia_anterior ? p.dia_anterior : p.dia;
+    var hora = semResposta && p.horario_anterior ? String(p.horario_anterior).slice(0, 5) : P.hm(p.horario);
+    return dia === novoDia ? hora : P.dataLonga(dia).replace(/^Hoje, /, "hoje, ").replace(/^Amanhã, /, "amanhã, ") + " às " + hora;
   };
   P.abrirWhats = function (texto, telefone) {
     var a = h("a", { href: P.whats(texto, telefone), target: "_blank", rel: "noopener" });

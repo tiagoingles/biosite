@@ -19,7 +19,8 @@ let papel = "dono";
 let googleAtivo = false; // como em produção: login com Google desligado no Supabase (/__google?ativo=1 liga)
 let seq = 1;
 // Confirmação de presença da prévia (/barbearia-modelo?confirmar=<id>.<assinatura>)
-const presencaPrev = { status: "confirmado", resposta: "" };
+const presencaPrev = { status: "confirmado", resposta: "", anterior: null, dia: null, horario: "15:00" };
+const LINK_PREVIA = "/gw-barbearia?confirmar=8c484a0d-d00c-4915-971c-39f2a6c1e1c9.Qf4Fh7ASDkUGPZZY";
 const P = (extra) => ({ id: "p" + seq++, codigo: "K" + (100 + seq), servico: "Corte degradê", profissional: "Bruno", profissional_id: "b1", dia: hoje, horario: "10:00", horario_fim: "10:40", duracao_min: 40, cliente: "Carlos Souza", observacao: "", status: "confirmado", motivo: null, valor: 40, comissao_pct: null, simulado: false, ...extra });
 let pedidos = [
   P({ horario: "09:00", horario_fim: "09:30", duracao_min: 30, servico: "Corte social", cliente: "João Pedro", status: "realizado", valor: 35, comissao_pct: 40 }),
@@ -291,7 +292,7 @@ const servidor = http.createServer(async (req, res) => {
     if (u.pathname === "/api/config") {
       // App do cliente (fase 23): avisos ligados e confirmação de presença
       if (metodo === "POST" && b.tipo === "lembrete-cliente") return json(res, 201, { ok: true, ligadoAoPedido: !!b.codigo });
-      if (metodo === "GET" && q.presenca) return /^[0-9a-f-]{36}\.[A-Za-z0-9_-]{16}$/i.test(q.presenca) ? json(res, 200, { barbearia: "Barbearia Modelo", servico: "Corte + barba", profissional: "Rafael", dia: hoje, horario: "15:00", hoje, status: presencaPrev.status, resposta: presencaPrev.resposta, passou: false }) : json(res, 404, { message: "Link inválido. Fale com a barbearia pelo WhatsApp." });
+      if (metodo === "GET" && q.presenca) return /^[0-9a-f-]{36}\.[A-Za-z0-9_-]{16}$/i.test(q.presenca) ? json(res, 200, { barbearia: "Barbearia Modelo", servico: "Corte + barba", profissional: "Rafael", dia: presencaPrev.dia || hoje, horario: presencaPrev.horario, hoje, status: presencaPrev.status, resposta: presencaPrev.resposta, passou: false, anterior: presencaPrev.anterior }) : json(res, 404, { message: "Link inválido. Fale com a barbearia pelo WhatsApp." });
       if (metodo === "POST" && b.tipo === "presenca") {
         if (presencaPrev.status === "cancelado") return json(res, 409, { message: "Este horário já foi cancelado.", status: "cancelado" });
         presencaPrev.resposta = b.resposta;
@@ -606,15 +607,17 @@ const servidor = http.createServer(async (req, res) => {
         const ini = Number(b.horario.slice(0, 2)) * 60 + Number(b.horario.slice(3, 5)), dur = Number(b.duracao) || p.duracao_min || 30, prof = b.profissionalId || p.profissional_id;
         const conflito = pedidos.find((x) => x.id !== p.id && x.dia === b.dia && x.profissional_id === prof && ["pendente", "confirmado", "avulso", "realizado"].includes(x.status) && (() => { const a = Number(x.horario.slice(0, 2)) * 60 + Number(x.horario.slice(3, 5)); return a < ini + dur && ini < a + (x.duracao_min || 30); })());
         if (conflito) return json(res, 409, { message: `Conflito com outro atendimento (das ${conflito.horario.slice(0, 5)}). Escolha outro horário.` });
+        const pedirAceite = !!(b.avisar || b.whatsapp);
+        if (pedirAceite) { Object.assign(presencaPrev, { anterior: { dia: p.dia, horario: p.horario.slice(0, 5) }, dia: b.dia, horario: b.horario, resposta: "", status: "confirmado" }); p.remarcado_em = new Date().toISOString(); p.dia_anterior = p.dia; p.horario_anterior = p.horario.slice(0, 5); p.cliente_resposta = null; }
         p.dia = b.dia; p.horario = b.horario; p.profissional_id = prof; p.profissional = prof === "b2" ? "Rafael" : "Bruno";
-        return json(res, 200, { pedido: p, avisados: b.avisar ? 1 : 0 });
+        return json(res, 200, { pedido: p, avisados: b.avisar ? 1 : 0, link: pedirAceite ? LINK_PREVIA : "" });
       }
       if (b.acao === "atrasar") {
         const prof = papel === "barbeiro" ? "b1" : b.profissionalId;
         const desde = b.aPartirDe || "00:00";
         const lista = pedidos.filter((x) => x.dia === b.dia && x.profissional_id === prof && ["pendente", "confirmado", "avulso"].includes(x.status) && x.horario.slice(0, 5) >= desde);
-        lista.forEach((x) => { const m = Number(x.horario.slice(0, 2)) * 60 + Number(x.horario.slice(3, 5)) + Number(b.minutos); x.horario = String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); });
-        return json(res, 200, { movidos: lista.length, falhas: [], avisados: b.avisar ? lista.length : 0 });
+        const resumo = lista.map((x) => { const de = x.horario.slice(0, 5); const m = Number(x.horario.slice(0, 2)) * 60 + Number(x.horario.slice(3, 5)) + Number(b.minutos); x.horario = String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); return { id: x.id, cliente: x.cliente, servico: x.servico, profissional: x.profissional, codigo: x.codigo, dia: x.dia, de, para: x.horario, telefone: (x.clientes && x.clientes.telefone) || "", avisado: !!b.avisar && x.cliente !== "Pedrinho", link: b.avisar || b.whatsapp ? LINK_PREVIA : "" }; });
+        return json(res, 200, { movidos: lista.length, falhas: [], avisados: resumo.filter((x) => x.avisado).length, lista: resumo });
       }
       if (b.acao === "avulso") { const n = P({ servico: b.servico, cliente: b.cliente, dia: b.dia, horario: b.horario, status: "avulso", duracao_min: b.duracao }); pedidos.push(n); return json(res, 201, { pedido: n }); }
       // Pedido feito no site (prévia): assinante do clube pelo WhatsApp cadastrado

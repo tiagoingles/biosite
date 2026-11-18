@@ -262,6 +262,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
 .ag-op.destaque small{opacity:.85}
 .ag-op.perigo{border-color:#c0392b;color:#c0392b}
 .ag-ok{font-weight:600;margin:0}
+.ag-dica{font-weight:400;font-size:12.5px;opacity:.75}
 </style>
 <script type="application/json" id="bio-config">{"modelo":"vitrine","tipo":"barbearia","nome":"Barbearia Modelo","cidade":"Recife - PE","descricao":"Barbearia de demonstração do Bio Site: agende à vontade, aqui tudo é de teste.","whatsapp":"5581997977699","whatsMsg":"Olá! Vim pelo site da Barbearia Modelo (demonstração do Bio Site).","instagram":"","review":"","endereco":"Rua da Demonstração, 100 - Boa Viagem, Recife - PE","maps":"","horario":"Seg a Sex: 9h às 19h\nSáb: 9h às 17h\nDom: fechado","logo":"/img/barbearia-modelo/logo.svg","capa":"/img/barbearia-modelo/capa.svg","nota":"","totalAval":"","mostrarNota":false,"extras":[],"catalogoTitulo":"Produtos","categorias":["Cabelo","Barba"],"produtos":[{"id":"mp1","nome":"Pomada modeladora 120 g","preco":"35,00","cat":"Cabelo","desc":"Efeito seco, fixação média.","foto":"","esgotado":false},{"id":"mp2","nome":"Shampoo para barba 200 ml","preco":"30,00","cat":"Barba","desc":"Limpa sem ressecar.","foto":"","esgotado":false},{"id":"mp3","nome":"Óleo para barba 30 ml","preco":"45,00","cat":"Barba","desc":"Hidrata e perfuma.","foto":"","esgotado":false},{"id":"mp4","nome":"Balm pós-barba","preco":"40,00","cat":"Barba","desc":"Acalma a pele depois da navalha.","foto":"","esgotado":true}],"pedido":{"entrega":false,"retirada":false,"agendamento":true,"taxa":"","minimo":"","pag":["Pix","Cartão","Dinheiro"],"pix":"","bairros":[],"botao":"Agendar pelo WhatsApp","obsDica":"Ex.: prefiro com o Rafael"},"cor":"#b08d57","fundo":"#121212","texto":"#f2efe9","fonteTitulo":"Oswald","fonteTexto":"DM Sans","slug":"barbearia-modelo","agenda":{"ativo":true,"termo":"Barbeiro","msg":"","servicos":[{"id":"m-corte","nome":"Corte","duracao":"30 min","preco":"40,00","midia":[]},{"id":"m-degrade","nome":"Corte degradê","duracao":"40 min","preco":"45,00","midia":[]},{"id":"m-barba","nome":"Barba","duracao":"30 min","preco":"30,00","midia":[]},{"id":"m-combo","nome":"Corte + barba","duracao":"60 min","preco":"65,00","midia":[]},{"id":"m-sobrancelha","nome":"Sobrancelha","duracao":"10 min","preco":"15,00","midia":[]},{"id":"m-pigmentacao","nome":"Pigmentação","duracao":"30 min","preco":"35,00","midia":[]},{"id":"m-protese-aplicacao","nome":"Prótese capilar (aplicação)","duracao":"120 min","preco":"350,00","midia":[],"protese":true},{"id":"m-protese-manutencao","nome":"Prótese capilar (manutenção)","duracao":"60 min","preco":"120,00","midia":[],"protese":true}],"profissionais":[{"id":"m-carlos","nome":"Carlos","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao","m-protese-aplicacao","m-protese-manutencao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"m-rafael","nome":"Rafael","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao","m-protese-aplicacao","m-protese-manutencao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"},{"id":"m-lucas","nome":"Lucas","servicos":["m-corte","m-degrade","m-barba","m-combo","m-sobrancelha","m-pigmentacao"],"dias":[1,2,3,4,5,6],"inicio":"09:00","fim":"19:00"}]},"icones":{"i180":"/img/barbearia-modelo/icone-180-1unsslo.png","i192":"/img/barbearia-modelo/icone-192-1xr3c5a.png","i512":"/img/barbearia-modelo/icone-512-12tz2es.png"}}</script>
 </head>
@@ -566,12 +567,13 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
       h+='<p class="cobertura">'+esc(sel.servico.nome)+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
       var doClube=noClube(sel.servico)?clubeSalvo():null;
       var zap=doClube||salvo("zap");
-      var blocoZap=semCadastro?"":'<label>Seu WhatsApp <small>(opcional, para a barbearia lembrar você do horário)</small><input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" value="'+esc(zap)+'"></label>';
+      var blocoZap=semCadastro?"":'<label>Seu WhatsApp<input id="agWhats" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="20" required value="'+esc(zap)+'"><small class="ag-dica">Obrigatório: a barbearia usa para confirmar o horário e avisar você se ele precisar mudar.</small></label>';
       var blocoClube=doClube===null?"":'<label class="check"><input type="checkbox" id="agClube"'+(doClube?" checked":"")+'><span>Sou assinante do clube <small>(com o WhatsApp cadastrado no clube)</small></span></label>';
       var blocoNovidades=semCadastro?"":'<label class="check"><input type="checkbox" id="agNovidades"><span>Quero receber promoções e novidades da '+esc(C.nome)+' pelo WhatsApp</span></label>';
       h+='<div class="campos"><input id="agSite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px"><label>Seu nome<input id="agNome" autocomplete="name" placeholder="Seu nome" maxlength="80" value="'+esc(salvo("nome"))+'"></label>'+blocoZap+blocoClube+blocoNovidades+'<label>Observação <small>(opcional)</small><textarea id="agObs" rows="2" maxlength="200"></textarea></label></div>';
     }else if(etapa==="presenca"){
-      titulo=pres&&pres.dados&&pres.dados.resposta==="sim"&&pres.dados.status!=="cancelado"?"Presença confirmada":"Seu horário";
+      var dd=pres&&pres.dados,ativo=!!dd&&dd.status!=="cancelado";
+      titulo=dd&&dd.anterior?(ativo&&dd.resposta==="sim"?"Novo horário aceito":ativo?"Seu horário mudou":"Seu horário"):(ativo&&dd.resposta==="sim"?"Presença confirmada":"Seu horário");
       h+=htmlPresenca();
     }else{
       // Barbearia com confirmação automática: o horário já está garantido e o WhatsApp é só para falar com ela
@@ -713,14 +715,16 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     if(!pres)return "";
     if(!pres.dados&&!pres.erro)return '<p class="note">Carregando seu horário…</p>';
     if(pres.erro)return '<p class="note">'+esc(pres.erro)+'</p>'+botaoWhats();
-    var d=pres.dados,h='<p class="cobertura"><b>'+esc(d.servico)+'</b>'+(d.profissional?' com '+esc(d.profissional):'')+'<br>'+esc(quandoTxt(d.dia,d.hoje))+' às '+esc(d.horario)+'</p>';
+    // A barbearia mudou o horário: mostra o de antes e as respostas viram "Aceito" e "Não posso"
+    var d=pres.dados,mudou=!!d.anterior,antes=mudou?(d.anterior.dia===d.dia?d.anterior.horario:quandoTxt(d.anterior.dia,d.hoje)+" às "+d.anterior.horario):"";
+    var h='<p class="cobertura"><b>'+esc(d.servico)+'</b>'+(d.profissional?' com '+esc(d.profissional):'')+'<br>'+(mudou?'Agora: ':'')+esc(quandoTxt(d.dia,d.hoje))+' às '+esc(d.horario)+(mudou?'<br><small>Antes: '+esc(antes)+'</small>':'')+'</p>';
     if(d.status==="cancelado")return h+'<p class="note">'+(pres.feito==="nao"?"Horário cancelado. A barbearia já foi avisada.":"Este horário foi cancelado.")+'</p><button type="button" class="ag-op" data-ag="novo"><b>Agendar outro horário</b><small>Escolha o serviço, o dia e a hora</small></button>';
     if(["pendente","confirmado","avulso"].indexOf(d.status)<0)return h+'<p class="note">Este horário não está mais ativo.</p>'+botaoWhats();
     if(d.passou)return h+'<p class="note">O horário já passou.</p>'+botaoWhats();
-    if(pres.querCancelar)return h+'<p class="note">Cancelar seu horário? A barbearia é avisada e o horário fica livre para outra pessoa.</p><button type="button" class="ag-op perigo" data-ag="pres-nao-ok"><b>Sim, cancelar o horário</b></button><button type="button" class="ag-op" data-ag="pres-voltar"><b>Voltar</b></button>';
-    if(d.resposta==="sim")h+='<p class="note ag-ok">✓ Presença confirmada. Até lá!</p>';
-    else h+='<button type="button" class="ag-op destaque" data-ag="pres-sim"><b>Confirmo, estarei lá</b><small>A barbearia fica sabendo na hora</small></button>';
-    h+='<button type="button" class="ag-op" data-ag="pres-nao"><b>Não vou poder ir</b><small>Cancela e libera o horário</small></button>';
+    if(pres.querCancelar)return h+'<p class="note">'+(mudou?"Não pode no novo horário? Ele é cancelado e a barbearia é avisada. Depois você pode escolher outro horário.":"Cancelar seu horário? A barbearia é avisada e o horário fica livre para outra pessoa.")+'</p><button type="button" class="ag-op perigo" data-ag="pres-nao-ok"><b>'+(mudou?"Sim, não posso nesse horário":"Sim, cancelar o horário")+'</b></button><button type="button" class="ag-op" data-ag="pres-voltar"><b>Voltar</b></button>';
+    if(d.resposta==="sim")h+='<p class="note ag-ok">'+(mudou?"✓ Novo horário aceito. Até lá!":"✓ Presença confirmada. Até lá!")+'</p>';
+    else h+='<button type="button" class="ag-op destaque" data-ag="pres-sim"><b>'+(mudou?"Aceito o novo horário":"Confirmo, estarei lá")+'</b><small>A barbearia fica sabendo na hora</small></button>';
+    h+='<button type="button" class="ag-op" data-ag="pres-nao"><b>'+(mudou?"Não posso nesse horário":"Não vou poder ir")+'</b><small>'+(mudou?"Cancela e você escolhe outro horário":"Cancela e libera o horário")+'</small></button>';
     if(whats())h+='<a class="ag-op" href="'+esc(linkWhats("Olá! Sobre o meu horário de "+d.servico+" ("+quandoTxt(d.dia,d.hoje).toLowerCase()+" às "+d.horario+")."))+'" target="_blank" rel="noopener"><b>Falar com a barbearia</b><small>Pelo WhatsApp, para remarcar</small></a>';
     return h;
   }
@@ -797,6 +801,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     if(nome.length<2){$("agErro").textContent="Informe seu nome.";return}
     var peloClube=!!($("agClube")&&$("agClube").checked),zap=$("agWhats")?$("agWhats").value.trim():"";
     var novidades=!!($("agNovidades")&&$("agNovidades").checked),digitos=zap.replace(/\D/g,"");
+    if(!semCadastro&&(digitos.length<10||digitos.length>13)){$("agErro").textContent=digitos?"Confira seu WhatsApp: DDD e número.":"Informe seu WhatsApp com DDD: a barbearia usa para avisar se o seu horário mudar.";if($("agWhats"))$("agWhats").focus();return}
     if(peloClube&&digitos.length<10){$("agErro").textContent="Informe o WhatsApp do clube com DDD.";return}
     if(digitos&&(digitos.length<10||digitos.length>13)){$("agErro").textContent="Confira seu WhatsApp: DDD e número.";return}
     if(novidades&&!digitos){$("agErro").textContent="Para receber as novidades, informe seu WhatsApp.";return}

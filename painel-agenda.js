@@ -67,7 +67,9 @@
       p.chegou_em ? h("span", { class: "chegou", texto: "chegou " + horaBr(p.chegou_em) }) : atraso >= 5 ? h("span", { class: "atrasado", texto: atraso + " min atrasado" }) : null,
       p.sinal_valor ? h("span", { class: p.sinal_status === "pago" ? "chegou" : "atrasado", texto: "sinal " + P.brl(p.sinal_valor) + (p.sinal_status === "pago" ? " pago" : p.sinal_status === "expirado" ? " não pago" : " aguardando") }) : null,
       // Confirmação de presença pelo celular do cliente (fase 23)
-      p.cliente_resposta === "sim" ? h("span", { class: "chegou", texto: "✓ cliente confirmou" }) : p.cliente_resposta === "nao" ? h("span", { class: "atrasado", texto: "cancelou pelo celular" }) : null,
+      p.cliente_resposta === "sim" ? h("span", { class: "chegou", texto: p.remarcado_em ? "✓ cliente aceitou o novo horário" : "✓ cliente confirmou" })
+        : p.cliente_resposta === "nao" ? h("span", { class: "atrasado", texto: p.remarcado_em ? "não aceitou o novo horário" : "cancelou pelo celular" })
+        : p.remarcado_em && editavel ? h("span", { class: "aguarda", texto: "aguardando o cliente aceitar o novo horário" + (p.horario_anterior ? " (era " + (p.dia_anterior && p.dia_anterior !== p.dia ? P.diaCurto(p.dia_anterior) + " " : "") + String(p.horario_anterior).slice(0, 5) + ")" : "") }) : null,
     ];
     return h("article", { class: classe + (clube ? " do-clube" : ""), dataset: { id: p.id } }, [
       h("div", { class: "hora" }, [h("b", { texto: P.hm(p.horario) }), opcoes.mostrarDia || p.dia !== hoje ? h("small", { texto: P.diaCurto(p.dia) }) : h("small", { texto: P.hm(p.horario_fim) ? "até " + P.hm(p.horario_fim) : "" })]),
@@ -104,18 +106,18 @@
   function telefoneDe(p) { return (p && p.clientes && p.clientes.telefone) || ""; }
 
   // Depois de decidir, oferece mandar a resposta ao cliente pelo WhatsApp (o número não é guardado)
-  function oferecerWhats(tipo, p, ctx, titulo) {
+  function oferecerWhats(tipo, p, ctx, titulo, extra) {
     // Recusou: dá para sugerir outros horários livres em vez de só avisar
     var sugerir = tipo === "recusado" && ctx.slug;
     return P.janela({
       titulo: titulo,
       conteudo: h("div", { class: "grade" }, [
         h("p", { class: "nota", texto: telefoneDe(p) ? "Quer avisar o cliente pelo WhatsApp? A mensagem já vai pronta para a conversa dele." : "Quer avisar o cliente pelo WhatsApp? A mensagem já vai pronta: é só escolher a conversa." }),
-        h("p", { class: "obs", style: "white-space:pre-line", texto: P.mensagem(tipo, p, ctx.barbearia) }),
+        h("p", { class: "obs", style: "white-space:pre-line", texto: P.mensagem(tipo, p, ctx.barbearia, extra) }),
       ]),
       acoes: [{ texto: "Agora não", valor: "cancelar" }].concat(sugerir ? [{ texto: "Sugerir outros horários", valor: "sugerir" }] : [], [{ texto: "Abrir WhatsApp", classe: "whats", valor: "ok" }]),
     }).then(function (r) {
-      if (r.valor === "ok") P.abrirWhats(P.mensagem(tipo, p, ctx.barbearia), telefoneDe(p));
+      if (r.valor === "ok") P.abrirWhats(P.mensagem(tipo, p, ctx.barbearia, extra), telefoneDe(p));
       if (r.valor === "sugerir") oferecerHorarios(ctx, { profissionalId: p.profissional_id, cliente: p.cliente, telefone: telefoneDe(p), duracao: p.duracao_min, servico: p.servico, dia: p.dia });
     });
   }
@@ -287,6 +289,7 @@
     var hora = h("input", { type: "time", name: "hora", value: P.hm(p.horario), step: 300, required: true });
     var dur = h("input", { type: "number", name: "duracao", min: 5, max: 240, step: 5, value: p.duracao_min || 30 });
     var avisar = h("input", { type: "checkbox", checked: true });
+    var zap = h("input", { type: "checkbox", checked: true });
     var prof = ctx.dono && ctx.equipe && ctx.equipe.length > 1
       ? h("select", { name: "prof" }, ctx.equipe.map(function (e) { var o = h("option", { value: e.id, texto: e.nome }); if (e.id === p.profissional_id) o.selected = true; return o; }))
       : null;
@@ -297,18 +300,25 @@
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Novo dia", dia]), h("label", { class: "campo" }, ["Novo horário", hora])]),
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Duração (min)", dur]), prof ? h("label", { class: "campo" }, ["Barbeiro", prof]) : null]),
         h("label", { class: "check-linha" }, [avisar, "Avisar o cliente no celular (se ele ligou os avisos da barbearia)"]),
+        h("label", { class: "check-linha" }, [zap, telefoneDe(p) ? "Mandar no WhatsApp se ele não tiver os avisos no celular" : "Mandar no WhatsApp se ele não tiver os avisos (sem número no cadastro: você escolhe a conversa)"]),
+        h("p", { class: "nota p", texto: "O cliente recebe o novo horário com \"Aceito\" e \"Não posso\". A resposta aparece aqui na agenda." }),
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Remarcar", classe: "principal", valor: "ok" }],
       validar: function () { return !dia.value || !hora.value ? "Escolha o dia e o horário." : ""; },
     }).then(function (r) {
       if (r.valor !== "ok") return;
-      var corpo = { acao: "remarcar", id: p.id, dia: dia.value, horario: hora.value, duracao: Number(dur.value) || p.duracao_min || 30, avisar: avisar.checked };
+      var corpo = { acao: "remarcar", id: p.id, dia: dia.value, horario: hora.value, duracao: Number(dur.value) || p.duracao_min || 30, avisar: avisar.checked, whatsapp: zap.checked };
       if (prof) corpo.profissionalId = prof.value;
       P.api("/api/pedido", { corpo: corpo })
         .then(function (res) {
           P.toast("Remarcado para " + P.dataLonga(dia.value) + " às " + hora.value + "." + (res.avisados ? " Cliente avisado no celular." : ""), "ok");
           ctx.recarregar();
-          return oferecerWhats("remarcado", Object.assign({}, p, res.pedido || {}, { dia: dia.value, horario: hora.value }), ctx, "Remarcado");
+          var novo = Object.assign({}, p, res.pedido || {}, { dia: dia.value, horario: hora.value });
+          var extra = { link: res.link ? location.origin + res.link : "", era: P.horarioAnterior(p, dia.value) };
+          if (!zap.checked) return;
+          // Recebeu no celular: o WhatsApp fica como opção; não recebeu: a mensagem já vai pronta
+          if (res.avisados) { P.toast("Cliente avisado no celular.", "ok", { texto: "WhatsApp também", acao: function () { P.abrirWhats(P.mensagem("remarcado", novo, ctx.barbearia, extra), telefoneDe(p)); } }); return; }
+          return oferecerWhats("remarcado", novo, ctx, "Mandar a mudança no WhatsApp", extra);
         })
         .catch(erro);
     });
@@ -457,6 +467,8 @@
   P.oferecerHorarios = oferecerHorarios;
   P.venderProduto = venderProduto;
   P.remarcar = remarcar;
+  P.oferecerWhats = oferecerWhats;
+  P.telefoneDe = telefoneDe;
   P.editorSemana = editorSemana;
   P.editorBloqueios = editorBloqueios;
   P.vazio = function (emoji, texto) { return h("div", { class: "vazio" }, [h("span", { class: "emoji", "aria-hidden": "true", texto: emoji }), h("p", { texto: texto })]); };

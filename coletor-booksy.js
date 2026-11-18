@@ -193,7 +193,7 @@
         "• Barbeiros: " + n(s.equipe, "novos") + " novos, " + n(s.equipe, "ligados") + " ligados" + ja(s.equipe) + "\n" +
         "• Serviços: " + n(s.servicos, "novos") + " novos\n" +
         "• Produtos: " + n(s.produtos, "novos") + " novos, " + n(s.produtos, "atualizados") + " atualizados\n" +
-        "• Agendamentos futuros: " + n(s.agendamentos, "novos") + " novos" + ja(s.agendamentos) + "\n" +
+        "• Agendamentos futuros: " + n(s.agendamentos, "novos") + " novos" + ja(s.agendamentos) + (n(s.agendamentos, "ligados") ? ", " + n(s.agendamentos, "ligados") + " ligados ao cliente" : "") + "\n" +
         "• Bloqueios de horário: " + n(s.bloqueios, "novos") + " novos" + ja(s.bloqueios) + (s.erros && s.erros.length ? "\nCom problema: " + s.erros.join(", ") : ""), !s.parcial);
     } catch (e) {
       devolver();

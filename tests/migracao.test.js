@@ -62,7 +62,8 @@ function rotasImportacao() {
     { metodo: "POST", padrao: /\/rest\/v1\/clientes/, resposta: { status: 201 } },
     { metodo: "PATCH", padrao: /\/rest\/v1\/clientes\?id=eq\./, resposta: { status: 204 } },
     { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&externo=like\.booksy/, resposta: { corpo: [{ id: "c-bia", externo: "booksy:2", nome: "Bia Souza" }] } },
-    { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?barbearia_id=eq\.[^&]+&externo=like\.booksy/, resposta: { corpo: [{ externo: "booksy:900" }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?barbearia_id=eq\.[^&]+&externo=like\.booksy/, resposta: { corpo: [{ id: "ped-900", externo: "booksy:900", cliente_id: "c-bia" }] } },
+    { metodo: "PATCH", padrao: /\/rest\/v1\/pedidos\?id=eq\./, resposta: { status: 204 } },
     { metodo: "POST", padrao: /\/rest\/v1\/pedidos/, resposta: { status: 201 } },
     { metodo: "GET", padrao: /\/rest\/v1\/bloqueios\?profissional_id=in\./, resposta: { corpo: [] } },
     { metodo: "POST", padrao: /\/rest\/v1\/bloqueios/, resposta: { status: 201 } },
@@ -98,7 +99,7 @@ test("importação: equipe da agenda, serviços com preço, produtos, clientes s
   assert.deepEqual(r.servicos, { novos: 1, existentes: 1, semPreco: 1 });
   assert.equal(r.produtos.novos, 1);
   assert.deepEqual(r.clientes, { novos: 2, atualizados: 1, jaEstavam: 0, ignorados: 2 });
-  assert.deepEqual(r.agendamentos, { novos: 2, jaEstavam: 1, semBarbeiro: 1, ignorados: 2 });
+  assert.deepEqual(r.agendamentos, { novos: 2, jaEstavam: 1, ligados: 0, semBarbeiro: 1, ignorados: 2 });
   assert.equal(r.bloqueios.novos, 1);
   assert.equal(r.erros, undefined);
 
@@ -175,6 +176,24 @@ test("importação: na coleta seguinte, o nome de verdade entra no lugar do prov
   assert.equal(patch.length, 1);
   assert.ok(patch[0].url.includes("c-prov"));
   assert.equal(patch[0].corpo.nome, "Paulo Lima");
+});
+
+test("importação: agendamento que veio antes sem cliente fica ligado a ele quando o cliente entra", async () => {
+  const chamadas = A.instalarFetch([
+    ...rotasImportacao().filter((r) => !(r.metodo === "GET" && String(r.padrao).includes("pedidos"))),
+    { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?barbearia_id=eq\.[^&]+&externo=like\.booksy/, resposta: { corpo: [{ id: "ped-900", externo: "booksy:900", cliente_id: null }, { id: "ped-901", externo: "booksy:901", cliente_id: "c-outro" }] } },
+  ]);
+  const amanha = A.daquiA(1);
+  const r = await migracao.importar(BARB, { equipe: [{ id: 11, nome: "Manolo", visivel: true }], agendamentos: [
+    { id: 900, inicio: amanha + "T10:00", fim: amanha + "T10:40", status: "A", clienteId: 2, equipeId: 11 },
+    { id: 901, inicio: amanha + "T11:00", fim: amanha + "T11:40", status: "A", clienteId: 2, equipeId: 11 },
+  ] });
+  assert.equal(r.agendamentos.jaEstavam, 2);
+  assert.equal(r.agendamentos.ligados, 1, "só o que estava sem cliente");
+  const patch = chamadas.filter((c) => c.metodo === "PATCH" && c.url.includes("/pedidos?id=eq."));
+  assert.equal(patch.length, 1);
+  assert.match(patch[0].url, /id=eq\.ped-900&cliente_id=is\.null/, "não troca o cliente de quem já tem");
+  assert.deepEqual(patch[0].corpo, { cliente_id: "c-bia", cliente: "Bia Souza" });
 });
 
 test("importação: erro que se repete para cedo, e sem tempo o resto fica para a próxima coleta (sem agendamento solto)", async () => {

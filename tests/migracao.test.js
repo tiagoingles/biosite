@@ -200,6 +200,24 @@ test("importação: ficha repetida no Booksy (mesmo WhatsApp) não vira outro cl
   assert.equal(pedidos.find((p) => p.externo === "booksy:951").cliente_id, "c-ana", "agendamento de quem já estava na barbearia");
 });
 
+test("importação: duas fichas do mesmo cliente completam um só cadastro, com a última visita mais recente", async () => {
+  const chamadas = A.instalarFetch([
+    ...rotasImportacao().filter((r) => !(r.metodo === "GET" && String(r.padrao).includes("select=id,nome,telefone"))),
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&select=id,nome,telefone/, resposta: { corpo: [
+      { id: "c-ana", nome: "Ana Lima", telefone: "81999990000", externo: "booksy:1", observacao: "", nascimento: null, ultima_visita_externa: "2026-01-10" },
+    ] } },
+  ]);
+  const r = await migracao.importar(BARB, { clientes: [
+    { id: 1, nome: "Ana Lima", telefone: "81999990000", ultimaVisita: "2026-10-05T10:00:00" },
+    { id: 9, nome: "Ana (app)", telefone: "81999990000", ultimaVisita: "2026-08-01T10:00:00", nascimento: "1991-03-04" },
+  ] });
+  const patch = chamadas.filter((c) => c.metodo === "PATCH" && c.url.includes("/clientes?id=eq."));
+  assert.equal(patch.length, 1, "um cadastro, uma atualização");
+  assert.equal(patch[0].corpo.ultima_visita_externa, "2026-10-05", "a ficha com visita mais antiga não volta a data");
+  assert.equal(patch[0].corpo.nascimento, "1991-03-04", "a outra ficha completa o que faltava");
+  assert.equal(r.clientes.atualizados, 1);
+});
+
 test("importação: agendamento que veio antes sem cliente fica ligado a ele quando o cliente entra", async () => {
   const chamadas = A.instalarFetch([
     ...rotasImportacao().filter((r) => !(r.metodo === "GET" && String(r.padrao).includes("pedidos"))),

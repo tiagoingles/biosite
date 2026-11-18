@@ -219,8 +219,8 @@ function painel(dia) {
   const doDia = pedidos.filter((p) => p.dia === dia && meus(p));
   const ativos = doDia.filter((p) => ["pendente", "confirmado", "avulso", "realizado"].includes(p.status));
   const equipe = [
-    { id: "b1", nome: "Bruno", foto_url: null, temLogin: true, agenda: { publicada: true, inicio: "09:00", fim: "18:00", almocoInicio: "12:00", almocoFim: "13:00" }, atendimentos: ativos.filter((p) => p.profissional_id === "b1").length, ocupacao: 27 },
-    { id: "b2", nome: "Rafael", foto_url: null, temLogin: false, agenda: null, atendimentos: ativos.filter((p) => p.profissional_id === "b2").length, ocupacao: null },
+    { id: "b1", nome: "Bruno", foto_url: null, temLogin: true, agenda: { publicada: true, inicio: "09:00", fim: "18:00", almocoInicio: "12:00", almocoFim: "13:00" }, atendimentos: ativos.filter((p) => p.profissional_id === "b1").length, ocupacao: 27, bloqueios: [{ inicio: "16:00", fim: "16:30", motivo: "Dentista" }] },
+    { id: "b2", nome: "Rafael", foto_url: null, temLogin: false, agenda: null, atendimentos: ativos.filter((p) => p.profissional_id === "b2").length, ocupacao: null, bloqueios: [] },
   ].filter((e) => !soDele || e.id === "b1");
   const soma = (l) => l.reduce((t, p) => t + (Number(p.valor) || 0), 0);
   return {
@@ -602,7 +602,20 @@ const servidor = http.createServer(async (req, res) => {
       const p = pedidos.find((x) => x.id === b.id);
       if (metodo === "PATCH" && p) { if (b.status) { p.status = b.status; p.motivo = b.motivo || null; } if (b.valor !== undefined) p.valor = b.valor ? Number(String(b.valor).replace(",", ".")) : null; return json(res, 200, { pedido: p }); }
       if (b.acao === "cancelar" && p) { p.status = "cancelado"; return json(res, 200, { pedido: p }); }
-      if (b.acao === "remarcar" && p) { p.dia = b.dia; p.horario = b.horario; return json(res, 200, { pedido: p }); }
+      if (b.acao === "remarcar" && p) {
+        const ini = Number(b.horario.slice(0, 2)) * 60 + Number(b.horario.slice(3, 5)), dur = Number(b.duracao) || p.duracao_min || 30, prof = b.profissionalId || p.profissional_id;
+        const conflito = pedidos.find((x) => x.id !== p.id && x.dia === b.dia && x.profissional_id === prof && ["pendente", "confirmado", "avulso", "realizado"].includes(x.status) && (() => { const a = Number(x.horario.slice(0, 2)) * 60 + Number(x.horario.slice(3, 5)); return a < ini + dur && ini < a + (x.duracao_min || 30); })());
+        if (conflito) return json(res, 409, { message: `Conflito com outro atendimento (das ${conflito.horario.slice(0, 5)}). Escolha outro horário.` });
+        p.dia = b.dia; p.horario = b.horario; p.profissional_id = prof; p.profissional = prof === "b2" ? "Rafael" : "Bruno";
+        return json(res, 200, { pedido: p, avisados: b.avisar ? 1 : 0 });
+      }
+      if (b.acao === "atrasar") {
+        const prof = papel === "barbeiro" ? "b1" : b.profissionalId;
+        const desde = b.aPartirDe || "00:00";
+        const lista = pedidos.filter((x) => x.dia === b.dia && x.profissional_id === prof && ["pendente", "confirmado", "avulso"].includes(x.status) && x.horario.slice(0, 5) >= desde);
+        lista.forEach((x) => { const m = Number(x.horario.slice(0, 2)) * 60 + Number(x.horario.slice(3, 5)) + Number(b.minutos); x.horario = String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); });
+        return json(res, 200, { movidos: lista.length, falhas: [], avisados: b.avisar ? lista.length : 0 });
+      }
       if (b.acao === "avulso") { const n = P({ servico: b.servico, cliente: b.cliente, dia: b.dia, horario: b.horario, status: "avulso", duracao_min: b.duracao }); pedidos.push(n); return json(res, 201, { pedido: n }); }
       // Pedido feito no site (prévia): assinante do clube pelo WhatsApp cadastrado
       if (metodo === "POST" && b.slug) {

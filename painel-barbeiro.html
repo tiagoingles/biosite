@@ -74,12 +74,14 @@
         <input type="date" id="dia">
         <button type="button" class="icone" id="diaProx" aria-label="Próximo dia"></button>
       </div>
+      <div class="alternar" role="group" aria-label="Ver a agenda como" id="modoAgenda"><button type="button" data-modo="quadro" aria-pressed="true"></button><button type="button" data-modo="lista" aria-pressed="false"></button></div>
       <div class="kpis" id="kpisDia" style="grid-template-columns:repeat(2,minmax(0,1fr))"></div>
       <div class="linha">
         <button type="button" class="botao principal" id="btnEncaixeDia"></button>
         <button type="button" class="botao" id="btnHoje">Hoje</button>
         <button type="button" class="botao fantasma" id="btnCsvDia"></button>
       </div>
+      <div id="quadroDia" hidden></div>
       <div class="lista" id="listaDia"></div>
     </section>
   </section>
@@ -149,6 +151,7 @@
 <script src="/avisos.js"></script>
 <script src="/painel-comum.js"></script>
 <script src="/painel-agenda.js"></script>
+<script src="/painel-quadro.js"></script>
 <script src="/qr.js"></script>
 <script src="/painel-clientes.js"></script>
 <script>
@@ -297,6 +300,22 @@
   $("diaProx").onclick = function () { dia = P.somaDias(dia, 1); $("dia").value = dia; carregarDia(); };
   $("btnHoje").onclick = function () { dia = P.hoje(); $("dia").value = dia; carregarDia(); };
   $("btnEncaixeDia").onclick = function () { P.encaixe(ctx, { dia: dia }); };
+  // Agenda em quadro (painel-quadro.js) ou em lista; a escolha fica guardada neste aparelho
+  P.trocar(document.querySelector('#modoAgenda [data-modo="quadro"]'), [P.icone("agenda"), "Quadro"]);
+  P.trocar(document.querySelector('#modoAgenda [data-modo="lista"]'), [P.icone("mais"), "Lista"]);
+  document.querySelectorAll("#modoAgenda [data-modo]").forEach(function (b) { b.onclick = function () { window.Quadro.modo(b.dataset.modo); if (diaDados) desenharDia(); }; });
+  function marcarModo() {
+    var modo = window.Quadro.modo();
+    document.querySelectorAll("#modoAgenda [data-modo]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.modo === modo ? "true" : "false"); });
+    $("listaDia").hidden = modo !== "lista";
+    $("quadroDia").hidden = modo !== "quadro";
+    return modo;
+  }
+  function desenharDia() {
+    var d = diaDados, minha = d.equipe[0], pub = minha && minha.agenda && minha.agenda.publicada;
+    if (marcarModo() === "quadro") window.Quadro.desenhar($("quadroDia"), d, ctx, { dia: dia });
+    else P.trocar($("listaDia"), d.pedidos.length ? d.pedidos.map(function (p) { return P.cartaoPedido(p, ctx); }) : P.vazio("🗓️", pub ? "Nenhum horário marcado neste dia." : "Nenhum horário neste dia. A agenda deste dia não está publicada no site."));
+  }
   function carregarDia() {
     $("rotuloDia").textContent = P.dataLonga(dia);
     return P.api("/api/pedido?painel=1&dia=" + dia).then(function (d) {
@@ -310,7 +329,7 @@
         kpi("Na agenda", String(ativos.length), fora ? fora + " recusado/cancelado" : (pub ? minha.agenda.inicio + "–" + minha.agenda.fim : "agenda não publicada")),
         kpi("Sua parte", P.brl(minhaParte(ativos)), "prevista no dia"),
       ]);
-      P.trocar($("listaDia"), d.pedidos.length ? d.pedidos.map(function (p) { return P.cartaoPedido(p, ctx); }) : P.vazio("🗓️", pub ? "Nenhum horário marcado neste dia." : "Nenhum horário neste dia. A agenda deste dia não está publicada no site."));
+      desenharDia();
     }).catch(function (e) { P.toast(e.message, "erro"); });
   }
   $("btnCsvDia").onclick = function () {

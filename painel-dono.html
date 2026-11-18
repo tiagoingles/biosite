@@ -71,6 +71,7 @@
         <input type="date" id="dia">
         <button type="button" class="icone" id="diaProx" aria-label="Próximo dia"></button>
       </div>
+      <div class="alternar" role="group" aria-label="Ver a agenda como" id="modoAgenda"><button type="button" data-modo="quadro" aria-pressed="true"></button><button type="button" data-modo="lista" aria-pressed="false"></button></div>
       <div class="linha" id="filtros"></div>
       <div class="kpis" id="kpisDia"></div>
       <div class="linha">
@@ -80,6 +81,7 @@
         <button type="button" class="botao" id="btnHoje">Hoje</button>
         <button type="button" class="botao fantasma" id="btnCsvDia"></button>
       </div>
+      <div id="quadroDia" hidden></div>
       <div class="lista" id="listaDia"></div>
     </section>
   </section>
@@ -229,6 +231,7 @@
 <script src="/avisos.js"></script>
 <script src="/painel-comum.js"></script>
 <script src="/painel-agenda.js"></script>
+<script src="/painel-quadro.js"></script>
 <script src="/qr.js"></script>
 <script src="/painel-clientes.js"></script>
 <script src="/painel-premium.js"></script>
@@ -403,6 +406,17 @@
       desenharDia();
     }).catch(function (e) { P.toast(e.message, "erro"); });
   }
+  // Agenda em quadro (painel-quadro.js) ou em lista; a escolha fica guardada neste aparelho
+  P.trocar(document.querySelector('#modoAgenda [data-modo="quadro"]'), [P.icone("agenda"), "Quadro"]);
+  P.trocar(document.querySelector('#modoAgenda [data-modo="lista"]'), [P.icone("mais"), "Lista"]);
+  document.querySelectorAll("#modoAgenda [data-modo]").forEach(function (b) { b.onclick = function () { window.Quadro.modo(b.dataset.modo); if (diaDados) desenharDia(); }; });
+  function marcarModo() {
+    var modo = window.Quadro.modo();
+    document.querySelectorAll("#modoAgenda [data-modo]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.modo === modo ? "true" : "false"); });
+    $("listaDia").hidden = modo !== "lista";
+    $("quadroDia").hidden = modo !== "quadro";
+    return modo;
+  }
   function desenharDia() {
     var d = diaDados;
     var chips = [h("button", { type: "button", class: "botao p" + (filtro ? "" : " principal"), texto: "Todos", onclick: function () { filtro = ""; desenharDia(); } })].concat(d.equipe.map(function (e) {
@@ -413,7 +427,8 @@
     var ativos = lista.filter(P.ativo);
     var fat = ativos.reduce(function (t, p) { return t + (Number(p.valor) || 0); }, 0);
     P.trocar($("kpisDia"), [kpi("Na agenda", String(ativos.length), lista.length - ativos.length ? (lista.length - ativos.length) + " recusado/cancelado" : ""), kpi("Faturamento", P.brl(fat), "previsto")]);
-    P.trocar($("listaDia"), lista.length ? lista.map(function (p) { return P.cartaoPedido(p, ctx, { mostrarBarbeiro: !filtro }); }) : P.vazio("🗓️", "Nenhum horário neste dia."));
+    if (marcarModo() === "quadro") window.Quadro.desenhar($("quadroDia"), d, ctx, { dia: dia, filtro: filtro, mudarColuna: true });
+    else P.trocar($("listaDia"), lista.length ? lista.map(function (p) { return P.cartaoPedido(p, ctx, { mostrarBarbeiro: !filtro }); }) : P.vazio("🗓️", "Nenhum horário neste dia."));
   }
   $("btnCsvDia").onclick = function () {
     if (!diaDados || !diaDados.pedidos.length) { P.toast("Nada para exportar neste dia."); return; }

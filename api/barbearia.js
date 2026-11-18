@@ -9,6 +9,7 @@ const { texto } = require("../lib/agenda");
 const { publicar, redefinirTeste, criarTesteBarbeiro, redefinirTesteBarbeiro, linkNovaSenha } = require("../lib/publicar");
 const { rest } = require("../lib/supabase");
 const formulario = require("../lib/formulario");
+const migracao = require("../lib/migracao");
 const { falha, corpoDe, UUID } = require("../lib/seguranca");
 
 function origemDo(req) {
@@ -51,6 +52,15 @@ module.exports = async (req, res) => {
       if (!perfil) return res.status(404).json({ message: "Esta conta não é deste site." });
       const r = await linkNovaSenha(userId, origemDo(req));
       return res.status(200).json({ link: r.link, nome: perfil.nome });
+    }
+
+    // Migração do Booksy (lib/migracao.js): gera o coletor de uma barbearia e mostra o resultado da última coleta
+    if (b.acao === "migracao-criar" || b.acao === "migracao-ultima") {
+      const barbeariaId = String(b.barbeariaId || "");
+      if (!UUID.test(barbeariaId)) return res.status(400).json({ message: "Escolha a barbearia." });
+      if (b.acao === "migracao-ultima") return res.status(200).json(await migracao.ultima(barbeariaId));
+      const r = await migracao.criar({ barbeariaId, userId: u.id });
+      return res.status(201).json({ ...r, api: origemDo(req) });
     }
 
     if (b.acao === "formulario-criar") return res.status(201).json(await formulario.criar({ nome: b.nome, whatsapp: b.whatsapp, leadId: b.leadId }, origemDo(req)));

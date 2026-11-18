@@ -56,6 +56,12 @@
       <p class="nota p">Mande o link para o dono da barbearia preencher pelo celular: dados da loja, e-mail do login, serviços e preços, produtos, insumos, equipe com comissão e fotos. As respostas chegam aqui, prontas para o Criador.</p>
       <div class="lista" id="listaFormularios"></div>
     </section>
+    <section class="cartao" id="secMigracao">
+      <div class="cartao-topo"><h2>Migrar do Booksy</h2><span class="nota p">Clientes, equipe, produtos e agenda</span></div>
+      <p class="nota p">Traz os dados de uma barbearia que usa o Booksy: clientes (com WhatsApp e última visita), barbeiros, serviços com preço, produtos com estoque, os agendamentos dos próximos 90 dias e os bloqueios. O coletor usa o Booksy já aberto e logado no navegador: a senha do Booksy não passa pelo barbeirotop e nada muda no Booksy.</p>
+      <div class="linha"><label class="campo" style="flex:1 1 220px">Barbearia que recebe<select id="migBarbearia"></select></label><button type="button" class="botao principal" id="migGerar">Gerar coletor</button></div>
+      <div id="migResultado"></div>
+    </section>
     <section class="cartao" id="secLeads" hidden>
       <div class="cartao-topo"><h2>Interessados <span class="contador" id="qtdLeads">0</span></h2><span class="nota p">Página de vendas</span></div>
       <div class="lista" id="listaLeads"></div>
@@ -138,6 +144,62 @@
     sitesAdmin = d.barbearias;
     mostrarLeads(d.leads || []);
     mostrarFormularios(d.formularios || []);
+    montarMigracao(d.barbearias);
+  }
+
+  // ---------- migração do Booksy (lib/migracao.js e coletor-booksy.js) ----------
+  // O favorito leva o código de uso da coleta e carrega o coletor na página do Booksy, onde a pessoa está logada
+  function montarMigracao(lista) {
+    P.trocar($("migBarbearia"), [h("option", { value: "", texto: "Escolha a barbearia" })].concat(lista.map(function (b) { return h("option", { value: b.id, texto: b.nome }); })));
+  }
+  function codigoDoColetor(j) {
+    var api = String(j.api || location.origin).replace(/[^a-zA-Z0-9:/._-]/g, "");
+    return "javascript:(function(){window.__BIO_MIGRACAO={token:'" + String(j.token).replace(/[^0-9a-f]/g, "") + "',api:'" + api + "'};var s=document.createElement('script');s.src='" + api + "/coletor-booksy.js?v=1';document.body.appendChild(s);})();";
+  }
+  $("migGerar").onclick = function () {
+    var id = $("migBarbearia").value;
+    if (!id) { P.toast("Escolha a barbearia que recebe os dados.", "erro"); return; }
+    P.acao($("migGerar"), P.api("/api/barbearia", { corpo: { acao: "migracao-criar", barbeariaId: id } }).then(mostrarColetor).catch(function (e) { P.toast(e.message, "erro"); }));
+  };
+  function mostrarColetor(j) {
+    var codigo = codigoDoColetor(j);
+    var favorito = h("a", { class: "botao principal", href: codigo, title: "Arraste para a barra de favoritos" }, [P.icone("baixar"), "Coletor Booksy · " + j.barbearia.nome]);
+    favorito.addEventListener("click", function (e) { e.preventDefault(); P.toast("Arraste este botão para a barra de favoritos e toque nele com o Booksy aberto.", "info"); });
+    var ate = new Date(j.expiraEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    var resumo = h("div");
+    P.trocar($("migResultado"), [
+      h("ol", { class: "mini-lista passos" }, [
+        h("li", { texto: "No computador, arraste o botão abaixo para a barra de favoritos do navegador." }),
+        h("li", { texto: "Abra o Booksy Biz (booksy.com/pro) já logado na conta da " + j.barbearia.nome + "." }),
+        h("li", { texto: "Toque no favorito. O coletor mostra o andamento no canto da tela e manda tudo para cá em 1 ou 2 minutos." }),
+      ]),
+      h("div", { class: "linha" }, [
+        favorito,
+        h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(codigo, "Código copiado. Crie um favorito novo e cole no campo do endereço."); } }, [P.icone("copiar"), "Copiar código"]),
+      ]),
+      h("p", { class: "nota p", texto: "Vale até " + ate + " e só para a " + j.barbearia.nome + ". Pode rodar mais de uma vez: o que já entrou não se repete." }),
+      h("div", { class: "linha" }, [h("button", { type: "button", class: "botao p", onclick: function (ev) { verUltimaMigracao(j.barbearia.id, resumo, ev.currentTarget); } }, [P.icone("atualizar"), "Ver o resultado"])]),
+      resumo,
+    ]);
+  }
+  function verUltimaMigracao(id, alvo, botao) {
+    P.acao(botao, P.api("/api/barbearia", { corpo: { acao: "migracao-ultima", barbeariaId: id } }).then(function (j) {
+      var m = j.ultima;
+      if (!m || !m.usado_em) { P.trocar(alvo, h("p", { class: "nota", texto: "Ainda não chegou nada. Toque no favorito com o Booksy aberto e espere o coletor dizer \"Pronto\"." })); return; }
+      var s = m.resumo || {}, n = function (o, k) { return (o && o[k]) || 0; };
+      P.trocar(alvo, [
+        h("p", { class: "nota", texto: "Coleta recebida em " + new Date(m.usado_em).toLocaleString("pt-BR") + ":" }),
+        h("ul", { class: "mini-lista" }, [
+          h("li", { texto: "Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados, " + n(s.clientes, "jaEstavam") + " já estavam" + (n(s.clientes, "ignorados") ? ", " + n(s.clientes, "ignorados") + " sem nome nem WhatsApp" : "") }),
+          h("li", { texto: "Barbeiros: " + n(s.equipe, "novos") + " novos, " + n(s.equipe, "ligados") + " já existiam" }),
+          h("li", { texto: "Serviços: " + n(s.servicos, "novos") + " novos" + (n(s.servicos, "semPreco") ? ", " + n(s.servicos, "semPreco") + " sem preço ficaram de fora" : "") }),
+          h("li", { texto: "Produtos: " + n(s.produtos, "novos") + " novos, " + n(s.produtos, "atualizados") + " atualizados" }),
+          h("li", { texto: "Agendamentos futuros: " + n(s.agendamentos, "novos") + " novos" + (n(s.agendamentos, "jaEstavam") ? ", " + n(s.agendamentos, "jaEstavam") + " já estavam" : "") + (n(s.agendamentos, "semBarbeiro") ? ", " + n(s.agendamentos, "semBarbeiro") + " de quem não aparece na agenda" : "") }),
+          h("li", { texto: "Bloqueios de horário: " + n(s.bloqueios, "novos") }),
+          s.erros && s.erros.length ? h("li", { texto: "Com problema: " + s.erros.join(", ") + " (rode o coletor de novo)" }) : null,
+        ]),
+      ]);
+    }).catch(function (e) { P.toast(e.message, "erro"); }));
   }
 
   // ---------- formulários de implantação (lib/formulario.js) ----------

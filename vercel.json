@@ -1,6 +1,9 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/config.js": { "maxDuration": 60 }
+  },
   "crons": [
     { "path": "/api/config?lembretes=clube", "schedule": "0 12 * * *" }
   ],

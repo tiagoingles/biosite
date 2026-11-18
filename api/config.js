@@ -22,6 +22,7 @@ const { registrar, origemDe, contarTentativas, corpoDe, falha } = require("../li
 const formulario = require("../lib/formulario");
 const lembretes = require("../lib/lembretes");
 const presenca = require("../lib/presenca");
+const migracao = require("../lib/migracao");
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 
 const { VERSAO: GERADOR_VERSAO } = require("../lib/gerador");
@@ -119,8 +120,11 @@ async function interessado(req, res, b) {
 module.exports = async (req, res) => {
   // Avisos do Stripe: lidos antes de qualquer outra coisa, porque precisam do corpo bruto
   if (req.query && req.query.stripe === "webhook") return assinatura.webhook(req, res);
+  // Coletor da migração (roda na página do Booksy): pré-verificação do navegador
+  if (req.method === "OPTIONS") { migracao.cors(req, res); return res.status(204).end(); }
   if (req.method === "POST") {
     const b = corpoDe(req);
+    if (b.tipo === "migracao") return migracao.receber(req, res, b).catch((e) => { migracao.cors(req, res); return falha(res, e, "POST /api/config (migracao)"); });
     if (b.tipo === "lembrete-cliente") return lembretes.inscreverCliente(req, res, b).catch((e) => falha(res, e, "POST /api/config (lembrete-cliente)"));
     if (b.tipo === "presenca") return presenca.responder(req, res, b).catch((e) => falha(res, e, "POST /api/config (presenca)"));
     if (b.tipo === "formulario" || b.tipo === "formulario-midia") {

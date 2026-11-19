@@ -257,6 +257,41 @@ test("importação: erro que se repete para cedo, e sem tempo o resto fica para 
   assert.equal(chamadas.filter((c) => c.metodo === "POST").length, 0);
 });
 
+test("importação: número salvo sem DDD ganha o DDD da barbearia (do telefone dela no Booksy ou do WhatsApp do painel)", async () => {
+  const clientes = [
+    { id: 31, nome: "Davi Sem DDD", telefone: "98111-2233" },
+    { id: 32, nome: "Edu Formato Antigo", telefone: "8122-3344" },
+    { id: 33, nome: "Fábio de Fora", telefone: "+351 912 345 678" },
+  ];
+  const inseridos = (chamadas) => chamadas.filter((c) => c.metodo === "POST" && c.url.includes("/rest/v1/clientes")).map((c) => c.corpo).flat();
+  const tel = (lista, id) => lista.find((c) => c.externo === "booksy:" + id).telefone;
+
+  let chamadas = A.instalarFetch(rotasImportacao());
+  await migracao.importar(BARB, { ddd: "81", clientes });
+  let ins = inseridos(chamadas);
+  assert.equal(tel(ins, 31), "81981112233");
+  assert.equal(tel(ins, 32), "81981223344", "8 dígitos de celular antigo ganham o 9");
+  assert.equal(tel(ins, 33), null, "número de outro país não vira DDD 81");
+
+  // Sem o DDD do Booksy, vale o do WhatsApp que o dono cadastrou no painel
+  chamadas = A.instalarFetch([
+    { padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { corpo: [{ id: BARB, slug: "dom-manolo", whatsapp: "11999990000" }] } },
+    ...rotasImportacao().filter((r) => !String(r.padrao).includes("barbearias")),
+  ]);
+  await migracao.importar(BARB, { clientes });
+  assert.equal(tel(inseridos(chamadas), 31), "11981112233");
+
+  // Sem nenhum DDD conhecido, o número sem DDD fica de fora (o cliente entra sem telefone)
+  chamadas = A.instalarFetch(rotasImportacao());
+  await migracao.importar(BARB, { clientes });
+  assert.equal(tel(inseridos(chamadas), 31), null);
+
+  const c = ler("coletor-booksy.js");
+  assert.match(c, /ddd: ddd,/, "o coletor manda o DDD da barbearia");
+  assert.ok(c.includes('.replace(/\\D/g, "").replace(/^55(?=\\d{10,11}$)/, "")'), "a barra do \\D não pode sumir");
+  assert.ok(ler("lib/migracao.js").includes('.replace(/\\D/g, "")'));
+});
+
 test("admin: só a conta da plataforma gera o coletor; o /app mostra o favorito e o resultado", async () => {
   const barbearia = require("../api/barbearia");
   A.instalarFetch([...A.rotasDeConta()]);

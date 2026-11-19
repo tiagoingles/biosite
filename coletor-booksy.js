@@ -163,6 +163,10 @@
       await esperarSessao();
       devolver();
       aviso("Lendo a equipe e os serviços…", 4);
+      // DDD da barbearia (telefone dela no Booksy): completa o número de cliente salvo sem DDD
+      var ddd = "";
+      try { var neg = await ler(""); var fone = String(((neg && neg.business) || neg || {}).phone || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); if (/^[1-9][1-9]/.test(fone)) ddd = fone.slice(0, 2); } catch (e) {}
+      await pausa(PAUSA);
       var rec = await ler("resources");
       var equipe = (Array.isArray(rec) ? rec : rec.resources || []).map(function (r) { return { id: r.id, nome: r.name, visivel: r.visible !== false }; });
       await pausa(PAUSA);
@@ -179,7 +183,7 @@
         r = await fetch(String(M.api).replace(/\/+$/, "") + "/api/config", {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=UTF-8" },
-          body: JSON.stringify({ tipo: "migracao", token: M.token, dados: { origem: "booksy", negocio: negocio, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios } }),
+          body: JSON.stringify({ tipo: "migracao", token: M.token, dados: { origem: "booksy", negocio: negocio, ddd: ddd, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios } }),
         });
       } catch (e) {
         throw new Error("A conexão com o barbeirotop caiu durante o envio. Parte dos dados pode ter entrado: veja em \"Ver o resultado\" no /app e toque no favorito de novo (nada é duplicado).");

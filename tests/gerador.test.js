@@ -168,7 +168,8 @@ test("preço \"a partir de\" (o \"R$ 28,00+\" do Booksy): cartão, lista do agen
   vm.runInNewContext(codigo + "\nthis.r=[precoTxt('A partir de 28,00'),precoTxt('15,00'),precoTxt('Grátis')];", ctx);
   assert.deepEqual(Array.from(ctx.r), ["a partir de " + G.brl(28), G.brl(15), "Grátis"]); // array de outro contexto do vm
   assert.ok(html.includes("var preco=precoTxt(s.preco);"), "lista do agendamento");
-  assert.ok(html.includes('s.preco=(/^\s*a partir de/i.test(String(s.preco||""))?"A partir de ":"")+v.toFixed(2)'), "preço do painel guarda o prefixo");
+  assert.ok(html.includes('s.preco=(/^\\s*a partir de/i.test(String(s.preco||""))?"A partir de ":"")+v.toFixed(2)'), "preço do painel guarda o prefixo");
+  assert.ok(!html.includes("(/^s*a partir de/i"), "a barra do \\s não pode sumir");
   assert.ok(html.includes("card.textContent=[s.duracao,precoTxt(s.preco)]"), "cartão atualizado com o preço do painel");
 });
 

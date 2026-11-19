@@ -1,5 +1,7 @@
 // Convite de dono ou de barbeiro.
-// GET ?token=      mostra a barbearia, o e-mail convidado e se esse e-mail já tem conta.
+// GET ?token=      mostra a barbearia, o e-mail convidado, se esse e-mail já tem conta e a ficha (se houver).
+// Convite com ficha (profissional_id, fase 27): a conta assume a ficha que já está na equipe, com a agenda, os
+//   agendamentos e os bloqueios (barbearia migrada de outro sistema). Dono com ficha entra como dono-barbeiro.
 // POST { token }   com a conta logada: aceita o convite com essa conta.
 // POST { token, nome, senha } sem login: cria a conta já confirmada e aceita o convite. O link do convite
 //   vai pelo WhatsApp e vale como confirmação (o Supabase não manda e-mail para quem não é da equipe).
@@ -7,7 +9,7 @@
 const { rest } = require("../lib/supabase");
 const { usuarioDaRequisicao, perfilDe, barbeariaDe } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
-const { falha, corpoDe, contarTentativas, origemDe } = require("../lib/seguranca");
+const { falha, corpoDe, contarTentativas, origemDe, erroPublico } = require("../lib/seguranca");
 const { authAdmin } = require("../lib/publicar");
 
 const TOKEN = /^[0-9a-f]{48}$/;
@@ -15,7 +17,7 @@ const MAX_ERROS_HORA = 20;
 
 async function conviteValido(token) {
   if (!TOKEN.test(token)) return null;
-  const linhas = await rest(`convites?token=eq.${token}&aceito_em=is.null&select=id,barbearia_id,email,expira_em,papel,comissao_pct`);
+  const linhas = await rest(`convites?token=eq.${token}&aceito_em=is.null&select=id,barbearia_id,email,expira_em,papel,comissao_pct,profissional_id`);
   const c = linhas[0];
   if (!c || new Date(c.expira_em) < new Date()) return null;
   return c;
@@ -40,12 +42,21 @@ async function liberarConvite(c) {
   await rest(`convites?id=eq.${c.id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { aceito_em: null } }).catch(() => {});
 }
 
-// Liga a conta à barbearia: o dono vira administrador do site; o barbeiro entra na equipe e na agenda
+// Liga a conta à barbearia: o dono vira administrador do site; o barbeiro entra na equipe e na agenda.
+// Com ficha: a conta assume a ficha que já está na equipe (só se ela ainda não tem login), em vez de criar outra.
 async function ligarConta(c, userId, nome) {
   const dono = c.papel === "dono";
-  await rest("perfis", { metodo: "POST", prefer: "return=minimal", corpo: { user_id: userId, barbearia_id: c.barbearia_id, papel: dono ? "dono" : "barbeiro", nome } });
-  if (dono) return;
+  const ficha = c.profissional_id || null;
+  await rest("perfis", { metodo: "POST", prefer: "return=minimal", corpo: { user_id: userId, barbearia_id: c.barbearia_id, papel: dono ? (ficha ? "dono_barbeiro" : "dono") : "barbeiro", nome } });
+  if (dono && !ficha) return;
   try {
+    if (ficha) {
+      const assumir = { perfil_user_id: userId };
+      if (c.comissao_pct != null) assumir.comissao_pct = Number(c.comissao_pct);
+      const r = await rest(`profissionais?id=eq.${ficha}&barbearia_id=eq.${c.barbearia_id}&perfil_user_id=is.null`, { metodo: "PATCH", prefer: "return=representation", corpo: assumir });
+      if (!Array.isArray(r) || !r.length) throw erroPublico(409, "A ficha deste convite já está ligada a outra conta. Peça um convite novo para a barbearia.");
+      return;
+    }
     const corpo = { barbearia_id: c.barbearia_id, perfil_user_id: userId, nome };
     // Comissão combinada no formulário da implantação; sem ela, vale o padrão do banco
     if (c.comissao_pct != null) corpo.comissao_pct = Number(c.comissao_pct);
@@ -106,8 +117,13 @@ module.exports = async (req, res) => {
     if (req.method === "GET") {
       const c = await conviteValido(texto(req.query.token, 64));
       if (!c) return res.status(404).json({ message: "Convite inválido ou vencido." });
-      const [b, conta] = await Promise.all([barbeariaDe(c.barbearia_id), contaDoEmail(c.email).catch(() => null)]);
-      return res.status(200).json({ barbearia: b && b.nome, email: c.email, papel: c.papel === "dono" ? "dono" : "barbeiro", temConta: !!(conta && conta.confirmado) });
+      const [b, conta, prof] = await Promise.all([
+        barbeariaDe(c.barbearia_id),
+        contaDoEmail(c.email).catch(() => null),
+        c.profissional_id ? rest(`profissionais?id=eq.${c.profissional_id}&perfil_user_id=is.null&select=nome`).then((l) => l[0] || null).catch(() => null) : null,
+      ]);
+      // ficha: o nome da ficha que a pessoa vai assumir (a tela mostra e já preenche o nome)
+      return res.status(200).json({ barbearia: b && b.nome, email: c.email, papel: c.papel === "dono" ? "dono" : "barbeiro", temConta: !!(conta && conta.confirmado), ficha: prof ? prof.nome : null });
     }
 
     if (req.method !== "POST") return res.status(405).json({ message: "Método não permitido." });

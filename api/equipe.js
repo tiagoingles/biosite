@@ -2,7 +2,8 @@
 // GET: lista profissionais (com atendimentos) e convites pendentes.
 // GET ?agenda=1&profissionalId=&de=&dias=7: agenda de um barbeiro (o dono publica por quem não tem login).
 // POST acao:
-//   "convidar" { email }               cria um convite (válido por 7 dias) e devolve o link;
+//   "convidar" { email, profissionalId? }  cria um convite (válido por 7 dias) e devolve o link; com
+//                                      profissionalId, quem aceitar assume essa ficha (sem login) da equipe;
 //   "cancelar-convite" { id } / "remover" { profissionalId };
 //   "link-senha" { profissionalId }      link para o barbeiro criar uma senha nova (vai pelo WhatsApp);
 //   "foto-link" / "foto-salvar" / "foto-remover"  foto do barbeiro;
@@ -68,7 +69,7 @@ module.exports = async (req, res) => {
       const desde30 = somaDias(hoje, -29);
       const [profissionais, convites, feitos] = await Promise.all([
         rest(`profissionais?barbearia_id=eq.${perfil.barbearia_id}&select=id,nome,ativo,perfil_user_id,foto_url,comissao_pct&order=criado_em.asc`),
-        rest(`convites?barbearia_id=eq.${perfil.barbearia_id}&aceito_em=is.null&expira_em=gt.${new Date().toISOString()}&select=id,email,token,expira_em&order=criado_em.desc`),
+        rest(`convites?barbearia_id=eq.${perfil.barbearia_id}&aceito_em=is.null&expira_em=gt.${new Date().toISOString()}&select=id,email,token,expira_em,profissional_id&order=criado_em.desc`),
         // Atendimentos realizados por barbeiro e por serviço: total e últimos 30 dias
         todas(`pedidos?barbearia_id=eq.${perfil.barbearia_id}&status=eq.realizado&select=profissional_id,servico,dia&order=id`),
       ]);
@@ -92,7 +93,7 @@ module.exports = async (req, res) => {
             },
           };
         }),
-        convites: convites.map((c) => ({ id: c.id, email: c.email, expira_em: c.expira_em, link: `${enderecoDoSite(req)}/entrar.html?convite=${c.token}` })),
+        convites: convites.map((c) => ({ id: c.id, email: c.email, expira_em: c.expira_em, profissionalId: c.profissional_id || null, link: `${enderecoDoSite(req)}/entrar.html?convite=${c.token}` })),
       });
     }
 
@@ -102,10 +103,20 @@ module.exports = async (req, res) => {
     if (b.acao === "convidar") {
       const email = texto(b.email, 120).toLowerCase();
       if (!EMAIL.test(email)) return res.status(400).json({ message: "Informe um e-mail válido." });
+      // Com profissionalId: o convite é para quem já está na equipe sem login (ex.: barbeiro de uma migração).
+      // Quem aceitar entra nessa ficha, com a agenda e os agendamentos; o convite novo substitui o anterior dela.
+      let ficha = null;
+      if (b.profissionalId) {
+        const alvo = await profissionalDaBarbearia(b.profissionalId, perfil.barbearia_id);
+        if (!alvo) return res.status(404).json({ message: "Profissional não encontrado." });
+        if (alvo.perfil_user_id) return res.status(409).json({ message: `${alvo.nome} já tem login no painel.` });
+        ficha = alvo;
+        await rest(`convites?profissional_id=eq.${alvo.id}&aceito_em=is.null`, { metodo: "DELETE", prefer: "return=minimal" });
+      }
       const token = crypto.randomBytes(24).toString("hex");
       const expira = new Date(Date.now() + DIAS_CONVITE * 864e5).toISOString();
-      await rest("convites", { metodo: "POST", prefer: "return=minimal", corpo: { barbearia_id: perfil.barbearia_id, email, token, expira_em: expira } });
-      return res.status(201).json({ link: `${enderecoDoSite(req)}/entrar.html?convite=${token}` });
+      await rest("convites", { metodo: "POST", prefer: "return=minimal", corpo: { barbearia_id: perfil.barbearia_id, email, token, expira_em: expira, profissional_id: ficha ? ficha.id : null } });
+      return res.status(201).json({ link: `${enderecoDoSite(req)}/entrar.html?convite=${token}`, ficha: ficha ? ficha.nome : null });
     }
 
     if (b.acao === "cancelar-convite") {

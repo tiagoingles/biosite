@@ -547,7 +547,13 @@ const servidor = http.createServer(async (req, res) => {
       if (q.agenda === "1") return json(res, 200, { profissional: { id: q.profissionalId, nome: "Rafael", temLogin: false }, ...semana(q.de || hoje, q.dias) });
       if (b.acao === "agenda-semana-salvar") return json(res, 200, semana(b.dias[0].dia, b.dias.length));
       if (metodo === "GET") return json(res, 200, { profissionais: equipeGestao, convites });
-      if (b.acao === "convidar") { const token = "tok" + seq++; convites.unshift({ id: "cn" + seq++, email: b.email, expira_em: new Date(Date.now() + 7 * 864e5).toISOString(), link: "http://localhost:" + PORTA + "/entrar.html?convite=" + token }); return json(res, 201, { link: convites[0].link }); }
+      if (b.acao === "convidar") {
+        // Com profissionalId: convite pela ficha de quem está na equipe sem login (fase 27)
+        const ficha = b.profissionalId ? equipeGestao.find((p) => p.id === b.profissionalId) : null;
+        const token = "tok" + seq++;
+        convites.unshift({ id: "cn" + seq++, email: b.email, expira_em: new Date(Date.now() + 7 * 864e5).toISOString(), profissionalId: ficha ? ficha.id : null, link: "http://localhost:" + PORTA + "/entrar.html?convite=" + token });
+        return json(res, 201, { link: convites[0].link, ficha: ficha ? ficha.nome : null });
+      }
       if (b.acao === "cancelar-convite") { convites = convites.filter((c) => c.id !== b.id); return json(res, 200, { ok: true }); }
       if (b.acao === "remover") { equipeGestao = equipeGestao.filter((p) => p.id !== b.profissionalId); return json(res, 200, { ok: true }); }
       if (b.acao === "foto-remover") { const p = equipeGestao.find((x) => x.id === b.profissionalId); if (p) p.foto_url = null; return json(res, 200, { ok: true }); }
@@ -559,6 +565,8 @@ const servidor = http.createServer(async (req, res) => {
         abc123: { barbearia: "GW Barbearia", email: "novo@exemplo.com", papel: "barbeiro", temConta: false },
         "tem-conta": { barbearia: "GW Barbearia", email: "bruno@exemplo.com", papel: "barbeiro", temConta: true },
         dono123: { barbearia: "Barbearia do Zé", email: "ze@exemplo.com", papel: "dono", temConta: false },
+        // ficha123: convite pela ficha de um barbeiro que já está na equipe (ex.: veio do Booksy com agenda)
+        ficha123: { barbearia: "GW Barbearia", email: "rafael@exemplo.com", papel: "barbeiro", temConta: false, ficha: "Rafael" },
       };
       if (metodo === "GET") return convitesFalsos[q.token] ? json(res, 200, convitesFalsos[q.token]) : json(res, 404, { message: "Convite inválido." });
       const c = convitesFalsos[b.token];
@@ -575,6 +583,7 @@ const servidor = http.createServer(async (req, res) => {
     if (u.pathname === "/api/barbearia" && b.acao === "formulario-ler") return json(res, 200, { id: b.id, token: formPrev.token, status: formPrev.status, dados: formPrev.dados, pendencias: [] });
     if (u.pathname === "/api/barbearia" && b.acao === "formulario-aplicar") return json(res, 200, { barbearia: "GW Barbearia", insumos: 2, convites: [{ nome: "Carlos", email: "carlos@exemplo.com", whatsapp: "81999990000", papel: "dono", jaEntrou: false, link: "http://localhost:" + PORTA + "/entrar.html?convite=dono123" }, { nome: "Rafael", email: "rafael@exemplo.com", whatsapp: "", papel: "barbeiro", comissao: 45, jaEntrou: false, link: "http://localhost:" + PORTA + "/entrar.html?convite=abc123" }] });
     if (u.pathname === "/api/barbearia" && /^formulario-/.test(b.acao || "")) return json(res, 200, { ok: true });
+    if (u.pathname === "/api/barbearia" && b.acao === "convite-dono") return json(res, 201, { link: "http://localhost:" + PORTA + "/entrar.html?convite=dono123", email: String(b.email || "").toLowerCase(), barbearia: "GW Barbearia", ficha: b.profissionalId === "b2" ? "Rafael (teste)" : null });
     if (u.pathname === "/api/barbearia") return json(res, 200, { email: "bruno.teste@exemplo.com", senha: "Previa-1234" });
     // Site público (agendamento): equipe e horários fictícios
     // Site sem cadastro no sistema (como a JM): a API não conhece a barbearia

@@ -525,6 +525,7 @@
         h("p", { class: "copiavel", texto: link }),
         h("div", { class: "linha" }, [h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(link, "Link copiado."); } }, [P.icone("copiar"), "Copiar link"])]),
       ]) : null,
+      !m.temLogin && !m.souEu ? acessoPainel(m) : null,
       m.temLogin && !m.souEu ? h("div", { class: "link-pessoal" }, [
         h("h3", { texto: "Esqueceu a senha?" }),
         h("p", { class: "nota p", texto: "Gere um link para " + P.primeiroNome(m.nome) + " criar uma senha nova e mande pelo WhatsApp." }),
@@ -536,6 +537,27 @@
       ]),
     ]);
     P.janela({ titulo: "Perfil de " + P.primeiroNome(m.nome), conteudo: conteudo, acoes: [{ texto: "Fechar", valor: "cancelar" }] });
+  }
+
+  // Barbeiro na equipe sem login (ex.: veio de uma migração do Booksy): o convite liga a conta a esta ficha, com a
+  // agenda e os agendamentos dela, em vez de criar outra com o mesmo nome
+  function acessoPainel(m) {
+    var email = h("input", { type: "email", maxlength: 120, placeholder: "e-mail de " + P.primeiroNome(m.nome), autocomplete: "off", inputmode: "email" });
+    var gerar = h("button", { type: "button", class: "botao p" }, [P.icone("email"), "Gerar convite"]);
+    gerar.onclick = function () {
+      var e = email.value.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) { P.toast("Informe um e-mail válido.", "erro"); email.focus(); return; }
+      P.acao(gerar, P.api("/api/equipe", { corpo: { acao: "convidar", email: e, profissionalId: m.id } }).then(function (j) {
+        carregarEquipe();
+        mostrarConviteCriado(j, e);
+      }).catch(function (er) { P.toast(er.message, "erro"); }));
+    };
+    return h("div", { class: "link-pessoal" }, [
+      h("h3", { texto: "Acesso ao painel" }),
+      h("p", { class: "nota p", texto: P.primeiroNome(m.nome) + " ainda não tem login. Gere o convite com o e-mail dele: ao aceitar, ele entra nesta mesma ficha, com a agenda e os agendamentos que já estão aqui." }),
+      h("label", { class: "campo" }, ["E-mail", email]),
+      h("div", { class: "linha" }, [gerar]),
+    ]);
   }
 
   // Sem e-mail no Supabase: o dono gera o link de nova senha e manda pelo WhatsApp
@@ -587,8 +609,25 @@
     return "Olá! Você foi convidado para trabalhar na " + (ctx.barbearia || "barbearia") + " pelo Bio Site. Abra este link, digite seu nome e crie sua senha: " + link +
       "\n\nO convite vale por 7 dias e é para o e-mail " + email + ".";
   }
+  // Convite criado: o link vai pelo WhatsApp (ou copiado). Com ficha, avisa que a pessoa entra nela.
+  function mostrarConviteCriado(j, email) {
+    P.janela({
+      titulo: "Convite criado",
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "nota", texto: "Envie este link para " + email + ". Ele vale por 7 dias e só funciona com esse e-mail." + (j.ficha ? " Quem aceitar entra na ficha de " + j.ficha + ", com a agenda e os agendamentos dela." : "") }),
+        h("p", { class: "copiavel", texto: j.link }),
+        h("div", { class: "linha" }, [
+          h("button", { type: "button", class: "botao whats", onclick: function () { P.abrirWhats(textoConvite(j.link, email)); } }, [P.icone("whats"), "Enviar pelo WhatsApp"]),
+          h("button", { type: "button", class: "botao", onclick: function () { P.copiar(j.link, "Link do convite copiado."); } }, [P.icone("copiar"), "Copiar link"]),
+        ]),
+      ]),
+      acoes: [{ texto: "Pronto", classe: "principal", valor: "ok" }],
+    });
+  }
   function desenharConvites() {
     var lista = gestao ? gestao.convites : [];
+    var nomes = {};
+    (gestao ? gestao.profissionais : []).forEach(function (p) { nomes[p.id] = p.nome; });
     $("qtdConvites").textContent = lista.length;
     P.trocar($("listaConvites"), lista.length ? lista.map(function (c) {
       var bCancelar = h("button", { type: "button", class: "botao mini perigo" }, [P.icone("x"), "Cancelar"]);
@@ -600,7 +639,7 @@
       };
       return h("div", { class: "membro", style: "flex-wrap:wrap" }, [
         h("span", { class: "avatar p" }, P.icone("email")),
-        h("div", { class: "cresce" }, [h("div", { class: "nome", style: "word-break:break-all", texto: c.email }), h("div", { class: "det", texto: "Vale até " + new Date(c.expira_em).toLocaleDateString("pt-BR") })]),
+        h("div", { class: "cresce" }, [h("div", { class: "nome", style: "word-break:break-all", texto: c.email }), h("div", { class: "det", texto: "Vale até " + new Date(c.expira_em).toLocaleDateString("pt-BR") + (c.profissionalId && nomes[c.profissionalId] ? " · entra na ficha de " + nomes[c.profissionalId] : "") })]),
         h("div", { class: "linha", style: "flex-basis:100%" }, [
           h("button", { type: "button", class: "botao p whats", onclick: function () { P.abrirWhats(textoConvite(c.link, c.email)); } }, [P.icone("whats"), "WhatsApp"]),
           h("button", { type: "button", class: "botao p", onclick: function () { P.copiar(c.link, "Link do convite copiado."); } }, [P.icone("copiar"), "Copiar link"]),
@@ -616,27 +655,27 @@
     P.acao($("btnConvidar"), P.api("/api/equipe", { corpo: { acao: "convidar", email: email } }).then(function (j) {
       $("cEmail").value = "";
       carregarEquipe();
-      P.janela({
-        titulo: "Convite criado",
-        conteudo: h("div", { class: "grade" }, [
-          h("p", { class: "nota", texto: "Envie este link para " + email + ". Ele vale por 7 dias e só funciona com esse e-mail." }),
-          h("p", { class: "copiavel", texto: j.link }),
-          h("div", { class: "linha" }, [
-            h("button", { type: "button", class: "botao whats", onclick: function () { P.abrirWhats(textoConvite(j.link, email)); } }, [P.icone("whats"), "Enviar pelo WhatsApp"]),
-            h("button", { type: "button", class: "botao", onclick: function () { P.copiar(j.link, "Link do convite copiado."); } }, [P.icone("copiar"), "Copiar link"]),
-          ]),
-        ]),
-        acoes: [{ texto: "Pronto", classe: "principal", valor: "ok" }],
-      });
+      mostrarConviteCriado(j, email);
     }).catch(function (e) { P.toast(e.message, "erro"); }));
   });
 
-  // O dono passa a atender também (vira dono-barbeiro)
+  // O dono passa a atender também (vira dono-barbeiro). Se ele já está na equipe numa ficha sem login (ex.: veio do
+  // Booksy, com agenda e agendamentos), escolhe a ficha e entra nela, em vez de ganhar outra com o mesmo nome.
   $("virarBarbeiro").onclick = function () {
-    P.confirmar("Também atendo clientes", "Você passa a aparecer como barbeiro no site e na agenda. Depois, publique seus horários aqui na Equipe.", "Continuar").then(function (ok) {
-      if (!ok) return;
-      P.acao($("virarBarbeiro"), P.api("/api/eu", { corpo: { acao: "virar-barbeiro" } }).then(function () {
-        P.toast("Pronto. Agora você atende também.", "ok");
+    var semLogin = membros().filter(function (x) { return !x.temLogin; });
+    var pergunta = semLogin.length
+      ? P.janela({
+          titulo: "Você já está na equipe?",
+          conteudo: h("p", { class: "nota", texto: "Se uma destas fichas é a sua, toque nela: você entra nela, com a agenda e os agendamentos que já estão lá. Se não, crie a sua." }),
+          acoes: semLogin.map(function (x) { return { texto: x.nome, classe: "principal", valor: x.id }; }).concat([{ texto: "Criar minha ficha", valor: "nova" }]),
+        }).then(function (r) { return r.valor && r.valor !== "cancelar" ? r.valor : null; })
+      : P.confirmar("Também atendo clientes", "Você passa a aparecer como barbeiro no site e na agenda. Depois, publique seus horários aqui na Equipe.", "Continuar").then(function (ok) { return ok ? "nova" : null; });
+    pergunta.then(function (escolha) {
+      if (!escolha) return;
+      var corpo = { acao: "virar-barbeiro" };
+      if (escolha !== "nova") corpo.profissionalId = escolha;
+      P.acao($("virarBarbeiro"), P.api("/api/eu", { corpo: corpo }).then(function (j) {
+        P.toast(j && j.ficha ? "Pronto. Você entrou na ficha de " + j.ficha + "." : "Pronto. Agora você atende também.", "ok");
         setTimeout(function () { location.reload(); }, 900);
       }).catch(function (e) { P.toast(e.message, "erro"); }));
     });

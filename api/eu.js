@@ -8,13 +8,14 @@
 //   "agenda-dia-salvar" { dia, inicio, fim, almocoInicio, almocoFim, confirmar }
 //   "agenda-semana-salvar" { dias: [{ dia, inicio, fim, almocoInicio, almocoFim, folga }], confirmar }
 //   "bloqueio-criar" { dia, inicio, fim, motivo } / "bloqueio-remover" { id } / "bloqueio-editar" { id, inicio, fim, motivo }
-//   "virar-barbeiro"  o dono passa a atender também (vira dono-barbeiro).
+//   "virar-barbeiro" { profissionalId? }  o dono passa a atender também (vira dono-barbeiro); com profissionalId,
+//                     assume a ficha dele que já está na equipe sem login, em vez de criar outra.
 const crypto = require("crypto");
 const { rest, linkDeEnvio, cfg } = require("../lib/supabase");
 const { usuarioDaRequisicao, perfilDe, perfilDoContexto, barbeariaDe, ehAdminDaPlataforma, ehAdmin, papelDemo, profissionalDemo } = require("../lib/conta");
 const { dataValida, hojeBr } = require("../lib/horarios");
 const { agendaDoDia, agendaDaSemana, salvarDia, salvarSemana, criarBloqueio, removerBloqueio, editarBloqueio } = require("../lib/agenda-dia");
-const { falha, corpoDe } = require("../lib/seguranca");
+const { falha, corpoDe, UUID } = require("../lib/seguranca");
 
 // Foto do próprio barbeiro: JPG, PNG ou WebP até 5 MB, no bucket público "midia"
 const FOTOS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
@@ -204,6 +205,20 @@ module.exports = async (req, res) => {
 
       if (b.acao !== "virar-barbeiro") return res.status(400).json({ message: "Ação desconhecida." });
       if (!perfil || perfil.papel !== "dono") return res.status(403).json({ message: "Só o dono pode fazer isso." });
+      // Com profissionalId: o dono já está na equipe numa ficha sem login (ex.: veio de uma migração, com agenda e
+      // agendamentos) e assume essa ficha, em vez de ganhar outra com o mesmo nome
+      if (b.profissionalId) {
+        if (!UUID.test(String(b.profissionalId))) return res.status(400).json({ message: "Ficha inválida." });
+        const r = await rest(`profissionais?id=eq.${b.profissionalId}&barbearia_id=eq.${perfil.barbearia_id}&perfil_user_id=is.null`, { metodo: "PATCH", prefer: "return=representation", corpo: { perfil_user_id: u.id } });
+        if (!Array.isArray(r) || !r.length) return res.status(409).json({ message: "Essa ficha já tem login ou não é desta barbearia." });
+        try {
+          await rest(`perfis?user_id=eq.${u.id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { papel: "dono_barbeiro" } });
+        } catch (e) {
+          await rest(`profissionais?id=eq.${b.profissionalId}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { perfil_user_id: null } }).catch(() => {});
+          throw e;
+        }
+        return res.status(200).json({ ok: true, ficha: r[0].nome });
+      }
       const nome = perfil.nome || u.email.split("@")[0];
       await rest(`perfis?user_id=eq.${u.id}`, { metodo: "PATCH", prefer: "return=minimal", corpo: { papel: "dono_barbeiro" } });
       await rest("profissionais", { metodo: "POST", prefer: "return=minimal", corpo: { barbearia_id: perfil.barbearia_id, perfil_user_id: u.id, nome } });

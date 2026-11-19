@@ -95,8 +95,11 @@ input[readonly]{opacity:.75}
       conviteOk = true;
       var papel = j.papel === "dono" ? "administrar o site de " : "trabalhar em ";
       $("titulo").textContent = j.temConta ? "Entre para aceitar" : "Crie sua conta";
-      $("convite").textContent = "Você foi convidado para " + papel + j.barbearia + ". " + (j.temConta ? "Entre com a sua senha para aceitar." : "Digite seu nome e crie uma senha.");
+      // Convite com ficha (barbeiro que já estava na equipe, ex.: vindo de uma migração): ele entra nela
+      var ficha = j.ficha ? "Você entra na ficha de " + j.ficha + ", com a agenda e os agendamentos que já estão lá. " : "";
+      $("convite").textContent = "Você foi convidado para " + papel + j.barbearia + ". " + ficha + (j.temConta ? "Entre com a sua senha para aceitar." : "Digite seu nome e crie uma senha.");
       $("convite").hidden = false;
+      if (j.ficha && !$("nome").value) $("nome").value = j.ficha;
       $("email").value = j.email;
       $("email").readOnly = true;
       $("abas").hidden = false;

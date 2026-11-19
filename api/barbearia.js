@@ -2,11 +2,13 @@
 // POST acao "publicar": liga o site a uma barbearia, cria o usuário de teste e, se informado, o convite do dono.
 // POST acao "redefinir-teste": gera nova senha para o usuário de teste de um site.
 // POST acao "link-senha" { slug, userId }: link para uma conta do site (ex.: o dono) criar uma senha nova.
+// POST acao "convite-dono" { slug, email, profissionalId? }: convite do dono de um site já no ar; com a ficha,
+//      ele também atende e entra nela como dono-barbeiro (barbearia migrada, barbeiros já na equipe).
 // POST acao "formulario-criar" { nome, whatsapp, leadId } / "formulario-ler" { id } / "formulario-arquivar" { id }
 //      "formulario-criador" { id } (rascunho do Criador) / "formulario-aplicar" { id, slug } (convites e insumos).
 const { usuarioDaRequisicao, ehAdminDaPlataforma } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
-const { publicar, redefinirTeste, criarTesteBarbeiro, redefinirTesteBarbeiro, linkNovaSenha } = require("../lib/publicar");
+const { publicar, redefinirTeste, criarTesteBarbeiro, redefinirTesteBarbeiro, linkNovaSenha, conviteDono } = require("../lib/publicar");
 const { rest } = require("../lib/supabase");
 const formulario = require("../lib/formulario");
 const migracao = require("../lib/migracao");
@@ -52,6 +54,10 @@ module.exports = async (req, res) => {
       if (!perfil) return res.status(404).json({ message: "Esta conta não é deste site." });
       const r = await linkNovaSenha(userId, origemDo(req));
       return res.status(200).json({ link: r.link, nome: perfil.nome });
+    }
+
+    if (b.acao === "convite-dono") {
+      return res.status(201).json(await conviteDono({ slug, email: b.email, profissionalId: b.profissionalId || null, origem: origemDo(req) }));
     }
 
     // Migração do Booksy (lib/migracao.js): gera o coletor de uma barbearia e mostra o resultado da última coleta

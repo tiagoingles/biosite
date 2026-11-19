@@ -73,6 +73,25 @@ test("retorno no ritmo de cada cliente", () => {
   assert.equal(r(["2026-11-01", "2026-11-03", "2026-11-05"]).ciclo, 7);
 });
 
+test("retorno de quem veio de outro aplicativo: vale o ritmo de lá até ter 3 intervalos aqui (fase 29)", () => {
+  const hoje = "2026-11-15";
+  const r = (dias, extra = {}) => C.retorno({ dias, ...extra }, hoje);
+  // Corta a cada 50 dias no Booksy; a última visita foi há 46 dias: em dia (não "atrasado" pelos 30 dias supostos)
+  const migrado = r([], { externa: "2026-09-30", cicloExterno: 50, visitasExternas: 12 });
+  assert.deepEqual([migrado.status, migrado.ciclo, migrado.previsao], ["em_dia", 50, "2026-11-19"]);
+  assert.equal(r([], { externa: "2026-09-30" }).status, "atrasado", "sem o histórico, continua supondo 30 dias");
+  // Com visitas lá, a primeira daqui não é de cliente "novo"
+  assert.equal(r(["2026-11-10"], { cicloExterno: 21, visitasExternas: 8 }).status, "em_dia");
+  assert.equal(r(["2026-11-10"], { cicloExterno: 21, visitasExternas: 1 }).status, "novo", "uma visita lá não faz ritmo");
+  // Com 3 intervalos aqui, vale o ritmo daqui
+  const daqui = r(["2026-10-01", "2026-10-15", "2026-10-29", "2026-11-12"], { cicloExterno: 60, visitasExternas: 20 });
+  assert.equal(daqui.ciclo, 14);
+  const poucos = r(["2026-10-29", "2026-11-12"], { cicloExterno: 60, visitasExternas: 20 });
+  assert.equal(poucos.ciclo, 60, "com 1 intervalo aqui, ainda vale o de lá");
+  // O ciclo de lá também fica entre 7 e 120 dias
+  assert.equal(r([], { externa: "2026-11-01", cicloExterno: 400, visitasExternas: 3 }).ciclo, 120);
+});
+
 test("aniversário: próximo dia e 29/02 em ano que não é bissexto", () => {
   assert.deepEqual(C.aniversario("1990-11-20", "2026-11-15"), { dia: "20/11", diasAte: 5, mes: 11 });
   assert.deepEqual(C.aniversario("1990-11-15", "2026-11-15"), { dia: "15/11", diasAte: 0, mes: 11 });

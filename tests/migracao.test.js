@@ -332,6 +332,7 @@ test("histórico do Booksy: atendido e não compareceu entram como do app anteri
     { metodo: "GET", padrao: /\/rest\/v1\/profissionais\?barbearia_id=eq\.[^&]+&externo=like/, resposta: { corpo: [{ id: "p-manolo", nome: "Manolo", externo: "booksy:11" }] } },
     // O banco devolve só o que entrou: o 503 já estava de uma coleta anterior
     { metodo: "POST", padrao: /\/rest\/v1\/atendimentos_externos/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.filter((x) => x.externo !== "booksy:503").map((x, i) => ({ id: "h" + i })) }) },
+    { metodo: "POST", padrao: /\/rest\/v1\/rpc\/recalcular_ritmo_externo/, resposta: { corpo: 2 } },
   ]);
   const r = await migracao.importarHistorico(BARB, { ddd: "81", equipe: [{ id: 11, nome: "Manolo" }, { id: 99, nome: "Ex Barbeiro" }], historico: [
     { id: 500, inicio: "2024-03-10T10:00", status: "F", clienteId: 1, servicoNome: "Corte", equipeId: 11 },
@@ -342,7 +343,9 @@ test("histórico do Booksy: atendido e não compareceu entram como do app anteri
     { id: 505, inicio: "2024-03-10T10:00", status: "C", clienteId: 1 },
     { id: 500, inicio: "2024-03-10T10:00", status: "F", clienteId: 1 },
   ] });
-  assert.deepEqual(r, { novos: 3, jaEstavam: 1, semCliente: 1, ignorados: 2 }, "hoje fica para a agenda; cancelado não entra; repetido conta uma vez");
+  assert.deepEqual(r, { novos: 3, jaEstavam: 1, semCliente: 1, ignorados: 2, ritmos: 2 }, "hoje fica para a agenda; cancelado não entra; repetido conta uma vez");
+  const ritmo = chamadas.find((c) => c.url.includes("/rpc/recalcular_ritmo_externo"));
+  assert.deepEqual(ritmo.corpo, { p_barbearia_id: BARB }, "o ritmo de retorno de cada cliente é refeito com o histórico");
   const post = chamadas.find((c) => c.metodo === "POST" && c.url.includes("atendimentos_externos"));
   assert.match(post.url, /on_conflict=barbearia_id,externo/, "o que já veio antes não duplica");
   const linha = (id) => post.corpo.find((x) => x.externo === "booksy:" + id);

@@ -256,6 +256,8 @@
     var det = [c.telefone ? whatsBr(c.telefone) : "sem WhatsApp"];
     if (c.aniversario) det.push("aniversário " + c.aniversario.dia);
     var uso = [c.visitas ? c.visitas + (c.visitas === 1 ? " visita" : " visitas") : "nenhuma visita pelo Bio Site"];
+    // Atendimentos no aplicativo anterior (migração): contam no ritmo de retorno, não no ticket
+    if (c.visitasExternas) uso.push(c.visitasExternas + " no app anterior");
     if (c.ticket) uso.push("ticket " + P.brl(c.ticket));
     if (c.barbeiro && op.dono) uso.push("com " + c.barbeiro);
     var bZap = c.telefone ? h("button", { type: "button", class: "botao p whats" }, [P.icone("whats"), "WhatsApp"]) : null;

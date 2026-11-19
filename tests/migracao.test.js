@@ -416,29 +416,38 @@ test("prótese do histórico: ficha na aba Prótese para quem fez colocação ou
     { id: "h7", externo: "booksy:7", cliente_id: "c-caio", dia: d(500), servico: "Manutenção de Prótese Capilar", profissional_id: "p-manolo" },
     // Duda: já tinha ficha no barbeirotop
     { id: "h8", externo: "booksy:8", cliente_id: "c-duda", dia: d(10), servico: "Manutenção de Prótese Capilar", profissional_id: "p-joao" },
+    // Fábio: já chegou com prótese (a primeira vez foi manutenção), sumiu quase um ano e voltou trocando a prótese
+    { id: "h9", externo: "booksy:9", cliente_id: "c-fabio", dia: d(420), servico: "Manutenção de Prótese Capilar", profissional_id: "p-manolo" },
+    { id: "h10", externo: "booksy:10", cliente_id: "c-fabio", dia: d(70), servico: "Manutenção de Prótese Capilar", profissional_id: "p-manolo" },
+    { id: "h11", externo: "booksy:11", cliente_id: "c-fabio", dia: d(16), servico: "Colocação de Prótese Capilar", profissional_id: "p-manolo" },
   ];
   const chamadas = A.instalarFetch([
     { metodo: "GET", padrao: /\/rest\/v1\/atendimentos_externos\?/, resposta: { corpo: hist } },
     { metodo: "GET", padrao: /\/rest\/v1\/protese_clientes\?/, resposta: { corpo: [{ id: "f-duda", cliente_id: "c-duda", aplicada_em: null, ultima_manutencao: d(40) }] } },
     // Edu tem prótese marcada na agenda, sem histórico
     { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?/, resposta: { corpo: [{ cliente_id: "c-edu" }] } },
-    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?id=in\./, resposta: { corpo: [{ id: "c-ana", nome: "Ana Lima", telefone: "81999990000" }, { id: "c-edu", nome: "Edu Prado", telefone: "81988880000" }, { id: "c-caio", nome: "Caio", telefone: "" }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?id=in\./, resposta: { corpo: [{ id: "c-ana", nome: "Ana Lima", telefone: "81999990000" }, { id: "c-edu", nome: "Edu Prado", telefone: "81988880000" }, { id: "c-caio", nome: "Caio", telefone: "" }, { id: "c-fabio", nome: "Fábio Reis", telefone: "81977770000" }] } },
     { metodo: "POST", padrao: /\/rest\/v1\/protese_clientes$/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.map((f) => ({ id: "f-" + f.cliente_id, ...f })) }) },
     { metodo: "PATCH", padrao: /\/rest\/v1\/protese_clientes\?id=eq\./, resposta: { status: 204 } },
     { metodo: "POST", padrao: /\/rest\/v1\/protese_manutencoes/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.map((x, i) => ({ id: "m" + i })) }) },
   ]);
   const r = await migracao.proteseDoHistorico(BARB);
-  assert.deepEqual(r, { fichas: 2, manutencoes: 6, jaTinham: 1, foraPorTempo: 1 }, "Ana e Edu ganham ficha; Bia (só avaliação) e Caio (mais de 1 ano) não");
+  assert.deepEqual(r, { fichas: 3, manutencoes: 9, jaTinham: 1, foraPorTempo: 1 }, "Ana, Edu e Fábio ganham ficha; Bia (só avaliação) e Caio (mais de 1 ano) não");
   const fichas = chamadas.find((c) => c.metodo === "POST" && /protese_clientes$/.test(c.url)).corpo;
   const ana = fichas.find((f) => f.cliente_id === "c-ana");
-  assert.deepEqual([ana.nome, ana.telefone, ana.profissional_id, ana.aplicada_em, ana.ultima_manutencao, ana.intervalo_dias, ana.ativo], ["Ana Lima", "81999990000", "p-manolo", d(37), d(16), 21, true]);
-  assert.match(ana.observacao, /^Veio do Booksy \(aplicativo anterior\): 3 manutenções de /);
+  assert.deepEqual([ana.nome, ana.telefone, ana.profissional_id, ana.aplicada_em, ana.ultima_manutencao, ana.intervalo_dias, ana.ativo], ["Ana Lima", "81999990000", "p-manolo", d(100), d(16), 21, true], "Aplicada em é a aplicação: a troca não muda a data, como na aba Prótese");
+  assert.match(ana.observacao, /^Veio do Booksy \(aplicativo anterior\): 3 manutenções de \d{4} a \d{4}\.$/);
+  const fabio = fichas.find((f) => f.cliente_id === "c-fabio");
+  assert.deepEqual([fabio.aplicada_em, fabio.ultima_manutencao, fabio.intervalo_dias], [null, d(16), 54], "sem aplicação no Booksy a data fica em branco; a pausa de quase um ano não entra no ritmo");
+  assert.match(fabio.observacao, / A aplicação não aparece no Booksy: o primeiro atendimento lá já foi manutenção\.$/);
   const edu = fichas.find((f) => f.cliente_id === "c-edu");
   assert.deepEqual([edu.aplicada_em, edu.ultima_manutencao, edu.intervalo_dias], [null, null, 21]);
   const post = chamadas.find((c) => c.metodo === "POST" && c.url.includes("protese_manutencoes"));
   assert.match(post.url, /on_conflict=barbearia_id,externo/, "rodar de novo não duplica");
   const tipos = post.corpo.filter((m) => m.protese_cliente_id === "f-c-ana").map((m) => m.tipo);
   assert.deepEqual(tipos, ["aplicacao", "manutencao", "manutencao", "troca", "manutencao"], "a primeira colocação é a aplicação; a seguinte, troca");
+  const tiposFabio = post.corpo.filter((m) => m.protese_cliente_id === "f-c-fabio").map((m) => m.tipo);
+  assert.deepEqual(tiposFabio, ["manutencao", "manutencao", "troca"], "colocação depois de manutenção é troca: o cliente já usava prótese");
   assert.ok(post.corpo.every((m) => m.observacao === "Booksy (aplicativo anterior)"));
   assert.ok(post.corpo.some((m) => m.protese_cliente_id === "f-duda" && m.externo === "booksy:8"), "a ficha que já existia recebe o histórico");
   const patch = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("protese_clientes?id=eq.f-duda"));

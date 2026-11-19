@@ -415,6 +415,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
   function $(id){return document.getElementById(id)}
   function num(v){var t=String(v==null?"":v).replace(/[^\d,.]/g,"");if(!t)return NaN;if(t.indexOf(",")>-1)t=t.replace(/\./g,"").replace(",",".");return parseFloat(t)}
   function brl(n){return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+  function precoTxt(p){var n=num(p);if(p==null||p==="")return "";return isNaN(n)?String(p):(/^s*a partir de/i.test(String(p))?"a partir de ":"")+brl(n)}
   function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
   function pad(n){return n<10?"0"+n:""+n}
   var DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -437,9 +438,9 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
       var precos=j&&j.precos||{};
       (AG.servicos||[]).forEach(function(s){
         var v=precos[s.nome];if(typeof v!=="number"||!isFinite(v))return;
-        s.preco=v.toFixed(2).replace(".",",");
+        s.preco=(/^s*a partir de/i.test(String(s.preco||""))?"A partir de ":"")+v.toFixed(2).replace(".",",");
         var card=document.querySelector('[data-agendar="'+String(s.id).replace(/["\\]/g,"")+'"] .svc-t small');
-        if(card)card.textContent=[s.duracao,brl(v)].filter(Boolean).join(" · ");
+        if(card)card.textContent=[s.duracao,precoTxt(s.preco)].filter(Boolean).join(" · ");
       });
       clube=j&&j.clube&&j.clube.planos&&j.clube.planos.length?j.clube.planos:null;
       if(j&&j.whatsapp)trocarWhats(j.whatsapp);
@@ -544,7 +545,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
       titulo="Escolha o serviço";
       if(oferta&&sel.prof)h+=notaOferta();
       (AG.servicos||[]).forEach(function(s){
-        var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
+        var preco=precoTxt(s.preco);
         var info=[s.duracao,preco].filter(Boolean).join(" · ");
         h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
       });

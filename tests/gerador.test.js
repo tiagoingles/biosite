@@ -145,3 +145,47 @@ test("cartão de serviço: o nome nunca passa por cima do \"Agendar\" (gerador v
     assert.ok(!/\.compacta \.svc-ag\{grid-column:2;grid-row:1\/span 2;margin:0\}\n/.test(t), f + ": fora da regra de largura, o Agendar fica embaixo");
   }
 });
+
+test("preço \"a partir de\" (o \"R$ 28,00+\" do Booksy): cartão, lista do agendamento e preço do painel mantêm o prefixo (gerador v18)", () => {
+  assert.ok(G.VERSAO >= 18);
+  assert.equal(G.precoTxt("A partir de 28,00"), "a partir de " + G.brl(28));
+  assert.equal(G.precoTxt("33,00"), G.brl(33));
+  assert.equal(G.precoTxt("Sob consulta"), "Sob consulta");
+  assert.equal(G.precoTxt(""), "");
+  const cfg = siteBarbearia();
+  cfg.agenda.servicos = [
+    { id: "s1", nome: "Barba com design", duracao: "30 min", preco: "A partir de 28,00", midia: [] },
+    { id: "s2", nome: "Manutenção de prótese", duracao: "60 min", preco: "Sob consulta", midia: [], protese: true },
+  ];
+  cfg.agenda.profissionais[0].servicos = ["s1", "s2"];
+  const html = G.bioHTML(cfg, (u) => u);
+  assert.ok(html.includes("<small>30 min · a partir de " + G.brl(28) + "</small>"), "cartão do serviço");
+  assert.ok(html.includes("<small>60 min · Sob consulta</small>"), "texto sem número fica como está");
+  // No navegador: a mesma função formata a lista do agendamento e o preço que vem do painel mantém o "a partir de"
+  const linha = (re) => (html.match(re) || [""])[0];
+  const codigo = [/ {2}function num\(v\)\{var t=[^\n]*/, / {2}function brl\(n\)\{[^\n]*/, / {2}function precoTxt\(p\)\{[^\n]*/].map(linha).join("\n");
+  const ctx = {};
+  vm.runInNewContext(codigo + "\nthis.r=[precoTxt('A partir de 28,00'),precoTxt('15,00'),precoTxt('Grátis')];", ctx);
+  assert.deepEqual(Array.from(ctx.r), ["a partir de " + G.brl(28), G.brl(15), "Grátis"]); // array de outro contexto do vm
+  assert.ok(html.includes("var preco=precoTxt(s.preco);"), "lista do agendamento");
+  assert.ok(html.includes('s.preco=(/^\s*a partir de/i.test(String(s.preco||""))?"A partir de ":"")+v.toFixed(2)'), "preço do painel guarda o prefixo");
+  assert.ok(html.includes("card.textContent=[s.duracao,precoTxt(s.preco)]"), "cartão atualizado com o preço do painel");
+});
+
+test("site da Dom Manolo: os 33 serviços do Booksy, na ordem de lá, com a prótese no bloco próprio", () => {
+  const cfg = extrairConfig(ler("dom-manolo-barbearia.html"));
+  const svcs = cfg.agenda.servicos;
+  assert.equal(svcs.length, 33);
+  assert.equal(svcs[0].nome, "Corte de cabelo na tesoura", "começa pela categoria Cortes de cabelo");
+  assert.equal(svcs.find((s) => s.nome === "Barba com design").preco, "A partir de 28,00");
+  assert.equal(svcs.find((s) => s.nome === "Sobrancelha").preco, "15,00");
+  assert.deepEqual(svcs.filter((s) => s.protese).map((s) => [s.nome, s.preco]), [
+    ["Avaliação para Prótese Capilar", "Grátis"], ["Manutenção de Prótese Capilar", "Sob consulta"], ["Colocação de Prótese Capilar", "Sob consulta"],
+  ]);
+  assert.ok(svcs.find((s) => s.nome === "Corte de cabelo degradê").midia.length, "o vídeo do corte foi junto");
+  assert.ok(svcs.find((s) => s.nome === "Barba simples").midia.length, "o vídeo da barba foi junto");
+  assert.ok(!svcs.some((s) => s.nome === "Corte social"), "os serviços do modelo saíram");
+  assert.ok(svcs.every((s) => /^bk-\d+$/.test(s.id)), "id ligado ao serviço do Booksy");
+  for (const p of cfg.agenda.profissionais) assert.equal(p.servicos.length, 33);
+  assert.ok(ler("dom-manolo-barbearia.html").includes('<section class="bloco svcs protese" id="protese">'));
+});

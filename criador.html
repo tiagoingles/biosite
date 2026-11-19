@@ -446,7 +446,7 @@ details code{background:var(--bg);padding:1px 5px;border-radius:4px}
 
 <script src="/conta.js"></script>
 <script>
-const GERADOR_VERSAO = 17;
+const GERADOR_VERSAO = 18;
 const FONTS = {
   "Poppins":"Poppins:wght@400;600;700",
   "Montserrat":"Montserrat:wght@400;600;800",
@@ -883,6 +883,7 @@ function agendaRuntime(){
   function $(id){return document.getElementById(id)}
   function num(v){var t=String(v==null?"":v).replace(/[^\d,.]/g,"");if(!t)return NaN;if(t.indexOf(",")>-1)t=t.replace(/\./g,"").replace(",",".");return parseFloat(t)}
   function brl(n){return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+  function precoTxt(p){var n=num(p);if(p==null||p==="")return "";return isNaN(n)?String(p):(/^s*a partir de/i.test(String(p))?"a partir de ":"")+brl(n)}
   function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
   function pad(n){return n<10?"0"+n:""+n}
   var DIAS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -905,9 +906,9 @@ function agendaRuntime(){
       var precos=j&&j.precos||{};
       (AG.servicos||[]).forEach(function(s){
         var v=precos[s.nome];if(typeof v!=="number"||!isFinite(v))return;
-        s.preco=v.toFixed(2).replace(".",",");
+        s.preco=(/^s*a partir de/i.test(String(s.preco||""))?"A partir de ":"")+v.toFixed(2).replace(".",",");
         var card=document.querySelector('[data-agendar="'+String(s.id).replace(/["\\]/g,"")+'"] .svc-t small');
-        if(card)card.textContent=[s.duracao,brl(v)].filter(Boolean).join(" · ");
+        if(card)card.textContent=[s.duracao,precoTxt(s.preco)].filter(Boolean).join(" · ");
       });
       clube=j&&j.clube&&j.clube.planos&&j.clube.planos.length?j.clube.planos:null;
       if(j&&j.whatsapp)trocarWhats(j.whatsapp);
@@ -1012,7 +1013,7 @@ function agendaRuntime(){
       titulo="Escolha o serviço";
       if(oferta&&sel.prof)h+=notaOferta();
       (AG.servicos||[]).forEach(function(s){
-        var preco=s.preco?(isNaN(num(s.preco))?s.preco:brl(num(s.preco))):"";
+        var preco=precoTxt(s.preco);
         var info=[s.duracao,preco].filter(Boolean).join(" · ");
         h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
       });
@@ -1378,7 +1379,7 @@ function bioHTML(d=s, img=R){
   const svcMidia=v=>(v.midia||[]).filter(x=>safeUrl(x.url));
   const compactaDe=l=>l.filter(v=>svcMidia(v).length).length*2<l.length;
   const svcVazio=`<div class="svc-midia svc-vazio" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div>`;
-  const cartoesSvc=(lista,compacta)=>lista.map(v=>{const m=svcMidia(v);const preco=v.preco?(isNaN(num(v.preco))?v.preco:brl(num(v.preco))):"";const midia=x=>x.tipo==="video"?`<video src="${esc(x.url)}" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video>`:`<img src="${esc(x.url)}" alt="${esc(x.titulo||v.nome)}" loading="lazy">`;return `<article class="svc" data-agendar="${esc(v.id)}" role="button" tabindex="0" aria-label="Agendar ${esc(v.nome)}">${m[0]?`<div class="svc-midia">${midia(m[0])}</div>`:svcVazio}<div class="svc-t"><b>${esc(v.nome)}</b><small>${esc([v.duracao,preco].filter(Boolean).join(" · "))}</small><span class="svc-ag">Agendar →</span></div>${!compacta&&m.length>1?`<div class="svc-mais">${m.slice(1).map(midia).join("")}</div>`:""}</article>`}).join("");
+  const cartoesSvc=(lista,compacta)=>lista.map(v=>{const m=svcMidia(v);const preco=precoTxt(v.preco);const midia=x=>x.tipo==="video"?`<video src="${esc(x.url)}" muted autoplay loop playsinline disablepictureinpicture preload="metadata"></video>`:`<img src="${esc(x.url)}" alt="${esc(x.titulo||v.nome)}" loading="lazy">`;return `<article class="svc" data-agendar="${esc(v.id)}" role="button" tabindex="0" aria-label="Agendar ${esc(v.nome)}">${m[0]?`<div class="svc-midia">${midia(m[0])}</div>`:svcVazio}<div class="svc-t"><b>${esc(v.nome)}</b><small>${esc([v.duracao,preco].filter(Boolean).join(" · "))}</small><span class="svc-ag">Agendar →</span></div>${!compacta&&m.length>1?`<div class="svc-mais">${m.slice(1).map(midia).join("")}</div>`:""}</article>`}).join("");
   // Prótese capilar: seção própria e em destaque (pedido dos donos); os outros serviços ficam em "Serviços"
   const svcsNormais=svcs.filter(v=>!v.protese), svcsProtese=svcs.filter(v=>v.protese);
   const svcsBloco=agOk&&svcsNormais.length?`<section class="bloco svcs"><h2>Serviços</h2><div class="svc-lista${compactaDe(svcsNormais)?" compacta":""}">${cartoesSvc(svcsNormais,compactaDe(svcsNormais))}</div></section>`:"";

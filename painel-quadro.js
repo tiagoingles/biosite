@@ -37,8 +37,40 @@
       if (min(a.fim) < f.fim) lista.push({ de: min(a.fim), ate: f.fim, texto: "" });
       if (a.almocoInicio && a.almocoFim) lista.push({ de: min(a.almocoInicio), ate: min(a.almocoFim), texto: "Almoço", pausa: true });
     }
-    (c.bloqueios || []).forEach(function (b) { lista.push({ de: min(b.inicio), ate: min(b.fim), texto: b.motivo || "Bloqueado", pausa: true }); });
+    (c.bloqueios || []).forEach(function (b) { lista.push({ de: min(b.inicio), ate: min(b.fim), texto: b.motivo || "Bloqueado", pausa: true, bloqueio: b }); });
     return lista;
+  }
+
+  // Bloqueio pontual tocado no quadro: muda o horário (e o motivo) ou remove. Vale para o bloqueio criado no painel
+  // e para o que veio de uma migração. O dono mexe no de qualquer barbeiro (api/equipe.js); o barbeiro, só nos dele.
+  function gerirBloqueio(c, b, dia, ctx) {
+    var ini = h("input", { type: "time", value: b.inicio, step: 60 });
+    var fim = h("input", { type: "time", value: b.fim, step: 60 });
+    var motivo = h("input", { maxlength: 80, value: b.motivo || "", placeholder: "Motivo (opcional)" });
+    function api(corpo) {
+      return ctx.dono
+        ? P.api("/api/equipe", { corpo: Object.assign({ profissionalId: c.id, id: b.id }, corpo) })
+        : P.api("/api/eu", { corpo: Object.assign({ id: b.id }, corpo) });
+    }
+    P.janela({
+      titulo: "Horário bloqueado",
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "nota p", texto: c.nome + " · " + P.dataLonga(dia) + ". Enquanto estiver bloqueado, o site não oferece esse horário." }),
+        h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Das", ini]), h("label", { class: "campo" }, ["Até", fim])]),
+        h("label", { class: "campo" }, ["Motivo", motivo]),
+      ]),
+      acoes: [{ texto: "Remover bloqueio", classe: "perigo", valor: "remover" }, { texto: "Salvar", classe: "principal", valor: "salvar" }],
+      validar: function (v) { if (v === "salvar" && (!ini.value || !fim.value || fim.value <= ini.value)) return "O fim precisa ser depois do início."; },
+    }).then(function (r) {
+      if (r.valor === "salvar") {
+        return api({ acao: "bloqueio-editar", inicio: ini.value, fim: fim.value, motivo: motivo.value.trim() })
+          .then(function () { P.toast("Bloqueio atualizado.", "ok"); ctx.recarregar(); });
+      }
+      if (r.valor === "remover") {
+        return api({ acao: "bloqueio-remover" })
+          .then(function () { P.toast("Bloqueio removido: o horário volta a aparecer no site.", "ok"); ctx.recarregar(); });
+      }
+    }).catch(function (e) { P.toast(e.message, "erro"); });
   }
 
   // Horário mudado pela barbearia que o cliente ainda não aceitou
@@ -105,7 +137,16 @@
       sombras(c, f).forEach(function (s) {
         var de = Math.max(s.de, f.ini), ate = Math.min(s.ate, f.fim);
         if (ate <= de) return;
-        col.appendChild(h("div", { class: "q-sombra" + (s.pausa ? " pausa" : ""), style: "top:" + (de - f.ini) * PX + "px;height:" + (ate - de) * PX + "px" }, s.texto ? h("span", { texto: s.texto }) : null));
+        // Bloqueio pontual de hoje em diante: tocar abre para mudar o horário ou remover (não abre o encaixe)
+        var b = editavel && s.bloqueio && s.bloqueio.tipo === "pontual" && s.bloqueio.id ? s.bloqueio : null;
+        var el = h("div", b
+          ? { class: "q-sombra pausa q-trava", style: "top:" + (de - f.ini) * PX + "px;height:" + (ate - de) * PX + "px", role: "button", tabindex: "0", title: "Mudar ou remover o bloqueio", "aria-label": (b.motivo || "Bloqueado") + ", das " + b.inicio + " às " + b.fim + ". Toque para mudar o horário ou remover." }
+          : { class: "q-sombra" + (s.pausa ? " pausa" : ""), style: "top:" + (de - f.ini) * PX + "px;height:" + (ate - de) * PX + "px" }, s.texto ? h("span", { texto: s.texto }) : null);
+        if (b) {
+          el.addEventListener("click", function (e) { e.stopPropagation(); gerirBloqueio(c, b, dia, ctx); });
+          el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); gerirBloqueio(c, b, dia, ctx); } });
+        }
+        col.appendChild(el);
       });
       pedidos.filter(function (p) { return p.profissional_id === c.id; }).forEach(function (p) {
         var podeMover = editavel && MOVEIS.indexOf(p.status) > -1 && (dia > hoje || min(p.horario) + duracao(p) > agoraMin() - 5);
@@ -115,7 +156,7 @@
       });
       // Espaço livre: tocar abre o encaixe naquela hora (de 15 em 15 minutos)
       col.addEventListener("click", function (e) {
-        if (!editavel || e.target.closest(".q-bloco")) return;
+        if (!editavel || e.target.closest(".q-bloco") || e.target.closest(".q-trava")) return;
         var r = col.getBoundingClientRect();
         var hora = f.ini + Math.floor((e.clientY - r.top) / PX / 15) * 15;
         if (dia === hoje && hora + 15 < agoraMin()) { P.toast("Esse horário já passou."); return; }

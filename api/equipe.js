@@ -7,14 +7,14 @@
 //   "link-senha" { profissionalId }      link para o barbeiro criar uma senha nova (vai pelo WhatsApp);
 //   "foto-link" / "foto-salvar" / "foto-remover"  foto do barbeiro;
 //   "agenda-semana-salvar" { profissionalId, dias, confirmar }  publica dias da agenda de um barbeiro;
-//   "bloqueio-criar" / "bloqueio-remover" { profissionalId, ... }.
+//   "bloqueio-criar" / "bloqueio-remover" / "bloqueio-editar" { profissionalId, id, inicio, fim, motivo }.
 // ?area=financeiro, ?area=assinatura, ?area=clube, ?area=clientes, ?area=produtos e ?area=protese usam esta mesma função (limite de funções da Vercel no plano gratuito).
 const crypto = require("crypto");
 const { rest, todas, linkDeEnvio, cfg } = require("../lib/supabase");
 const { usuarioDaRequisicao, perfilDoContexto, ehAdmin } = require("../lib/conta");
 const { texto } = require("../lib/agenda");
 const { dataValida, hojeBr, somaDias } = require("../lib/horarios");
-const { agendaDaSemana, salvarSemana, criarBloqueio, removerBloqueio } = require("../lib/agenda-dia");
+const { agendaDaSemana, salvarSemana, criarBloqueio, removerBloqueio, editarBloqueio } = require("../lib/agenda-dia");
 const { falha, corpoDe, UUID } = require("../lib/seguranca");
 const { linkNovaSenha } = require("../lib/publicar");
 const financeiro = require("../lib/financeiro");
@@ -135,7 +135,7 @@ module.exports = async (req, res) => {
     }
 
     // Agenda de um barbeiro, publicada pelo dono (necessário para quem não tem login)
-    if (b.acao === "agenda-semana-salvar" || b.acao === "bloqueio-criar" || b.acao === "bloqueio-remover") {
+    if (b.acao === "agenda-semana-salvar" || b.acao === "bloqueio-criar" || b.acao === "bloqueio-remover" || b.acao === "bloqueio-editar") {
       const prof = await profissionalDaBarbearia(b.profissionalId, perfil.barbearia_id);
       if (!prof) return res.status(404).json({ message: "Profissional não encontrado." });
       if (b.acao === "agenda-semana-salvar") {
@@ -144,6 +144,7 @@ module.exports = async (req, res) => {
         return res.status(200).json(await agendaDaSemana(prof.id, de, (b.dias || []).length));
       }
       if (b.acao === "bloqueio-criar") return res.status(201).json({ bloqueio: await criarBloqueio(prof.id, b) });
+      if (b.acao === "bloqueio-editar") return res.status(200).json({ bloqueio: await editarBloqueio(prof.id, b.id, b) });
       await removerBloqueio(prof.id, b.id);
       return res.status(200).json({ ok: true });
     }

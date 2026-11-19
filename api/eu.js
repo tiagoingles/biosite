@@ -7,13 +7,13 @@
 //   "foto-propria-link" / "foto-propria-salvar"   foto do próprio barbeiro;
 //   "agenda-dia-salvar" { dia, inicio, fim, almocoInicio, almocoFim, confirmar }
 //   "agenda-semana-salvar" { dias: [{ dia, inicio, fim, almocoInicio, almocoFim, folga }], confirmar }
-//   "bloqueio-criar" { dia, inicio, fim, motivo } / "bloqueio-remover" { id }
+//   "bloqueio-criar" { dia, inicio, fim, motivo } / "bloqueio-remover" { id } / "bloqueio-editar" { id, inicio, fim, motivo }
 //   "virar-barbeiro"  o dono passa a atender também (vira dono-barbeiro).
 const crypto = require("crypto");
 const { rest, linkDeEnvio, cfg } = require("../lib/supabase");
 const { usuarioDaRequisicao, perfilDe, perfilDoContexto, barbeariaDe, ehAdminDaPlataforma, ehAdmin, papelDemo, profissionalDemo } = require("../lib/conta");
 const { dataValida, hojeBr } = require("../lib/horarios");
-const { agendaDoDia, agendaDaSemana, salvarDia, salvarSemana, criarBloqueio, removerBloqueio } = require("../lib/agenda-dia");
+const { agendaDoDia, agendaDaSemana, salvarDia, salvarSemana, criarBloqueio, removerBloqueio, editarBloqueio } = require("../lib/agenda-dia");
 const { falha, corpoDe } = require("../lib/seguranca");
 
 // Foto do próprio barbeiro: JPG, PNG ou WebP até 5 MB, no bucket público "midia"
@@ -144,7 +144,7 @@ module.exports = async (req, res) => {
       }
 
       // Agenda: salvar mantém fora do site até confirmar; confirmar publica
-      if (["agenda-dia-salvar", "agenda-semana-salvar", "bloqueio-criar", "bloqueio-remover"].includes(b.acao)) {
+      if (["agenda-dia-salvar", "agenda-semana-salvar", "bloqueio-criar", "bloqueio-remover", "bloqueio-editar"].includes(b.acao)) {
         const meu = await meuProfissional(u.id);
         if (!meu) return res.status(403).json({ message: "Sua conta não tem agenda de atendimento." });
         if (b.acao === "agenda-dia-salvar") {
@@ -157,6 +157,7 @@ module.exports = async (req, res) => {
           return res.status(200).json(await agendaDaSemana(meu.id, de, (b.dias || []).length));
         }
         if (b.acao === "bloqueio-criar") return res.status(201).json({ bloqueio: await criarBloqueio(meu.id, b) });
+        if (b.acao === "bloqueio-editar") return res.status(200).json({ bloqueio: await editarBloqueio(meu.id, b.id, b) });
         await removerBloqueio(meu.id, b.id);
         return res.status(200).json({ ok: true });
       }

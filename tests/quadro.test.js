@@ -43,8 +43,8 @@ test("painel do dia: traz os bloqueios do dia de cada barbeiro (do dia e os sema
   const dia = A.daquiA(1);
   const chamadas = A.instalarFetch([
     ...A.rotasDeConta(),
-    { padrao: /\/rest\/v1\/bloqueios\?tipo=eq\.pontual/, resposta: { corpo: [{ profissional_id: UUIDS.bruno, inicio: "16:00:00", fim: "16:30:00", motivo: "Dentista" }] } },
-    { padrao: /\/rest\/v1\/bloqueios\?tipo=eq\.recorrente/, resposta: { corpo: [{ profissional_id: UUIDS.bruno, inicio: "08:00:00", fim: "09:00:00", motivo: null }] } },
+    { padrao: /\/rest\/v1\/bloqueios\?tipo=eq\.pontual/, resposta: { corpo: [{ id: "b-pontual", tipo: "pontual", profissional_id: UUIDS.bruno, inicio: "16:00:00", fim: "16:30:00", motivo: "Dentista" }] } },
+    { padrao: /\/rest\/v1\/bloqueios\?tipo=eq\.recorrente/, resposta: { corpo: [{ id: "b-semanal", tipo: "recorrente", profissional_id: UUIDS.bruno, inicio: "08:00:00", fim: "09:00:00", motivo: null }] } },
     { padrao: /\/rest\/v1\/pedidos\?/, resposta: { corpo: [] } },
     { padrao: /\/rest\/v1\/profissionais\?barbearia_id=eq\./, resposta: { corpo: [{ id: UUIDS.bruno, nome: "Bruno", foto_url: null, perfil_user_id: null, comissao_pct: 40 }, { id: UUIDS.rafael, nome: "Rafael", foto_url: null, perfil_user_id: null, comissao_pct: 40 }] } },
     { padrao: /\/rest\/v1\/agenda_dia\?dia=eq\./, resposta: { corpo: [] } },
@@ -54,7 +54,11 @@ test("painel do dia: traz os bloqueios do dia de cada barbeiro (do dia e os sema
   assert.equal(r.statusCode, 200, JSON.stringify(r.body));
   const bruno = r.body.equipe.find((e) => e.id === UUIDS.bruno);
   const rafael = r.body.equipe.find((e) => e.id === UUIDS.rafael);
-  assert.deepEqual(bruno.bloqueios, [{ inicio: "16:00", fim: "16:30", motivo: "Dentista" }, { inicio: "08:00", fim: "09:00", motivo: "" }]);
+  // id e tipo: o pontual dá para mudar ou remover tocando no quadro; o semanal (recorrente) não
+  assert.deepEqual(bruno.bloqueios, [
+    { id: "b-pontual", tipo: "pontual", inicio: "16:00", fim: "16:30", motivo: "Dentista" },
+    { id: "b-semanal", tipo: "recorrente", inicio: "08:00", fim: "09:00", motivo: "" },
+  ]);
   assert.deepEqual(rafael.bloqueios, []);
   const busca = chamadas.find((c) => c.url.includes("bloqueios?tipo=eq.pontual"));
   assert.ok(busca.url.includes(`data=eq.${dia}`) && busca.url.includes(`profissionais.barbearia_id=eq.${UUIDS.barbearia}`), "só desta barbearia e deste dia");

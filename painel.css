@@ -515,6 +515,10 @@ body.sem-abas { padding-bottom: 24px; }
 .q-sombra { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--fraco) 9%, transparent) 0 6px, transparent 6px 12px); pointer-events: auto; }
 .q-sombra.pausa { background-color: color-mix(in srgb, var(--neutro-fundo) 70%, transparent); }
 .q-sombra span { position: absolute; top: 4px; left: 8px; font-size: 11px; font-weight: 700; color: var(--fraco); }
+/* Bloqueio que dá para mudar ou remover tocando nele */
+.q-sombra.q-trava { cursor: pointer; }
+.q-sombra.q-trava:hover { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--acento) 45%, transparent); }
+.q-sombra.q-trava:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; border-radius: 0; }
 .q-bloco {
   position: absolute; left: 4px; right: 4px; z-index: 1; overflow: hidden; padding: 3px 8px 3px 9px; border-radius: 9px;
   background: var(--info-fundo); color: var(--texto); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent); border-left: 4px solid var(--info);

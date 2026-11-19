@@ -191,6 +191,48 @@ test("bloqueio pontual: valida horário e só apaga bloqueio do próprio barbeir
   assert.ok(del.url.includes(`profissional_id=eq.${UUIDS.bruno}`) && del.url.includes("tipo=eq.pontual"), del.url);
 });
 
+test("bloqueio pontual: mudar o horário tocando no quadro (barbeiro nos dele, dono em qualquer um da equipe), só de hoje em diante", async () => {
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { padrao: /\/rest\/v1\/profissionais\?id=eq\./, resposta: (url) => ({ corpo: url.includes(UUIDS.rafael) ? [{ id: UUIDS.rafael, nome: "Rafael", perfil_user_id: null }] : [] }) },
+    // Só o bloqueio UUIDS.pedido existe (de amanhã); outro id não volta nada (de outro barbeiro ou de dia que passou)
+    { metodo: "PATCH", padrao: /\/rest\/v1\/bloqueios\?id=eq\./, resposta: (u, o, c) => ({ status: 200, corpo: u.includes("id=eq." + UUIDS.pedido) ? [{ id: UUIDS.pedido, data: A.daquiA(1), inicio: c.inicio + ":00", fim: c.fim + ":00", motivo: c.motivo == null ? "" : c.motivo }] : [] }) },
+  ]);
+  let r = await A.chamar(eu, { metodo: "POST", corpo: { acao: "bloqueio-editar", id: UUIDS.pedido, inicio: "13:00", fim: "12:00" }, token: "token-bruno" });
+  assert.equal(r.statusCode, 400, "o fim antes do início é recusado");
+  r = await A.chamar(eu, { metodo: "POST", corpo: { acao: "bloqueio-editar", id: UUIDS.pedido, inicio: "12:30", fim: "14:00", motivo: "Almoço" }, token: "token-bruno" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.bloqueio, { id: UUIDS.pedido, dia: A.daquiA(1), inicio: "12:30", fim: "14:00", motivo: "Almoço" });
+  const patch = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("/bloqueios?"));
+  assert.ok(patch.url.includes(`profissional_id=eq.${UUIDS.bruno}`) && patch.url.includes("tipo=eq.pontual") && patch.url.includes("data=gte."), patch.url);
+  // O dono muda o bloqueio de um barbeiro da equipe (inclusive sem login); de fora da equipe, não
+  r = await A.chamar(equipe, { metodo: "POST", corpo: { acao: "bloqueio-editar", profissionalId: UUIDS.rafael, id: UUIDS.pedido, inicio: "12:40", fim: "14:30" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.ok(chamadas.some((c) => c.metodo === "PATCH" && c.url.includes(`profissional_id=eq.${UUIDS.rafael}`)));
+  r = await A.chamar(equipe, { metodo: "POST", corpo: { acao: "bloqueio-editar", profissionalId: UUIDS.estranho, id: UUIDS.pedido, inicio: "12:40", fim: "14:30" }, token: "token-dono" });
+  assert.equal(r.statusCode, 404);
+  r = await A.chamar(eu, { metodo: "POST", corpo: { acao: "bloqueio-editar", id: UUIDS.estranho, inicio: "12:40", fim: "14:30" }, token: "token-bruno" });
+  assert.equal(r.statusCode, 404, "bloqueio que não é dele ou de dia que já passou");
+});
+
+test("quadro: o bloqueio pontual traz id e tipo, e tocar nele abre mudar/remover em vez do encaixe", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const ler = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+  const servidor = ler("lib/pedidos-painel.js");
+  assert.match(servidor, /bloqueios\?tipo=eq\.pontual&data=eq\.\$\{dia\}&select=id,tipo,profissional_id/);
+  assert.match(servidor, /push\(\{ id: b\.id, tipo: b\.tipo, inicio:/);
+  const q = ler("painel-quadro.js");
+  assert.match(q, /function gerirBloqueio\(c, b, dia, ctx\)/);
+  assert.match(q, /s\.bloqueio\.tipo === "pontual" && s\.bloqueio\.id/, "só o pontual (o recorrente é o padrão da semana)");
+  assert.match(q, /P\.api\("\/api\/equipe", \{ corpo: Object\.assign\(\{ profissionalId: c\.id, id: b\.id \}, corpo\) \}\)/, "o dono usa a equipe");
+  assert.match(q, /P\.api\("\/api\/eu", \{ corpo: Object\.assign\(\{ id: b\.id \}, corpo\) \}\)/, "o barbeiro, a própria agenda");
+  assert.match(q, /acao: "bloqueio-editar"/);
+  assert.match(q, /acao: "bloqueio-remover"/);
+  assert.match(q, /e\.target\.closest\("\.q-trava"\)\) return;/, "tocar no bloqueio não abre o encaixe");
+  assert.match(ler("painel.css"), /\.q-sombra\.q-trava \{ cursor: pointer; \}/);
+});
+
 test("dono liga e desliga a confirmação automática; barbeiro não muda", async () => {
   const eu = require("../api/eu");
   const chamadas = A.instalarFetch([{ metodo: "PATCH", padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { status: 204 } }, ...A.rotasDeConta()]);

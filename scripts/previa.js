@@ -220,8 +220,9 @@ function painel(dia) {
   const doDia = pedidos.filter((p) => p.dia === dia && meus(p));
   const ativos = doDia.filter((p) => ["pendente", "confirmado", "avulso", "realizado"].includes(p.status));
   const equipe = [
-    { id: "b1", nome: "Bruno", foto_url: null, temLogin: true, agenda: { publicada: true, inicio: "09:00", fim: "18:00", almocoInicio: "12:00", almocoFim: "13:00" }, atendimentos: ativos.filter((p) => p.profissional_id === "b1").length, ocupacao: 27, bloqueios: [{ inicio: "16:00", fim: "16:30", motivo: "Dentista" }] },
-    { id: "b2", nome: "Rafael", foto_url: null, temLogin: false, agenda: null, atendimentos: ativos.filter((p) => p.profissional_id === "b2").length, ocupacao: null, bloqueios: [] },
+    { id: "b1", nome: "Bruno", foto_url: null, temLogin: true, agenda: { publicada: true, inicio: "09:00", fim: "18:00", almocoInicio: "12:00", almocoFim: "13:00" }, atendimentos: ativos.filter((p) => p.profissional_id === "b1").length, ocupacao: 27, bloqueios: [{ id: "bl-dentista", tipo: "pontual", inicio: "16:00", fim: "16:30", motivo: "Dentista" }] },
+    // Rafael sem login, com um bloqueio sem motivo (como os que vêm de uma migração do Booksy): o dono muda ou remove no quadro
+    { id: "b2", nome: "Rafael", foto_url: null, temLogin: false, agenda: null, atendimentos: ativos.filter((p) => p.profissional_id === "b2").length, ocupacao: null, bloqueios: [{ id: "bl-almoco", tipo: "pontual", inicio: "12:40", fim: "14:30", motivo: "" }] },
   ].filter((e) => !soDele || e.id === "b1");
   const soma = (l) => l.reduce((t, p) => t + (Number(p.valor) || 0), 0);
   return {

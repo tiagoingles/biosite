@@ -143,7 +143,8 @@ test("importação: equipe da agenda, serviços com preço, produtos, clientes s
   assert.equal(p902.cliente_id, null);
   assert.equal(p902.valor, null);
   const blq = post("bloqueios")[0];
-  assert.deepEqual([blq.profissional_id, blq.tipo, blq.data, blq.inicio, blq.fim, blq.motivo], ["p-novo-Cleyton Santos", "pontual", amanha, "12:40", "14:30", "Bloqueio (Booksy)"]);
+  // Bloqueio comum do barbeirotop: sem motivo no Booksy, fica sem motivo (o quadro mostra "Bloqueado")
+  assert.deepEqual([blq.profissional_id, blq.tipo, blq.data, blq.inicio, blq.fim, blq.motivo], ["p-novo-Cleyton Santos", "pontual", amanha, "12:40", "14:30", ""]);
 });
 
 test("importação: um registro fora das regras do banco não derruba o lote inteiro", async () => {

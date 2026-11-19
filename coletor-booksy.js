@@ -210,11 +210,20 @@
       }
       await pausa(PAUSA);
     }
+    // Fim do histórico: o barbeirotop monta as fichas da aba Prótese a partir dele
+    if (!total.pendentes) {
+      aviso("Montando as fichas de prótese capilar…", 99);
+      try { total.protese = (await mandarParte({ origem: "booksy", negocio: negocio, historicoFim: true })).protese || null; }
+      catch (e) { total.proteseErro = e.message; }
+    }
     return total;
   }
   function textoHistorico(t) {
     return "• Histórico do Booksy (app anterior): " + t.novos + " atendimentos novos" + (t.jaEstavam ? ", " + t.jaEstavam + " já estavam" : "") +
-      (t.semCliente ? ", " + t.semCliente + " sem cliente com ficha" : "") + (t.pendentes ? "\nFaltou parte do histórico: toque no favorito de novo (nada é duplicado)." : "");
+      (t.semCliente ? ", " + t.semCliente + " sem cliente com ficha" : "") +
+      (t.protese ? "\n• Prótese capilar: " + t.protese.fichas + " fichas novas na aba Prótese, " + t.protese.manutencoes + " manutenções do Booksy" : "") +
+      (t.proteseErro ? "\nAs fichas de prótese não foram montadas (" + t.proteseErro + "): toque no favorito de novo." : "") +
+      (t.pendentes ? "\nFaltou parte do histórico: toque no favorito de novo (nada é duplicado)." : "");
   }
 
   (async function () {

@@ -200,6 +200,8 @@
           h("li", { texto: "Bloqueios de horário: " + n(s.bloqueios, "novos") + " novos" + ja(s.bloqueios, "já estavam") }),
           // Histórico: atendimentos que já aconteceram no Booksy, na ficha do cliente como do app anterior
           s.historico ? h("li", { texto: "Histórico do Booksy (app anterior): " + n(s.historico, "novos") + " atendimentos novos" + ja(s.historico, "já estavam") + (n(s.historico, "semCliente") ? ", " + n(s.historico, "semCliente") + " sem cliente com ficha" : "") + (n(s.historico, "pendentes") ? " · faltou parte: rode o coletor de novo" : "") }) : null,
+          // Prótese capilar: fichas montadas a partir do histórico (quem fez colocação ou manutenção no último ano)
+          s.protese ? h("li", { texto: "Prótese capilar: " + n(s.protese, "fichas") + " fichas novas na aba Prótese, " + n(s.protese, "manutencoes") + " manutenções do Booksy" + (n(s.protese, "foraPorTempo") ? ", " + n(s.protese, "foraPorTempo") + " sem prótese há mais de 1 ano ficaram de fora" : "") }) : null,
           s.erros && s.erros.length ? h("li", { texto: "Com problema: " + s.erros.join(", ") + " (rode o coletor de novo)" }) : null,
         ]),
       ]);

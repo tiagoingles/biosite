@@ -373,6 +373,7 @@ test("recebimento do histórico: parte a parte, e o resumo da coleta soma as par
     { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\./, resposta: { corpo: [{ id: "c-ana", externo: "booksy:1", telefone: null }] } },
     { metodo: "GET", padrao: /\/rest\/v1\/profissionais\?barbearia_id=eq\./, resposta: { corpo: [] } },
     { metodo: "POST", padrao: /\/rest\/v1\/atendimentos_externos/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.map((x, i) => ({ id: "h" + i })) }) },
+    { metodo: "POST", padrao: /\/rest\/v1\/rpc\/recalcular_ritmo_externo/, resposta: { corpo: 1 } },
   ]);
   const parte = (n, ids) => A.chamar(config, { metodo: "POST", headers: { origin: "https://booksy.com" }, corpo: JSON.stringify({ tipo: "migracao", token, dados: { historicoParte: n, historico: ids.map((id) => ({ id, inicio: "2024-01-0" + ((id % 8) + 1) + "T10:00", status: "F", clienteId: 1 })) } }) });
   let r = await parte(1, [1, 2]);
@@ -397,6 +398,75 @@ test("coletor do histórico: ano a ano, só atendido e não compareceu, depois d
   const funcoes = [...c.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1]);
   const variaveis = new Set([...c.matchAll(/\bvar\s+([^;]+);/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s*=/)[0])).filter(Boolean));
   assert.deepEqual(funcoes.filter((f) => variaveis.has(f)), [], "função com o nome de uma variável");
+});
+
+test("prótese do histórico: ficha na aba Prótese para quem fez colocação ou manutenção no último ano (ou tem horário), com as manutenções de lá", async () => {
+  const hoje = A.hoje();
+  const d = (n) => somaDias(hoje, -n);
+  const hist = [
+    // Ana: colocou, trocou e faz manutenção a cada 21 dias, quase sempre com o Manolo
+    { id: "h1", externo: "booksy:1", cliente_id: "c-ana", dia: d(100), servico: "Colocação de Prótese Capilar", profissional_id: "p-manolo" },
+    { id: "h2", externo: "booksy:2", cliente_id: "c-ana", dia: d(79), servico: "Manutenção de Prótese Capilar", profissional_id: "p-manolo" },
+    { id: "h3", externo: "booksy:3", cliente_id: "c-ana", dia: d(58), servico: "Manutenção de Prótese Capilar", profissional_id: "p-joao" },
+    { id: "h4", externo: "booksy:4", cliente_id: "c-ana", dia: d(37), servico: "Colocação de Prótese Capilar", profissional_id: "p-manolo" },
+    { id: "h5", externo: "booksy:5", cliente_id: "c-ana", dia: d(16), servico: "Manutenção de Prótese Capilar", profissional_id: "p-manolo" },
+    // Bia: só avaliação (não é cliente de prótese)
+    { id: "h6", externo: "booksy:6", cliente_id: "c-bia", dia: d(30), servico: "Avaliação para Prótese Capilar", profissional_id: null },
+    // Caio: parou há mais de 1 ano
+    { id: "h7", externo: "booksy:7", cliente_id: "c-caio", dia: d(500), servico: "Manutenção de Prótese Capilar", profissional_id: "p-manolo" },
+    // Duda: já tinha ficha no barbeirotop
+    { id: "h8", externo: "booksy:8", cliente_id: "c-duda", dia: d(10), servico: "Manutenção de Prótese Capilar", profissional_id: "p-joao" },
+  ];
+  const chamadas = A.instalarFetch([
+    { metodo: "GET", padrao: /\/rest\/v1\/atendimentos_externos\?/, resposta: { corpo: hist } },
+    { metodo: "GET", padrao: /\/rest\/v1\/protese_clientes\?/, resposta: { corpo: [{ id: "f-duda", cliente_id: "c-duda", aplicada_em: null, ultima_manutencao: d(40) }] } },
+    // Edu tem prótese marcada na agenda, sem histórico
+    { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?/, resposta: { corpo: [{ cliente_id: "c-edu" }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?id=in\./, resposta: { corpo: [{ id: "c-ana", nome: "Ana Lima", telefone: "81999990000" }, { id: "c-edu", nome: "Edu Prado", telefone: "81988880000" }, { id: "c-caio", nome: "Caio", telefone: "" }] } },
+    { metodo: "POST", padrao: /\/rest\/v1\/protese_clientes$/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.map((f) => ({ id: "f-" + f.cliente_id, ...f })) }) },
+    { metodo: "PATCH", padrao: /\/rest\/v1\/protese_clientes\?id=eq\./, resposta: { status: 204 } },
+    { metodo: "POST", padrao: /\/rest\/v1\/protese_manutencoes/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.map((x, i) => ({ id: "m" + i })) }) },
+  ]);
+  const r = await migracao.proteseDoHistorico(BARB);
+  assert.deepEqual(r, { fichas: 2, manutencoes: 6, jaTinham: 1, foraPorTempo: 1 }, "Ana e Edu ganham ficha; Bia (só avaliação) e Caio (mais de 1 ano) não");
+  const fichas = chamadas.find((c) => c.metodo === "POST" && /protese_clientes$/.test(c.url)).corpo;
+  const ana = fichas.find((f) => f.cliente_id === "c-ana");
+  assert.deepEqual([ana.nome, ana.telefone, ana.profissional_id, ana.aplicada_em, ana.ultima_manutencao, ana.intervalo_dias, ana.ativo], ["Ana Lima", "81999990000", "p-manolo", d(37), d(16), 21, true]);
+  assert.match(ana.observacao, /^Veio do Booksy \(aplicativo anterior\): 3 manutenções de /);
+  const edu = fichas.find((f) => f.cliente_id === "c-edu");
+  assert.deepEqual([edu.aplicada_em, edu.ultima_manutencao, edu.intervalo_dias], [null, null, 21]);
+  const post = chamadas.find((c) => c.metodo === "POST" && c.url.includes("protese_manutencoes"));
+  assert.match(post.url, /on_conflict=barbearia_id,externo/, "rodar de novo não duplica");
+  const tipos = post.corpo.filter((m) => m.protese_cliente_id === "f-c-ana").map((m) => m.tipo);
+  assert.deepEqual(tipos, ["aplicacao", "manutencao", "manutencao", "troca", "manutencao"], "a primeira colocação é a aplicação; a seguinte, troca");
+  assert.ok(post.corpo.every((m) => m.observacao === "Booksy (aplicativo anterior)"));
+  assert.ok(post.corpo.some((m) => m.protese_cliente_id === "f-duda" && m.externo === "booksy:8"), "a ficha que já existia recebe o histórico");
+  const patch = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("protese_clientes?id=eq.f-duda"));
+  assert.deepEqual(patch.corpo, { ultima_manutencao: d(10) }, "a última manutenção de lá vale se for mais nova");
+  assert.ok(!post.corpo.some((m) => m.externo === "booksy:6" || m.externo === "booksy:7"));
+});
+
+test("fim do histórico: o recebimento monta as fichas de prótese e o coletor pede isso depois do último ano", async () => {
+  const config = require("../api/config");
+  const token = "d".repeat(48);
+  let resumoSalvo = { clientes: { novos: 3 } };
+  A.instalarFetch([
+    { padrao: /\/rest\/v1\/rpc\/contar_tentativa/, resposta: { corpo: 0 } },
+    { metodo: "GET", padrao: /\/rest\/v1\/migracoes\?token_hash=eq\./, resposta: () => ({ corpo: [{ id: "m1", barbearia_id: BARB, expira_em: new Date(Date.now() + 3600e3).toISOString(), resumo: resumoSalvo }] }) },
+    { metodo: "PATCH", padrao: /\/rest\/v1\/migracoes\?id=eq\./, resposta: (u, o, corpo) => { resumoSalvo = corpo.resumo; return { status: 204 }; } },
+    { metodo: "GET", padrao: /\/rest\/v1\/atendimentos_externos\?/, resposta: { corpo: [] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/protese_clientes\?/, resposta: { corpo: [] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/pedidos\?/, resposta: { corpo: [] } },
+  ]);
+  const r = await A.chamar(config, { metodo: "POST", headers: { origin: "https://booksy.com" }, corpo: JSON.stringify({ tipo: "migracao", token, dados: { historicoFim: true } }) });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.resumo.protese, { fichas: 0, manutencoes: 0, jaTinham: 0, foraPorTempo: 0 });
+  assert.equal(resumoSalvo.clientes.novos, 3, "o resto do resumo fica");
+  assert.ok(resumoSalvo.protese);
+  const c = ler("coletor-booksy.js");
+  assert.match(c, /historicoFim: true/);
+  assert.match(c, /if \(!total\.pendentes\) \{/, "só depois que o histórico entrou todo");
+  assert.match(ler("app.html"), /fichas novas na aba Prótese/);
 });
 
 test("ficha do cliente: o histórico do Booksy vem separado, marcado como do aplicativo anterior", async () => {

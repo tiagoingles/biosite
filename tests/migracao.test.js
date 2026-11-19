@@ -389,6 +389,11 @@ test("coletor do histórico: ano a ano, só atendido e não compareceu, depois d
   assert.match(c, /if \(s\.parcial\) \{ encerrar\(/, "com clientes faltando, o histórico espera a próxima coleta");
   assert.match(c, /if \(M\.so === "historico"\)/);
   assert.match(c, /clienteTelefone: c\.phone/, "o WhatsApp acha o cliente de ficha repetida");
+  // Nenhuma função do coletor pode ter o nome de uma variável do mesmo escopo: a variável sobrescreve a função
+  // (aconteceu com "enviar", que guarda o XMLHttpRequest.prototype.send, e o coletor parou com "Illegal invocation")
+  const funcoes = [...c.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1]);
+  const variaveis = new Set([...c.matchAll(/\bvar\s+([^;]+);/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s*=/)[0])).filter(Boolean));
+  assert.deepEqual(funcoes.filter((f) => variaveis.has(f)), [], "função com o nome de uma variável");
 });
 
 test("ficha do cliente: o histórico do Booksy vem separado, marcado como do aplicativo anterior", async () => {

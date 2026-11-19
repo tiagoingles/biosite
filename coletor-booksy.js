@@ -160,8 +160,9 @@
     return { agendamentos: ags, bloqueios: blqs };
   }
 
-  // Manda uma parte para o barbeirotop (texto puro: sem pré-verificação de CORS) e devolve o resumo dela
-  async function enviar(dados) {
+  // Manda uma parte para o barbeirotop (texto puro: sem pré-verificação de CORS) e devolve o resumo dela.
+  // (Não chame de "enviar": esse nome guarda o XMLHttpRequest.prototype.send original, lá em cima.)
+  async function mandarParte(dados) {
     var r;
     try {
       r = await fetch(String(M.api).replace(/\/+$/, "") + "/api/config", {
@@ -198,9 +199,9 @@
         parte++;
         aviso("Enviando " + lista.length + " atendimentos de " + ano + " (histórico)…", pct);
         var dados = { origem: "booksy", negocio: negocio, ddd: ddd, equipe: equipe, historico: lista, historicoParte: parte };
-        var h = (await enviar(dados)).historico || {};
+        var h = (await mandarParte(dados)).historico || {};
         // Se o tempo do servidor acabou no meio, manda o mesmo ano de novo (o que já entrou não duplica)
-        if (h.pendentes) { var h2 = (await enviar(dados)).historico || {}; h = { novos: (h.novos || 0) + (h2.novos || 0), jaEstavam: h2.jaEstavam || 0, semCliente: h.semCliente || 0, pendentes: h2.pendentes || 0 }; }
+        if (h.pendentes) { var h2 = (await mandarParte(dados)).historico || {}; h = { novos: (h.novos || 0) + (h2.novos || 0), jaEstavam: h2.jaEstavam || 0, semCliente: h.semCliente || 0, pendentes: h2.pendentes || 0 }; }
         total.lidos += lista.length;
         total.novos += h.novos || 0;
         total.jaEstavam += h.jaEstavam || 0;
@@ -242,7 +243,7 @@
       var prod = await produtos();
       var ag = await agenda();
       aviso("Enviando " + cli.length + " clientes, " + ag.agendamentos.length + " horários e " + prod.length + " produtos para o barbeirotop…", 92);
-      var s = await enviar({ origem: "booksy", negocio: negocio, ddd: ddd, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios });
+      var s = await mandarParte({ origem: "booksy", negocio: negocio, ddd: ddd, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios });
       var n = function (o, k) { return (o && o[k]) || 0; };
       var ja = function (o) { return n(o, "jaEstavam") ? ", " + n(o, "jaEstavam") + " já estavam" : ""; };
       var linhas = "• Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados" + ja(s.clientes) + "\n" +

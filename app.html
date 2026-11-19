@@ -154,7 +154,7 @@
   }
   function codigoDoColetor(j) {
     var api = String(j.api || location.origin).replace(/[^a-zA-Z0-9:/._-]/g, "");
-    return "javascript:(function(){window.__BIO_MIGRACAO={token:'" + String(j.token).replace(/[^0-9a-f]/g, "") + "',api:'" + api + "'};var s=document.createElement('script');s.src='" + api + "/coletor-booksy.js?v=4';document.body.appendChild(s);})();";
+    return "javascript:(function(){window.__BIO_MIGRACAO={token:'" + String(j.token).replace(/[^0-9a-f]/g, "") + "',api:'" + api + "'};var s=document.createElement('script');s.src='" + api + "/coletor-booksy.js?v=5';document.body.appendChild(s);})();";
   }
   $("migGerar").onclick = function () {
     var id = $("migBarbearia").value;
@@ -198,6 +198,8 @@
           h("li", { texto: "Produtos: " + n(s.produtos, "novos") + " novos, " + n(s.produtos, "atualizados") + " atualizados" }),
           h("li", { texto: "Agendamentos futuros: " + n(s.agendamentos, "novos") + " novos" + (n(s.agendamentos, "jaEstavam") ? ", " + n(s.agendamentos, "jaEstavam") + " já estavam" : "") + (n(s.agendamentos, "ligados") ? ", " + n(s.agendamentos, "ligados") + " ligados ao cliente" : "") + (n(s.agendamentos, "semBarbeiro") ? ", " + n(s.agendamentos, "semBarbeiro") + " de quem não aparece na agenda" : "") }),
           h("li", { texto: "Bloqueios de horário: " + n(s.bloqueios, "novos") + " novos" + ja(s.bloqueios, "já estavam") }),
+          // Histórico: atendimentos que já aconteceram no Booksy, na ficha do cliente como do app anterior
+          s.historico ? h("li", { texto: "Histórico do Booksy (app anterior): " + n(s.historico, "novos") + " atendimentos novos" + ja(s.historico, "já estavam") + (n(s.historico, "semCliente") ? ", " + n(s.historico, "semCliente") + " sem cliente com ficha" : "") + (n(s.historico, "pendentes") ? " · faltou parte: rode o coletor de novo" : "") }) : null,
           s.erros && s.erros.length ? h("li", { texto: "Com problema: " + s.erros.join(", ") + " (rode o coletor de novo)" }) : null,
         ]),
       ]);

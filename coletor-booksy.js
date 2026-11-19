@@ -1,7 +1,9 @@
 // Coletor do Booksy para o barbeirotop. Roda na página do Booksy Biz (booksy.com/pro), aberto pelo favorito que o
 // /app do barbeirotop gera (o favorito traz o código de uso da coleta). Usa a sessão que já está aberta neste
 // navegador: só lê (GET) os clientes, a equipe, os serviços, os produtos e a agenda dos próximos 90 dias, e manda
-// tudo para o barbeirotop. A senha do Booksy não é usada nem guardada, e nada é alterado no Booksy.
+// tudo para o barbeirotop. Depois, o histórico de atendimentos (um ano por vez), que entra marcado como do
+// aplicativo anterior. A senha do Booksy não é usada nem guardada, e nada é alterado no Booksy.
+// __BIO_MIGRACAO = { token, api, so? }: so = "historico" manda só o histórico (o resto já veio antes).
 (function () {
   "use strict";
   var M = window.__BIO_MIGRACAO || {};
@@ -158,6 +160,62 @@
     return { agendamentos: ags, bloqueios: blqs };
   }
 
+  // Manda uma parte para o barbeirotop (texto puro: sem pré-verificação de CORS) e devolve o resumo dela
+  async function enviar(dados) {
+    var r;
+    try {
+      r = await fetch(String(M.api).replace(/\/+$/, "") + "/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: JSON.stringify({ tipo: "migracao", token: M.token, dados: dados }),
+      });
+    } catch (e) {
+      throw new Error("A conexão com o barbeirotop caiu durante o envio. Parte dos dados pode ter entrado: veja em \"Ver o resultado\" no /app e toque no favorito de novo (nada é duplicado).");
+    }
+    var j = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(j.message || "O barbeirotop respondeu " + r.status + ".");
+    return j.resumo || {};
+  }
+
+  // Histórico: atendimentos que já aconteceram (atendido ou não compareceu), um ano por vez, até ontem. No
+  // barbeirotop eles ficam marcados como do aplicativo anterior, fora da agenda e do financeiro.
+  var ANO_INICIO = 2016;
+  async function historico(ddd, equipe) {
+    var hoje = new Date(), ontem = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1);
+    var total = { lidos: 0, novos: 0, jaEstavam: 0, semCliente: 0 }, parte = 0, anos = ontem.getFullYear() - ANO_INICIO + 1;
+    for (var ano = ANO_INICIO; ano <= ontem.getFullYear(); ano++) {
+      var pct = 93 + 6 * ((ano - ANO_INICIO) / anos);
+      aviso("Lendo o histórico de " + ano + "…", pct);
+      var fim = ano === ontem.getFullYear() ? diaLocal(ontem) : ano + "-12-31";
+      var j = await ler("calendar?start_date=" + ano + "-01-01&end_date=" + fim + "&include_unconfirmed=true&version=3&resources_per_page=50");
+      var lista = [];
+      Object.keys(j.bookings || {}).forEach(function (id) {
+        var b = j.bookings[id] || {}, c = b.customer || {}, s = b.service || {};
+        if (b.status !== "F" && b.status !== "N") return;
+        lista.push({ id: b.id || id, inicio: b.booked_from, status: b.status, clienteId: c.id || "", clienteTelefone: c.phone || "", servicoNome: s.name || "", equipeId: ((b.resources || [])[0] || {}).id || "" });
+      });
+      if (lista.length) {
+        parte++;
+        aviso("Enviando " + lista.length + " atendimentos de " + ano + " (histórico)…", pct);
+        var dados = { origem: "booksy", negocio: negocio, ddd: ddd, equipe: equipe, historico: lista, historicoParte: parte };
+        var h = (await enviar(dados)).historico || {};
+        // Se o tempo do servidor acabou no meio, manda o mesmo ano de novo (o que já entrou não duplica)
+        if (h.pendentes) { var h2 = (await enviar(dados)).historico || {}; h = { novos: (h.novos || 0) + (h2.novos || 0), jaEstavam: h2.jaEstavam || 0, semCliente: h.semCliente || 0, pendentes: h2.pendentes || 0 }; }
+        total.lidos += lista.length;
+        total.novos += h.novos || 0;
+        total.jaEstavam += h.jaEstavam || 0;
+        total.semCliente += h.semCliente || 0;
+        if (h.pendentes) total.pendentes = (total.pendentes || 0) + h.pendentes;
+      }
+      await pausa(PAUSA);
+    }
+    return total;
+  }
+  function textoHistorico(t) {
+    return "• Histórico do Booksy (app anterior): " + t.novos + " atendimentos novos" + (t.jaEstavam ? ", " + t.jaEstavam + " já estavam" : "") +
+      (t.semCliente ? ", " + t.semCliente + " sem cliente com ficha" : "") + (t.pendentes ? "\nFaltou parte do histórico: toque no favorito de novo (nada é duplicado)." : "");
+  }
+
   (async function () {
     try {
       await esperarSessao();
@@ -170,6 +228,12 @@
       var rec = await ler("resources");
       var equipe = (Array.isArray(rec) ? rec : rec.resources || []).map(function (r) { return { id: r.id, nome: r.name, visivel: r.visible !== false }; });
       await pausa(PAUSA);
+      // Só o histórico (o resto já veio numa coleta anterior)
+      if (M.so === "historico") {
+        var t0 = await historico(ddd, equipe);
+        encerrar("Pronto! Entrou no barbeirotop:\n" + textoHistorico(t0), !t0.pendentes);
+        return;
+      }
       var svc = await ler("services");
       var servicos = (svc.services || []).map(function (s) { var v = (s.variants || [])[0] || {}; return { id: s.id, nome: s.name, duracao: v.duration, preco: v.price != null ? v.price : s.service_price || "" }; });
       await pausa(PAUSA);
@@ -178,27 +242,19 @@
       var prod = await produtos();
       var ag = await agenda();
       aviso("Enviando " + cli.length + " clientes, " + ag.agendamentos.length + " horários e " + prod.length + " produtos para o barbeirotop…", 92);
-      var r;
-      try {
-        r = await fetch(String(M.api).replace(/\/+$/, "") + "/api/config", {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=UTF-8" },
-          body: JSON.stringify({ tipo: "migracao", token: M.token, dados: { origem: "booksy", negocio: negocio, ddd: ddd, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios } }),
-        });
-      } catch (e) {
-        throw new Error("A conexão com o barbeirotop caiu durante o envio. Parte dos dados pode ter entrado: veja em \"Ver o resultado\" no /app e toque no favorito de novo (nada é duplicado).");
-      }
-      var j = await r.json().catch(function () { return {}; });
-      if (!r.ok) throw new Error(j.message || "O barbeirotop respondeu " + r.status + ".");
-      var s = j.resumo || {}, n = function (o, k) { return (o && o[k]) || 0; };
+      var s = await enviar({ origem: "booksy", negocio: negocio, ddd: ddd, equipe: equipe, servicos: servicos, produtos: prod, clientes: cli, agendamentos: ag.agendamentos, bloqueios: ag.bloqueios });
+      var n = function (o, k) { return (o && o[k]) || 0; };
       var ja = function (o) { return n(o, "jaEstavam") ? ", " + n(o, "jaEstavam") + " já estavam" : ""; };
-      encerrar((s.parcial ? "Entrou uma parte. Toque no favorito de novo para completar (nada é duplicado):\n" : "Pronto! Entrou no barbeirotop:\n") +
-        "• Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados" + ja(s.clientes) + "\n" +
+      var linhas = "• Clientes: " + n(s.clientes, "novos") + " novos, " + n(s.clientes, "atualizados") + " completados" + ja(s.clientes) + "\n" +
         "• Barbeiros: " + n(s.equipe, "novos") + " novos, " + n(s.equipe, "ligados") + " ligados" + ja(s.equipe) + "\n" +
         "• Serviços: " + n(s.servicos, "novos") + " novos\n" +
         "• Produtos: " + n(s.produtos, "novos") + " novos, " + n(s.produtos, "atualizados") + " atualizados\n" +
         "• Agendamentos futuros: " + n(s.agendamentos, "novos") + " novos" + ja(s.agendamentos) + (n(s.agendamentos, "ligados") ? ", " + n(s.agendamentos, "ligados") + " ligados ao cliente" : "") + "\n" +
-        "• Bloqueios de horário: " + n(s.bloqueios, "novos") + " novos" + ja(s.bloqueios) + (s.erros && s.erros.length ? "\nCom problema: " + s.erros.join(", ") : ""), !s.parcial);
+        "• Bloqueios de horário: " + n(s.bloqueios, "novos") + " novos" + ja(s.bloqueios) + (s.erros && s.erros.length ? "\nCom problema: " + s.erros.join(", ") : "");
+      // O histórico só vem depois que todos os clientes entraram (cada atendimento é ligado ao cliente)
+      if (s.parcial) { encerrar("Entrou uma parte. Toque no favorito de novo para completar (nada é duplicado):\n" + linhas, false); return; }
+      var t = await historico(ddd, equipe);
+      encerrar("Pronto! Entrou no barbeirotop:\n" + linhas + "\n" + textoHistorico(t), !t.pendentes);
     } catch (e) {
       devolver();
       encerrar(e && e.message ? e.message : "Não deu para coletar agora. Tente de novo.");

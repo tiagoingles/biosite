@@ -27,6 +27,8 @@
     "": "Olá, {nome}! Novidade na {barbearia}: ... Agende pelo link: {site}",
   };
   var ORIGEM = { painel: "cadastrado no painel", importacao: "veio da planilha", site: "agendou pelo site", convite: "se cadastrou pelo link" };
+  // Aplicativo que a barbearia usava antes (migração): nome que a ficha mostra no histórico de lá
+  var APP_ANTERIOR = { booksy: "Booksy" };
   var LOTE = 60;
 
   var op = {}, raiz = null, dados = null, seg = "", busca = "", limite = LOTE, campanhasCache = null;
@@ -284,7 +286,7 @@
         op.dono ? ["CPF", c.cpfMascarado || "—"] : null,
         ["Retorno", resumo.status ? (STATUS[resumo.status] || [resumo.status])[0] + " · " + linhaRetorno(resumo) : "—"],
         ["Novidades", c.saiu_em ? "Pediu para não receber (" + P.dataBr(String(c.saiu_em).slice(0, 10)) + ")" : c.aceita ? "Aceitou em " + P.dataBr(String(c.aceite_em || c.criado_em).slice(0, 10)) + (c.aceite_origem ? " (" + (ORIGEM[c.aceite_origem] || c.aceite_origem).replace(/^se /, "") + ")" : "") : "Ainda não aceitou"],
-        ["Origem", ORIGEM[c.origem] || c.origem],
+        ["Origem", c.veioDe && APP_ANTERIOR[c.veioDe] ? "veio do " + APP_ANTERIOR[c.veioDe] + " (aplicativo anterior)" : ORIGEM[c.origem] || c.origem],
         c.ultima_visita_externa ? ["Antes do Bio Site", "última visita em " + dataBrAno(c.ultima_visita_externa)] : null,
       ].filter(Boolean);
       var visitas = f.visitas.length ? h("ul", { class: "mini-lista visitas" }, f.visitas.slice(0, 30).map(function (v) {
@@ -294,11 +296,25 @@
           h("b", { texto: v.valor == null ? "—" : P.brl(v.valor) }),
         ]);
       })) : h("p", { class: "nota p", texto: "Nenhum atendimento ligado a este cliente ainda." });
+      // Atendimentos no aplicativo anterior (migração do Booksy): separados, só como histórico
+      var ant = f.anteriores || [];
+      var app = ant.length ? (APP_ANTERIOR[ant[0].origem] || "aplicativo anterior") : "";
+      var anteriores = ant.length ? h("details", { class: "anteriores" }, [
+        h("summary", { texto: "No " + app + " (aplicativo anterior) · " + (ant.length >= 300 ? "os 300 atendimentos mais recentes" : ant.length + (ant.length === 1 ? " atendimento" : " atendimentos")) + ", de " + ant[ant.length - 1].dia.slice(0, 4) + " a " + ant[0].dia.slice(0, 4) }),
+        h("p", { class: "nota p", texto: "Feitos antes do barbeirotop, no " + app + ". Ficam só como histórico: não entram no financeiro nem nas comissões." }),
+        h("ul", { class: "mini-lista visitas" }, ant.map(function (v) {
+          return h("li", null, [h("span", null, [
+            h("b", { texto: P.dataBr(v.dia) + "/" + v.dia.slice(2, 4) + " · " + (v.servico || "Atendimento") }),
+            h("small", { texto: (v.profissional ? "com " + v.profissional + " · " : "") + (v.status === "faltou" ? "não compareceu" : "atendido") + " · " + app }),
+          ])]);
+        })),
+      ]) : null;
       var conteudo = [
         h("dl", { class: "ficha-dados" }, linhas.map(function (l) { return h("div", null, [h("dt", { texto: l[0] }), h("dd", { texto: l[1] })]); })),
         c.observacao ? h("p", { class: "obs", texto: c.observacao }) : null,
         h("h3", { class: "sub-titulo", texto: "Visitas" }),
         visitas,
+        anteriores,
         f.campanhas.length ? h("p", { class: "nota p", texto: "Campanhas recebidas: " + f.campanhas.map(function (x) { return x.nome + " (" + P.dataBr(String(x.enviado_em).slice(0, 10)) + ")"; }).join(", ") }) : null,
       ];
       var j = janela(c.nome, conteudo);

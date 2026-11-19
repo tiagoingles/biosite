@@ -410,6 +410,10 @@ body.sem-abas { padding-bottom: 24px; }
 .premium h2 { display: inline-flex; align-items: center; gap: 8px; }
 .premium h2 svg, #cartaoAvisosCelular h2 svg { width: 20px; height: 20px; color: var(--acento); }
 .como-avisos summary { cursor: pointer; color: var(--acento); font-weight: 700; font-size: 14px; }
+/* Ficha do cliente: atendimentos no aplicativo anterior (migração), fechados por padrão */
+.anteriores { margin-top: 6px; }
+.anteriores summary { cursor: pointer; color: var(--acento); font-weight: 700; font-size: 14px; padding: 6px 0; }
+.anteriores .mini-lista { margin-top: 6px; }
 .como-avisos p { margin-top: 6px; }
 .automacao { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--linha); border-radius: 14px; background: var(--cartao-2); }
 .automacao.desligada { opacity: 0.65; }

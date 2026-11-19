@@ -322,3 +322,96 @@ test("coletor: no Booksy só lê; manda para o barbeirotop como texto (sem pré-
   assert.doesNotMatch(sql, /\bdrop\b|\bdelete\b|\btruncate\b/);
   assert.match(sql, /token_hash text not null unique/);
 });
+
+// ---------- histórico do aplicativo anterior (fase 28) ----------
+test("histórico do Booksy: atendido e não compareceu entram como do app anterior, ligados ao cliente (pela ficha ou pelo WhatsApp), sem duplicar", async () => {
+  const ontem = somaDias(A.hoje(), -1);
+  const chamadas = A.instalarFetch([
+    { padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { corpo: [{ id: BARB, whatsapp: null }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\.[^&]+&select=id,externo,telefone/, resposta: { corpo: [{ id: "c-ana", externo: "booksy:1", telefone: "81999990000" }, { id: "c-bia", externo: "booksy:2", telefone: "81988887777" }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/profissionais\?barbearia_id=eq\.[^&]+&externo=like/, resposta: { corpo: [{ id: "p-manolo", nome: "Manolo", externo: "booksy:11" }] } },
+    // O banco devolve só o que entrou: o 503 já estava de uma coleta anterior
+    { metodo: "POST", padrao: /\/rest\/v1\/atendimentos_externos/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.filter((x) => x.externo !== "booksy:503").map((x, i) => ({ id: "h" + i })) }) },
+  ]);
+  const r = await migracao.importarHistorico(BARB, { ddd: "81", equipe: [{ id: 11, nome: "Manolo" }, { id: 99, nome: "Ex Barbeiro" }], historico: [
+    { id: 500, inicio: "2024-03-10T10:00", status: "F", clienteId: 1, servicoNome: "Corte", equipeId: 11 },
+    { id: 501, inicio: "2023-01-05T15:30", status: "N", clienteId: 7, clienteTelefone: "98888-7777", servicoNome: "Barba", equipeId: 99 },
+    { id: 502, inicio: "2022-02-02T09:00", status: "F", clienteId: 8, servicoNome: "Corte", equipeId: 55 },
+    { id: 503, inicio: ontem + "T11:00", status: "F", clienteId: 1, servicoNome: "Corte", equipeId: 11 },
+    { id: 504, inicio: A.hoje() + "T11:00", status: "F", clienteId: 1 },
+    { id: 505, inicio: "2024-03-10T10:00", status: "C", clienteId: 1 },
+    { id: 500, inicio: "2024-03-10T10:00", status: "F", clienteId: 1 },
+  ] });
+  assert.deepEqual(r, { novos: 3, jaEstavam: 1, semCliente: 1, ignorados: 2 }, "hoje fica para a agenda; cancelado não entra; repetido conta uma vez");
+  const post = chamadas.find((c) => c.metodo === "POST" && c.url.includes("atendimentos_externos"));
+  assert.match(post.url, /on_conflict=barbearia_id,externo/, "o que já veio antes não duplica");
+  const linha = (id) => post.corpo.find((x) => x.externo === "booksy:" + id);
+  const l500 = linha(500);
+  assert.deepEqual([l500.cliente_id, l500.status, l500.dia, l500.horario, l500.servico, l500.profissional, l500.profissional_id, l500.origem], ["c-ana", "realizado", "2024-03-10", "10:00", "Corte", "Manolo", "p-manolo", "booksy"]);
+  assert.equal(linha(501).cliente_id, "c-bia", "ficha repetida no Booksy: achado pelo WhatsApp (com o DDD da barbearia)");
+  assert.equal(linha(501).status, "faltou");
+  assert.equal(linha(501).profissional, "Ex Barbeiro", "quem não está no barbeirotop fica com o nome do Booksy");
+  assert.equal(linha(501).profissional_id, null);
+  assert.equal(linha(502).cliente_id, null);
+  assert.equal(linha(502).profissional, null);
+  assert.ok(!linha(504) && !linha(505));
+  assert.equal(post.corpo.filter((x) => x.externo === "booksy:500").length, 1);
+});
+
+test("recebimento do histórico: parte a parte, e o resumo da coleta soma as partes (a primeira começa do zero)", async () => {
+  const config = require("../api/config");
+  const token = "c".repeat(48);
+  let resumoSalvo = { clientes: { novos: 5 }, historico: { novos: 99 } };
+  A.instalarFetch([
+    { padrao: /\/rest\/v1\/rpc\/contar_tentativa/, resposta: { corpo: 0 } },
+    { metodo: "GET", padrao: /\/rest\/v1\/migracoes\?token_hash=eq\./, resposta: () => ({ corpo: [{ id: "m1", barbearia_id: BARB, expira_em: new Date(Date.now() + 3600e3).toISOString(), resumo: resumoSalvo }] }) },
+    { metodo: "PATCH", padrao: /\/rest\/v1\/migracoes\?id=eq\./, resposta: (u, o, corpo) => { resumoSalvo = corpo.resumo; return { status: 204 }; } },
+    { padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { corpo: [{ id: BARB, whatsapp: null }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\./, resposta: { corpo: [{ id: "c-ana", externo: "booksy:1", telefone: null }] } },
+    { metodo: "GET", padrao: /\/rest\/v1\/profissionais\?barbearia_id=eq\./, resposta: { corpo: [] } },
+    { metodo: "POST", padrao: /\/rest\/v1\/atendimentos_externos/, resposta: (u, o, corpo) => ({ status: 201, corpo: corpo.map((x, i) => ({ id: "h" + i })) }) },
+  ]);
+  const parte = (n, ids) => A.chamar(config, { metodo: "POST", headers: { origin: "https://booksy.com" }, corpo: JSON.stringify({ tipo: "migracao", token, dados: { historicoParte: n, historico: ids.map((id) => ({ id, inicio: "2024-01-0" + ((id % 8) + 1) + "T10:00", status: "F", clienteId: 1 })) } }) });
+  let r = await parte(1, [1, 2]);
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.equal(r.body.resumo.historico.novos, 2);
+  r = await parte(2, [3, 4, 5]);
+  assert.equal(r.statusCode, 200);
+  assert.equal(resumoSalvo.historico.novos, 5, "soma as partes; a parte 1 começou do zero");
+  assert.equal(resumoSalvo.clientes.novos, 5, "o resto do resumo da coleta fica");
+});
+
+test("coletor do histórico: ano a ano, só atendido e não compareceu, depois de todos os clientes; dá para mandar só o histórico", () => {
+  const c = ler("coletor-booksy.js");
+  assert.match(c, /if \(b\.status !== "F" && b\.status !== "N"\) return;/);
+  assert.match(c, /calendar\?start_date=" \+ ano \+ "-01-01&end_date=" \+ fim/);
+  assert.match(c, /historicoParte: parte/);
+  assert.match(c, /if \(s\.parcial\) \{ encerrar\(/, "com clientes faltando, o histórico espera a próxima coleta");
+  assert.match(c, /if \(M\.so === "historico"\)/);
+  assert.match(c, /clienteTelefone: c\.phone/, "o WhatsApp acha o cliente de ficha repetida");
+});
+
+test("ficha do cliente: o histórico do Booksy vem separado, marcado como do aplicativo anterior", async () => {
+  const equipe = require("../api/equipe");
+  const ID = "dddddddd-0000-4000-8000-000000000009";
+  A.instalarFetch([
+    { padrao: /\/rest\/v1\/clientes\?id=eq\./, resposta: { corpo: [{ id: ID, nome: "Edu Prado", telefone: "81999990005", cpf: null, nascimento: null, observacao: "", profissional_id: null, origem: "importacao", ultima_visita_externa: "2026-10-02", aceita_novidades: false, aceite_em: null, aceite_origem: null, saiu_em: null, criado_em: "2026-11-18T12:00:00Z", externo: "booksy:77" }] } },
+    { padrao: /\/rest\/v1\/pedidos\?cliente_id=eq\./, resposta: { corpo: [] } },
+    { padrao: /\/rest\/v1\/campanha_envios\?/, resposta: { corpo: [] } },
+    { padrao: /\/rest\/v1\/atendimentos_externos\?cliente_id=eq\./, resposta: { corpo: [
+      { dia: "2026-10-02", horario: "10:00", servico: "Corte americano", profissional: "Cleyton Santos", profissional_id: null, status: "realizado", origem: "booksy" },
+      { dia: "2025-03-01", horario: "15:00", servico: "Barba simples", profissional: null, profissional_id: null, status: "faltou", origem: "booksy" },
+    ] } },
+    ...A.rotasDeConta(),
+  ]);
+  const r = await A.chamar(equipe, { query: { area: "clientes", id: ID }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.equal(r.body.cliente.veioDe, "booksy");
+  assert.equal(r.body.anteriores.length, 2);
+  assert.deepEqual(r.body.anteriores[1], { dia: "2025-03-01", horario: "15:00", servico: "Barba simples", profissional: "", status: "faltou", origem: "booksy" });
+  assert.deepEqual(r.body.visitas, [], "não se mistura com as visitas do barbeirotop");
+  const tela = ler("painel-clientes.js");
+  assert.match(tela, /\(aplicativo anterior\)/);
+  assert.match(tela, /não entram no financeiro nem nas comissões/);
+  assert.match(tela, /"veio do " \+ APP_ANTERIOR\[c\.veioDe\]/);
+});

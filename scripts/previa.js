@@ -369,9 +369,17 @@ const servidor = http.createServer(async (req, res) => {
               id: c.id, nome: c.nome, telefone: c.telefone || "", nascimento: dono ? c.nascimento : null, aniversario: c.nascimento ? c.nascimento.slice(8, 10) + "/" + c.nascimento.slice(5, 7) : "", observacao: c.observacao, cpf: dono ? c.cpf || "" : "", cpfMascarado: dono ? CL.mascararCpf(c.cpf) : "",
               origem: c.origem, profissional_id: c.profissional_id, ultima_visita_externa: c.ultima_visita_externa || null, aceita: !!c.aceita && !c.saiu,
               aceite_em: c.aceita ? somaDias(hoje, -30) + "T12:00:00Z" : null, aceite_origem: c.aceita ? c.origem : null, saiu_em: c.saiu ? somaDias(hoje, -10) + "T12:00:00Z" : null, criado_em: somaDias(hoje, -100) + "T12:00:00Z",
+              // Gustavo veio de uma migração do Booksy, com o histórico de lá (fase 28)
+              veioDe: c.id === "c11" ? "booksy" : null,
             },
             visitas: visitasDe(c.id).map(({ id, dia, horario, servico, profissional, status, valor }) => ({ id, dia, horario, servico, profissional, status, valor })),
             campanhas: c.id === "c2" ? [{ nome: campanhasPrev[campanhasPrev.length - 1].nome, enviado_em: campanhasPrev[campanhasPrev.length - 1].criado_em }] : [],
+            anteriores: c.id === "c11" ? [
+              { dia: somaDias(hoje, -70), horario: "10:00", servico: "Corte de cabelo degradê", profissional: "Bruno", status: "realizado", origem: "booksy" },
+              { dia: somaDias(hoje, -110), horario: "15:30", servico: "Barba + Cabelo", profissional: "Bruno", status: "realizado", origem: "booksy" },
+              { dia: somaDias(hoje, -150), horario: "11:00", servico: "Corte de cabelo degradê", profissional: "", status: "faltou", origem: "booksy" },
+              { dia: "2023-08-12", horario: "09:30", servico: "Corte americano", profissional: "Rafael", status: "realizado", origem: "booksy" },
+            ] : [],
           });
         }
         if (metodo === "GET" && q.campanhas === "1") return json(res, 200, { campanhas: campanhasPrev });

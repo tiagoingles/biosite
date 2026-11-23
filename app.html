@@ -57,9 +57,13 @@
       <div class="lista" id="listaFormularios"></div>
     </section>
     <section class="cartao" id="secMigracao">
-      <div class="cartao-topo"><h2>Migrar do Booksy</h2><span class="nota p">Clientes, equipe, produtos e agenda</span></div>
-      <p class="nota p">Traz os dados de uma barbearia que usa o Booksy: clientes (com WhatsApp e última visita), barbeiros, serviços com preço, produtos com estoque, os agendamentos dos próximos 90 dias e os bloqueios. O coletor usa o Booksy já aberto e logado no navegador: a senha do Booksy não passa pelo barbeirotop e nada muda no Booksy.</p>
-      <div class="linha"><label class="campo" style="flex:1 1 220px">Barbearia que recebe<select id="migBarbearia"></select></label><button type="button" class="botao principal" id="migGerar">Gerar coletor</button></div>
+      <div class="cartao-topo"><h2>Migração de outro aplicativo</h2><span class="nota p">Clientes, equipe, produtos e agenda</span></div>
+      <p class="nota p" id="migTexto"></p>
+      <div class="linha">
+        <label class="campo" style="flex:1 1 160px">Aplicativo de origem<select id="migOrigem"></select></label>
+        <label class="campo" style="flex:1 1 220px">Barbearia que recebe<select id="migBarbearia"><option value="">Carregando as barbearias…</option></select></label>
+        <button type="button" class="botao principal" id="migGerar">Gerar coletor</button>
+      </div>
       <div id="migResultado"></div>
     </section>
     <section class="cartao" id="secLeads" hidden>
@@ -138,40 +142,62 @@
     tela("telaAdmin");
     $("titulo").textContent = "Bio Site";
     $("sub").textContent = "Administração da plataforma";
-    var equipe = d.barbearias.reduce(function (t, b) { return t + (b.equipe || []).length; }, 0);
-    $("resumoAdmin").textContent = d.barbearias.length + " site(s) · " + equipe + " barbeiro(s) ativo(s)";
-    P.trocar($("listaSites"), d.barbearias.length ? d.barbearias.map(cartaoSite) : P.vazio("🌐", "Nenhum site ainda."));
-    sitesAdmin = d.barbearias;
-    mostrarLeads(d.leads || []);
-    mostrarFormularios(d.formularios || []);
-    montarMigracao(d.barbearias);
+    sitesAdmin = d.barbearias || [];
+    // Cada parte da tela monta sozinha: se uma falhar, as outras aparecem e o erro fica à vista
+    [
+      ["a migração", function () { montarMigracao(sitesAdmin); }],
+      ["os sites", function () {
+        var equipe = sitesAdmin.reduce(function (t, b) { return t + (b.equipe || []).length; }, 0);
+        $("resumoAdmin").textContent = sitesAdmin.length + " site(s) · " + equipe + " barbeiro(s) ativo(s)";
+        P.trocar($("listaSites"), sitesAdmin.length ? sitesAdmin.map(cartaoSite) : P.vazio("🌐", "Nenhum site ainda."));
+      }],
+      ["os interessados", function () { mostrarLeads(d.leads || []); }],
+      ["os formulários", function () { mostrarFormularios(d.formularios || []); }],
+    ].forEach(function (parte) {
+      try { parte[1](); } catch (e) { console.error(e); P.toast("Não consegui mostrar " + parte[0] + ": " + e.message, "erro"); }
+    });
   }
 
-  // ---------- migração do Booksy (lib/migracao.js e coletor-booksy.js) ----------
-  // O favorito leva o código de uso da coleta e carrega o coletor na página do Booksy, onde a pessoa está logada
+  // ---------- migração de outro aplicativo (lib/migracao.js e o coletor de cada aplicativo) ----------
+  // O favorito leva o código de uso da coleta e carrega o coletor na página do aplicativo, onde a pessoa está logada.
+  // Cada aplicativo tem o seu coletor; por enquanto, só o Booksy.
+  var ORIGENS_MIGRACAO = {
+    booksy: {
+      nome: "Booksy", coletor: "/coletor-booksy.js?v=6", site: "o Booksy Biz (booksy.com/pro)",
+      texto: "Traz os dados de uma barbearia que usa o Booksy: clientes (com WhatsApp e última visita), barbeiros, serviços com preço, produtos com estoque, os agendamentos dos próximos 90 dias, os bloqueios e o histórico de atendimentos. O coletor usa o Booksy já aberto e logado no navegador: a senha do Booksy não passa pelo barbeirotop e nada muda no Booksy. Rodar de novo traz só o que é novo, sem duplicar, e o histórico vem só a partir da última coleta.",
+    },
+  };
+  function origemMigracao() { return ORIGENS_MIGRACAO[$("migOrigem").value] || ORIGENS_MIGRACAO.booksy; }
   function montarMigracao(lista) {
-    P.trocar($("migBarbearia"), [h("option", { value: "", texto: "Escolha a barbearia" })].concat(lista.map(function (b) { return h("option", { value: b.id, texto: b.nome }); })));
+    P.trocar($("migOrigem"), Object.keys(ORIGENS_MIGRACAO).map(function (k) { return h("option", { value: k, texto: ORIGENS_MIGRACAO[k].nome }); }));
+    $("migTexto").textContent = origemMigracao().texto;
+    P.trocar($("migBarbearia"), [h("option", { value: "", texto: lista.length ? "Escolha a barbearia" : "Nenhuma barbearia cadastrada" })].concat(lista.map(function (b) { return h("option", { value: b.id, texto: b.nome }); })));
   }
+  $("migOrigem").onchange = function () { $("migTexto").textContent = origemMigracao().texto; P.limpar($("migResultado")); };
   function codigoDoColetor(j) {
     var api = String(j.api || location.origin).replace(/[^a-zA-Z0-9:/._-]/g, "");
-    return "javascript:(function(){window.__BIO_MIGRACAO={token:'" + String(j.token).replace(/[^0-9a-f]/g, "") + "',api:'" + api + "'};var s=document.createElement('script');s.src='" + api + "/coletor-booksy.js?v=5';document.body.appendChild(s);})();";
+    var o = ORIGENS_MIGRACAO[j.origem] || ORIGENS_MIGRACAO.booksy;
+    // Coleta de novo: o histórico vem só a partir desta data (o servidor calcula pela última coleta)
+    var desde = /^\d{4}-\d{2}-\d{2}$/.test(String(j.historicoDesde || "")) ? String(j.historicoDesde) : "";
+    return "javascript:(function(){window.__BIO_MIGRACAO={token:'" + String(j.token).replace(/[^0-9a-f]/g, "") + "',api:'" + api + "'" + (desde ? ",desde:'" + desde + "'" : "") + "};var s=document.createElement('script');s.src='" + api + o.coletor + "';document.body.appendChild(s);})();";
   }
   $("migGerar").onclick = function () {
     var id = $("migBarbearia").value;
     if (!id) { P.toast("Escolha a barbearia que recebe os dados.", "erro"); return; }
-    P.acao($("migGerar"), P.api("/api/barbearia", { corpo: { acao: "migracao-criar", barbeariaId: id } }).then(mostrarColetor).catch(function (e) { P.toast(e.message, "erro"); }));
+    P.acao($("migGerar"), P.api("/api/barbearia", { corpo: { acao: "migracao-criar", barbeariaId: id, origem: $("migOrigem").value || "booksy" } }).then(mostrarColetor).catch(function (e) { P.toast(e.message, "erro"); }));
   };
   function mostrarColetor(j) {
+    var o = ORIGENS_MIGRACAO[j.origem] || ORIGENS_MIGRACAO.booksy;
     var codigo = codigoDoColetor(j);
-    var favorito = h("a", { class: "botao principal", href: codigo, title: "Arraste para a barra de favoritos" }, [P.icone("baixar"), "Coletor Booksy · " + j.barbearia.nome]);
-    favorito.addEventListener("click", function (e) { e.preventDefault(); P.toast("Arraste este botão para a barra de favoritos e toque nele com o Booksy aberto.", "info"); });
+    var favorito = h("a", { class: "botao principal", href: codigo, title: "Arraste para a barra de favoritos" }, [P.icone("baixar"), "Coletor " + o.nome + " · " + j.barbearia.nome]);
+    favorito.addEventListener("click", function (e) { e.preventDefault(); P.toast("Arraste este botão para a barra de favoritos e toque nele com o " + o.nome + " aberto.", "info"); });
     var ate = new Date(j.expiraEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     var resumo = h("div");
     P.trocar($("migResultado"), [
       h("ol", { class: "mini-lista passos" }, [
         h("li", { texto: "No computador, arraste o botão abaixo para a barra de favoritos do navegador." }),
-        h("li", { texto: "Abra o Booksy Biz (booksy.com/pro) já logado na conta da " + j.barbearia.nome + "." }),
-        h("li", { texto: "Toque no favorito. O coletor mostra o andamento no canto da tela e manda tudo para cá em 1 ou 2 minutos." }),
+        h("li", { texto: "Abra " + o.site + " já logado na conta da " + j.barbearia.nome + "." }),
+        h("li", { texto: "Toque no favorito. O coletor mostra o andamento no canto da tela e manda tudo para cá em 1 ou 2 minutos." + (j.historicoDesde ? " Esta barbearia já foi migrada: o histórico vem só a partir de " + j.historicoDesde.split("-").reverse().join("/") + "." : "") }),
       ]),
       h("div", { class: "linha" }, [
         favorito,

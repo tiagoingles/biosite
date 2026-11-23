@@ -65,7 +65,7 @@ module.exports = async (req, res) => {
       const barbeariaId = String(b.barbeariaId || "");
       if (!UUID.test(barbeariaId)) return res.status(400).json({ message: "Escolha a barbearia." });
       if (b.acao === "migracao-ultima") return res.status(200).json(await migracao.ultima(barbeariaId));
-      const r = await migracao.criar({ barbeariaId, userId: u.id });
+      const r = await migracao.criar({ barbeariaId, userId: u.id, origem: String(b.origem || "booksy") });
       return res.status(201).json({ ...r, api: origemDo(req) });
     }
 

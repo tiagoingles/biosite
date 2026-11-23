@@ -3,7 +3,8 @@
 // navegador: só lê (GET) os clientes, a equipe, os serviços, os produtos e a agenda dos próximos 90 dias, e manda
 // tudo para o barbeirotop. Depois, o histórico de atendimentos (um ano por vez), que entra marcado como do
 // aplicativo anterior. A senha do Booksy não é usada nem guardada, e nada é alterado no Booksy.
-// __BIO_MIGRACAO = { token, api, so? }: so = "historico" manda só o histórico (o resto já veio antes).
+// __BIO_MIGRACAO = { token, api, so?, desde? }: so = "historico" manda só o histórico (o resto já veio antes);
+// desde = AAAA-MM-DD (barbearia já migrada): o histórico vem só a partir dessa data.
 (function () {
   "use strict";
   var M = window.__BIO_MIGRACAO || {};
@@ -181,14 +182,20 @@
   // Histórico: atendimentos que já aconteceram (atendido ou não compareceu), um ano por vez, até ontem. No
   // barbeirotop eles ficam marcados como do aplicativo anterior, fora da agenda e do financeiro.
   var ANO_INICIO = 2016;
+  // Coleta de novo (M.desde, calculado pelo barbeirotop a partir da última coleta): o histórico vem só a partir
+  // dessa data, em vez de desde 2016. O que já entrou não duplica.
+  var DESDE = /^\d{4}-\d{2}-\d{2}$/.test(String(M.desde || "")) ? String(M.desde) : "";
   async function historico(ddd, equipe) {
     var hoje = new Date(), ontem = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1);
-    var total = { lidos: 0, novos: 0, jaEstavam: 0, semCliente: 0 }, parte = 0, anos = ontem.getFullYear() - ANO_INICIO + 1;
-    for (var ano = ANO_INICIO; ano <= ontem.getFullYear(); ano++) {
-      var pct = 93 + 6 * ((ano - ANO_INICIO) / anos);
-      aviso("Lendo o histórico de " + ano + "…", pct);
+    var inicio = DESDE ? Number(DESDE.slice(0, 4)) : ANO_INICIO;
+    var total = { lidos: 0, novos: 0, jaEstavam: 0, semCliente: 0 }, parte = 0, anos = Math.max(1, ontem.getFullYear() - inicio + 1);
+    for (var ano = inicio; ano <= ontem.getFullYear(); ano++) {
+      var pct = 93 + 6 * ((ano - inicio) / anos);
+      var comeco = DESDE && ano === inicio ? DESDE : ano + "-01-01";
       var fim = ano === ontem.getFullYear() ? diaLocal(ontem) : ano + "-12-31";
-      var j = await ler("calendar?start_date=" + ano + "-01-01&end_date=" + fim + "&include_unconfirmed=true&version=3&resources_per_page=50");
+      if (comeco > fim) continue;
+      aviso("Lendo o histórico de " + ano + "…", pct);
+      var j = await ler("calendar?start_date=" + comeco + "&end_date=" + fim + "&include_unconfirmed=true&version=3&resources_per_page=50");
       var lista = [];
       Object.keys(j.bookings || {}).forEach(function (id) {
         var b = j.bookings[id] || {}, c = b.customer || {}, s = b.service || {};

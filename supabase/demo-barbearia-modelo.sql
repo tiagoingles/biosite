@@ -19,8 +19,9 @@ begin
     raise exception 'A Barbearia Modelo já existe: nada foi feito.';
   end if;
 
-  insert into barbearias (nome, slug, confirmacao_automatica, protese_ativa, sinal)
-  values ('Barbearia Modelo', 'barbearia-modelo', false, true, '{}'::jsonb) returning id into v_b;
+  -- whatsapp_premium (fase 33): a Modelo é onde o WhatsApp automático fica liberado para os testes
+  insert into barbearias (nome, slug, confirmacao_automatica, protese_ativa, sinal, whatsapp_premium)
+  values ('Barbearia Modelo', 'barbearia-modelo', false, true, '{}'::jsonb, true) returning id into v_b;
 
   -- Equipe (o dono também atende) com a comissão de cada um
   insert into profissionais (barbearia_id, nome, comissao_pct) values (v_b, 'Carlos', 0) returning id into v_carlos;

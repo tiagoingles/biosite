@@ -82,7 +82,7 @@ function rotasDoPremium(extra = []) {
   return [
     ...extra,
     ...A.rotasDeConta(),
-    { padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { corpo: [{ id: UUIDS.barbearia, slug: "gw-teste", nome: "GW" }] } },
+    { padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: { corpo: [{ id: UUIDS.barbearia, slug: "gw-teste", nome: "GW", whatsapp_premium: true }] } },
     { padrao: /\/rest\/v1\/clientes\?barbearia_id=eq\./, resposta: { corpo: [{ id: "dddddddd-0000-4000-8000-000000000001", nome: "Ana Souza", telefone: "81999990001", cpf: null, nascimento: null, observacao: "", profissional_id: null, origem: "site", ultima_visita_externa: null, aceita_novidades: true, aceite_em: "2026-10-01T12:00:00Z", aceite_origem: "site", saiu_em: null, criado_em: "2026-08-01T12:00:00Z" }] } },
     { padrao: /\/rest\/v1\/pedidos\?barbearia_id=eq\.[^&]+&cliente_id=not\.is\.null/, resposta: { corpo: [{ cliente_id: "dddddddd-0000-4000-8000-000000000001", dia: A.daquiA(-40), status: "realizado", valor: "40", profissional_id: UUIDS.bruno }] } },
     { padrao: /\/rest\/v1\/pedidos\?barbearia_id=eq\.[^&]+&dia=gte\./, resposta: { corpo: [{ id: UUIDS.pedido, dia: A.daquiA(2), horario: "10:00:00", duracao_min: 30, cliente: "Caio", servico: "Corte", profissional: "Bruno", status: "confirmado", cliente_id: "x", clientes: { nome: "Caio Reis", telefone: "81999990003" } }] } },
@@ -148,4 +148,17 @@ test("tela do Premium no painel do dono e migração da fase 15 só acrescenta",
   assert.match(sql, /create table if not exists public\.whatsapp_automacoes/);
   assert.match(sql, /revoke all on public\.whatsapp_automacoes from anon, authenticated/);
   assert.ok(!/^\s*(drop|delete|truncate|update)\b/m.test(sql));
+});
+
+// Fase 33: o WhatsApp automático é só do Premium (por enquanto só a Barbearia Modelo)
+test("WhatsApp automático só com o Premium liberado: sem ele o cartão some e nada é salvo", async () => {
+  const automacoes = require("../lib/automacoes");
+  A.instalarFetch([{ padrao: /rest[/]v1[/]barbearias[?]id=eq[.]/, resposta: { corpo: [{ whatsapp_premium: false }] } }]);
+  const ctx = { barbeariaId: UUIDS.barbearia };
+  assert.deepEqual(await automacoes.dados(ctx, {}, async () => ({ clientes: [] })), { disponivel: false });
+  const res = { statusCode: 0, body: null, status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; return this; } };
+  await automacoes.salvar(res, ctx, { tipo: "lembrete" });
+  assert.equal(res.statusCode, 403, "não salva automação fora do Premium");
+  const js = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "painel-premium.js"), "utf8");
+  assert.ok(js.includes("el.raiz.hidden = j.disponivel === false"), "o painel esconde o cartão");
 });

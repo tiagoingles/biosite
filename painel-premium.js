@@ -32,12 +32,18 @@
       h("div", { class: "cartao-topo" }, [h("h2", null, [P.icone("raio"), "WhatsApp automático"]), h("span", { class: "selo selo-clube", texto: "Premium · teste" })]),
       el.resumo, el.lista, el.rodape,
     ]);
+    // Só aparece na barbearia com o Premium liberado (hoje, só a Modelo): o servidor diz no carregar
+    el.raiz.hidden = true;
     return el.raiz;
   }
 
   function carregar() {
     if (!el.raiz) return Promise.resolve();
-    return api().then(function (j) { dados = j; desenhar(); }).catch(function (e) { P.trocar(el.resumo, h("p", { class: "nota p", texto: e.message })); });
+    return api().then(function (j) {
+      el.raiz.hidden = j.disponivel === false;
+      if (j.disponivel === false) return;
+      dados = j; desenhar();
+    }).catch(function (e) { P.trocar(el.resumo, h("p", { class: "nota p", texto: e.message })); });
   }
 
   function desenhar() {

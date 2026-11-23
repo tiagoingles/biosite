@@ -120,4 +120,10 @@ const { hojeBr, somaDias } = require("../lib/horarios");
 const hoje = () => hojeBr();
 const daquiA = (n) => somaDias(hojeBr(), n);
 
-module.exports = { UUIDS, TOKENS, instalarFetch, rotasDeConta, req, res, chamar, resposta, hoje, daquiA };
+// Aba Clientes do painel: o núcleo (painel-clientes.js) e as partes dela, lidos como um texto só
+const ABA_CLIENTES = ["painel-clientes.js", "painel-clientes-ficha.js", "painel-clientes-cadastro.js", "painel-clientes-planilha.js", "painel-clientes-campanhas.js"];
+function lerAbaClientes() {
+  return ABA_CLIENTES.map((f) => require("fs").readFileSync(require("path").join(__dirname, "..", f), "utf8")).join("\n");
+}
+
+module.exports = { UUIDS, TOKENS, instalarFetch, rotasDeConta, req, res, chamar, resposta, hoje, daquiA, ABA_CLIENTES, lerAbaClientes };

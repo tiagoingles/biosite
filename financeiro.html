@@ -270,6 +270,18 @@ button.perigo{color:var(--erro)}
         d.appendChild(el("b", null, brl(linha[1])));
         c.appendChild(d);
       });
+      // Como entrou: atendimentos e produtos por forma de pagamento, quando já há forma registrada
+      var pf = p.porForma;
+      if (pf && (pf.dinheiro || pf.pix || pf.debito || pf.credito)) {
+        c.appendChild(el("span", "note", "Como entrou (atendimentos e produtos)"));
+        [["dinheiro", "Dinheiro"], ["pix", "Pix"], ["debito", "Débito"], ["credito", "Crédito"], ["sem", "Sem forma informada"]].forEach(function (f) {
+          if (!pf[f[0]]) return;
+          var d = el("div", "detalhe");
+          d.appendChild(el("span", null, f[1]));
+          d.appendChild(el("b", null, brl(pf[f[0]])));
+          c.appendChild(d);
+        });
+      }
       if (p.semPreco) c.appendChild(el("span", "aviso-card", p.semPreco + " atendimento(s) sem preço"));
       box.appendChild(c);
     });
@@ -374,8 +386,9 @@ button.perigo{color:var(--erro)}
     ocupado(botao, apiProdutos({ acao: "estoque", id: p.id, quantidade: n })).then(function () { carregarProdutos(); })
       .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
   }
-  function venderUm(p, botao) {
-    ocupado(botao, apiProdutos({ acao: "vender", id: p.id, quantidade: 1 })).then(function (r) {
+  function venderUm(p, botao, forma) {
+    if (!forma) { msg("msgProdutos", "Escolha como o cliente pagou (" + p.nome + ") antes de vender.", "erro"); return; }
+    ocupado(botao, apiProdutos({ acao: "vender", id: p.id, quantidade: 1, forma_pagamento: forma })).then(function (r) {
       msg("msgProdutos", "Venda de " + p.nome + " registrada." + (r.baixo ? " Estoque baixo: hora de repor." : ""), r.baixo ? "" : "ok");
       carregar();
     }).catch(function (err) { msg("msgProdutos", err.message, "erro"); });
@@ -407,11 +420,13 @@ button.perigo{color:var(--erro)}
       var qtd = el("b", "qtd", String(p.estoque));
       var mais = el("button", null, "+"); mais.type = "button"; mais.setAttribute("aria-label", "Repor 1 de " + p.nome);
       var vender = el("button", "main", "Vender 1"); vender.type = "button";
+      var forma = el("select"); forma.setAttribute("aria-label", "Forma de pagamento de " + p.nome);
+      [["", "Pagou como?"], ["dinheiro", "Dinheiro"], ["pix", "Pix"], ["debito", "Débito"], ["credito", "Crédito"]].forEach(function (f) { var o = el("option", null, f[1]); o.value = f[0]; forma.appendChild(o); });
       menos.onclick = function () { mexer(p, -1, menos); };
       mais.onclick = function () { mexer(p, 1, mais); };
-      vender.onclick = function () { venderUm(p, vender); };
-      vender.disabled = !p.ativo;
-      [menos, qtd, mais, vender].forEach(function (x) { linha.appendChild(x); });
+      vender.onclick = function () { venderUm(p, vender, forma.value); };
+      vender.disabled = forma.disabled = !p.ativo;
+      [menos, qtd, mais, forma, vender].forEach(function (x) { linha.appendChild(x); });
       item.appendChild(linha);
       // Repor várias de uma vez (com o preço de compra novo) e mudar os preços
       var det = document.createElement("details");
@@ -438,7 +453,14 @@ button.perigo{color:var(--erro)}
           .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
       };
       var l2 = el("div", "linha"); [ev.label, ec.label, em.label].forEach(function (x) { l2.appendChild(x); });
-      var l3 = el("div", "linha"); [bSalvar, bAtivo].forEach(function (x) { l3.appendChild(x); });
+      // Apagar: só produto que nunca foi vendido (o servidor confere; vendido só desativa)
+      var bApagar = el("button", "perigo", "Apagar"); bApagar.type = "button";
+      bApagar.onclick = function () {
+        if (!confirm("Apagar \"" + p.nome + "\"? Só dá para apagar produto que nunca foi vendido.")) return;
+        ocupado(bApagar, apiProdutos({ acao: "apagar", id: p.id })).then(function () { msg("msgProdutos", p.nome + " apagado.", "ok"); carregarProdutos(); })
+          .catch(function (err) { msg("msgProdutos", err.message, "erro"); });
+      };
+      var l3 = el("div", "linha"); [bSalvar, bAtivo, bApagar].forEach(function (x) { l3.appendChild(x); });
       [l1, l2, l3].forEach(function (x) { x.style.marginTop = "8px"; det.appendChild(x); });
       item.appendChild(det);
       box.appendChild(item);

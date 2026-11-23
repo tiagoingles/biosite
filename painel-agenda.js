@@ -33,7 +33,7 @@
       botao(primarias, "Recusar", "perigo", "x", function (b) { decidir(p, "recusado", ctx, b); });
     }
     if (encerravel) {
-      botao(primarias, "Realizado", "principal", "check", function (b) { encerrar(p, { status: "realizado" }, ctx, b); });
+      botao(primarias, "Realizado", "principal", "check", function (b) { realizado(p, ctx, b); });
       botao(primarias, "Não realizado", "", null, function (b) { naoRealizado(p, ctx, b); });
     }
     // Gestão de atrasos: no atendimento de hoje, "Chegou" para o aviso de atraso; atrasado, o WhatsApp vai pronto
@@ -62,6 +62,7 @@
       opcoes.mostrarBarbeiro && p.profissional ? h("span", { texto: "com " + p.profissional }) : null,
       h("span", { texto: P.duracao(p.duracao_min || 30) }),
       h("span", { texto: clube ? (Number(p.valor) ? P.brl(p.valor) + " extra" : "pago no clube") : p.valor == null ? "sem preço" : P.brl(p.valor) }),
+      p.status === "realizado" && p.forma_pagamento ? h("span", { texto: P.formaNome(p.forma_pagamento) }) : null,
       clube && p.comissao_valor != null ? h("span", { texto: "comissão " + P.brl(p.comissao_valor) }) : null,
       p.codigo ? h("span", { texto: "código " + p.codigo }) : null,
       p.chegou_em ? h("span", { class: "chegou", texto: "chegou " + horaBr(p.chegou_em) }) : atraso >= 5 ? h("span", { class: "atrasado", texto: atraso + " min atrasado" }) : null,
@@ -133,14 +134,16 @@
       }
       var sel = h("select", { "aria-label": "Produto" }, ativos.map(function (p) { return h("option", { value: p.id, texto: p.nome + " · " + P.brl(p.preco) + (p.estoque <= 0 ? " · sem estoque" : " · " + p.estoque + " em estoque") }); }));
       var qtd = h("input", { type: "number", min: "1", max: "100", step: "1", value: "1", inputmode: "numeric" });
+      var forma = h("select", { "aria-label": "Forma de pagamento" }, [h("option", { value: "", texto: "Escolha" })].concat(P.FORMAS.map(function (f) { return h("option", { value: f[0], texto: f[1] }); })));
       P.janela({
         titulo: "Vender produto",
-        conteudo: h("div", { class: "grade" }, [h("label", { class: "campo" }, ["Produto", sel]), h("label", { class: "campo" }, ["Quantidade", qtd]), j.hoje && j.hoje.unidades ? h("p", { class: "nota p", texto: "Hoje: " + j.hoje.unidades + " vendido(s), " + P.brl(j.hoje.bruto) + "." }) : null]),
+        validar: function () { return forma.value ? "" : "Escolha a forma de pagamento."; },
+        conteudo: h("div", { class: "grade" }, [h("label", { class: "campo" }, ["Produto", sel]), h("label", { class: "campo" }, ["Quantidade", qtd]), h("label", { class: "campo" }, ["Forma de pagamento", forma]), j.hoje && j.hoje.unidades ? h("p", { class: "nota p", texto: "Hoje: " + j.hoje.unidades + " vendido(s), " + P.brl(j.hoje.bruto) + "." }) : null]),
         acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Registrar venda", classe: "principal", valor: "ok" }],
       }).then(function (r) {
         if (r.valor !== "ok") return;
         var p = ativos.filter(function (a) { return a.id === sel.value; })[0];
-        P.api("/api/equipe?area=produtos", { corpo: { acao: "vender", id: sel.value, quantidade: Number(qtd.value) || 1 } }).then(function (x) {
+        P.api("/api/equipe?area=produtos", { corpo: { acao: "vender", id: sel.value, quantidade: Number(qtd.value) || 1, forma_pagamento: forma.value } }).then(function (x) {
           P.toast("Venda registrada" + (p ? ": " + p.nome : "") + "." + (x.baixo ? (ctx.dono ? " Estoque baixo: hora de repor." : " Estoque baixo: avise o dono.") : ""), "ok");
           if (ctx.recarregar) ctx.recarregar();
         }).catch(function (e) { P.toast(e.message, "erro"); });
@@ -244,9 +247,17 @@
     });
   }
 
+  // Realizado: um toque na forma de pagamento e encerra. Do clube sem valor extra já está pago na mensalidade.
+  function realizado(p, ctx, botao) {
+    if (p.clube_assinante_id && !Number(p.valor)) return encerrar(p, { status: "realizado" }, ctx, botao);
+    P.perguntarForma("Como o cliente pagou?", p.servico + (p.valor != null ? " · " + P.brl(p.valor) : "")).then(function (forma) {
+      if (forma) encerrar(p, { status: "realizado", forma_pagamento: forma }, ctx, botao);
+    });
+  }
+
   function encerrar(p, corpo, ctx, botao) {
     return P.acao(botao, P.api("/api/pedido", { metodo: "PATCH", corpo: Object.assign({ id: p.id }, corpo) }))
-      .then(function () { P.toast(corpo.status === "realizado" ? "Atendimento realizado. Valor lançado no financeiro." : "Registrado como não realizado.", "ok"); ctx.recarregar(); })
+      .then(function () { P.toast(corpo.status === "realizado" ? "Atendimento realizado" + (corpo.forma_pagamento ? " (" + P.formaNome(corpo.forma_pagamento) + ")" : "") + ". Valor lançado no financeiro." : "Registrado como não realizado.", "ok"); ctx.recarregar(); })
       .catch(function (e) { erro(e); ctx.recarregar(); });
   }
 
@@ -273,14 +284,18 @@
 
   function editarValor(p, ctx) {
     var campo = h("input", { name: "valor", inputmode: "decimal", placeholder: "Ex.: 40,00", value: p.valor == null ? "" : String(p.valor).replace(".", ",") });
+    // Realizado: dá para corrigir a forma de pagamento escolhida
+    var forma = p.status === "realizado" ? h("select", { "aria-label": "Forma de pagamento" }, [h("option", { value: "", texto: "Não informada" })].concat(P.FORMAS.map(function (f) { var o = h("option", { value: f[0], texto: f[1] }); if (p.forma_pagamento === f[0]) o.selected = true; return o; }))) : null;
     P.janela({
       titulo: "Valor do atendimento",
-      conteudo: h("div", { class: "grade" }, [h("label", { class: "campo" }, ["Valor em R$ (deixe vazio para tirar)", campo]), h("p", { class: "nota p", texto: "Use para desconto ou serviço extra. O valor entra no financeiro quando o atendimento é realizado." })]),
+      conteudo: h("div", { class: "grade" }, [h("label", { class: "campo" }, ["Valor em R$ (deixe vazio para tirar)", campo]), forma ? h("label", { class: "campo" }, ["Forma de pagamento", forma]) : null, h("p", { class: "nota p", texto: "Use para desconto ou serviço extra. O valor entra no financeiro quando o atendimento é realizado." })]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Salvar", classe: "principal", valor: "ok" }],
       validar: function () { var v = campo.value.trim(); return v && !/^\d{1,6}([.,]\d{1,2})?$/.test(v.replace(/\./g, "").replace(/^R\$\s*/, "")) ? "Use só números, ex.: 40,00" : ""; },
     }).then(function (r) {
       if (r.valor !== "ok") return;
-      P.api("/api/pedido", { metodo: "PATCH", corpo: { id: p.id, valor: campo.value.trim() } }).then(function () { P.toast("Valor atualizado.", "ok"); ctx.recarregar(); }).catch(erro);
+      var corpo = { id: p.id, valor: campo.value.trim() };
+      if (forma) corpo.forma_pagamento = forma.value;
+      P.api("/api/pedido", { metodo: "PATCH", corpo: corpo }).then(function () { P.toast(forma ? "Valor e pagamento atualizados." : "Valor atualizado.", "ok"); ctx.recarregar(); }).catch(erro);
     });
   }
 

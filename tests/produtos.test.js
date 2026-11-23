@@ -139,3 +139,48 @@ test("telas: Produtos e estoque no Financeiro, Vender produto nos dois painéis 
   assert.match(ler("painel-dono.html"), /Hora de repor: /);
   assert.match(ler("lib/pedidos-painel.js"), /estoqueBaixo/);
 });
+
+// Fase 31 (pedido do Manolo): forma de pagamento na venda e apagar produto que nunca foi vendido
+test("venda com forma de pagamento: vai para o movimento; forma desconhecida é recusada", async () => {
+  const chamadas = A.instalarFetch(rotas());
+  let r = await post({ acao: "vender", id: POMADA, quantidade: 1, forma_pagamento: "pix" }, "token-bruno");
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  const mov = chamadas.find((c) => c.url.includes("produto_movimentar"));
+  assert.equal(mov.corpo.p.forma_pagamento, "pix");
+  r = await post({ acao: "vender", id: POMADA, quantidade: 1, forma_pagamento: "cheque" });
+  assert.equal(r.statusCode, 400);
+});
+
+test("apagar: só o dono e só produto que nunca foi vendido; vendido pede para desativar", async () => {
+  let vendas = [{ id: "m1" }];
+  const chamadas = A.instalarFetch([
+    { metodo: "GET", padrao: /produto_movimentos[?]produto_id=eq[.]/, resposta: () => ({ corpo: vendas }) },
+    { metodo: "DELETE", padrao: /rest[/]v1[/]produtos[?]id=eq[.]/, resposta: { status: 204 } },
+    ...rotas(),
+  ]);
+  let r = await post({ acao: "apagar", id: POMADA });
+  assert.equal(r.statusCode, 409, "já vendido: fica no histórico do Financeiro");
+  assert.match(r.body.message, /Desativar/);
+  assert.ok(!chamadas.some((c) => c.metodo === "DELETE"), "não apaga produto vendido");
+  vendas = [];
+  r = await post({ acao: "apagar", id: POMADA });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  const del = chamadas.find((c) => c.metodo === "DELETE");
+  assert.ok(del.url.includes(`produtos?id=eq.${POMADA}&barbearia_id=eq.${UUIDS.barbearia}`), "só o desta barbearia");
+  assert.equal((await post({ acao: "apagar", id: POMADA }, "token-bruno")).statusCode, 403, "barbeiro não apaga");
+  assert.equal((await post({ acao: "apagar", id: OLEO })).statusCode, 404, "produto que não é desta barbearia");
+});
+
+test("financeiro por forma de pagamento: atendimentos e produtos somados por forma; sem forma vai para 'sem'", () => {
+  const hoje = "2026-11-14";
+  const r = calcularFinanceiro(hoje, {
+    pedidos: [
+      { id: "a", dia: hoje, status: "realizado", valor: 40, forma_pagamento: "pix", comissao_pct: 0, servico: "Corte" },
+      { id: "b", dia: hoje, status: "realizado", valor: 30, forma_pagamento: "dinheiro", comissao_pct: 0, servico: "Corte" },
+      { id: "c", dia: hoje, status: "realizado", valor: 25, forma_pagamento: null, comissao_pct: 0, servico: "Corte" },
+      { id: "d", dia: hoje, status: "nao_realizado", valor: 99, forma_pagamento: "credito", servico: "Corte" },
+    ],
+    vendasProdutos: [{ id: "v", quantidade: -2, preco_unit: "35.00", custo_unit: "18.00", forma_pagamento: "debito", dia: hoje }],
+  });
+  assert.deepEqual(r.resumo.dia.porForma, { dinheiro: 30, pix: 40, debito: 70, credito: 0, sem: 25 }, "não realizado não entra");
+});

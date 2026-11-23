@@ -217,6 +217,20 @@
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: rotulo || "Confirmar", classe: perigo ? "perigo" : "principal", valor: "ok" }],
     }).then(function (r) { return r.valor === "ok"; });
   };
+  // Forma de pagamento (fase 31): no atendimento realizado e na venda de produto
+  P.FORMAS = [["dinheiro", "Dinheiro"], ["pix", "Pix"], ["debito", "Débito"], ["credito", "Crédito"]];
+  P.formaNome = function (v) { var f = P.FORMAS.filter(function (x) { return x[0] === v; })[0]; return f ? f[1] : ""; };
+  // Um toque na forma: resolve com ela, ou null se voltou
+  P.perguntarForma = function (titulo, detalhe) {
+    return P.janela({
+      titulo: titulo || "Como o cliente pagou?",
+      conteudo: h("div", { class: "grade" }, [
+        detalhe ? h("p", { class: "nota p", texto: detalhe }) : null,
+        h("div", { class: "formas-pag" }, P.FORMAS.map(function (f) { return h("button", { value: f[0], class: "botao", texto: f[1] }); })),
+      ]),
+      acoes: [{ texto: "Voltar", valor: "cancelar" }],
+    }).then(function (r) { return P.formaNome(r.valor) ? r.valor : null; });
+  };
 
   // ---------- WhatsApp (sem o número do cliente, o WhatsApp pergunta para quem enviar) ----------
   // Com o telefone do cliente (só números, com DDD), abre direto a conversa dele; sem, o WhatsApp pergunta para quem

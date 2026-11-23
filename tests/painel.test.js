@@ -246,3 +246,32 @@ test("dono liga e desliga a confirmação automática; barbeiro não muda", asyn
   r = await A.chamar(eu, { metodo: "POST", token: "token-bruno", corpo: { acao: "config-barbearia", confirmacaoAutomatica: true } });
   assert.equal(r.statusCode, 403);
 });
+
+// Fase 31 (pedido do Manolo): forma de pagamento ao marcar realizado
+test("forma de pagamento: realizado grava a forma; dá para corrigir depois; forma desconhecida é recusada", async () => {
+  let atual = pedidoBase({ dia: HOJE, status: "confirmado" });
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { metodo: "GET", padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: () => ({ corpo: [atual] }) },
+    { metodo: "GET", padrao: /rest[/]v1[/]profissionais[?]id=eq[.]/, resposta: { corpo: [{ comissao_pct: 40 }] } },
+    { metodo: "PATCH", padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: (u, o, corpo) => ({ corpo: [{ ...atual, ...corpo }] }) },
+  ]);
+  let r = await A.chamar(pedido, { metodo: "PATCH", corpo: { id: UUIDS.pedido, status: "realizado", forma_pagamento: "pix" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  let patch = chamadas.filter((c) => c.metodo === "PATCH").pop();
+  assert.equal(patch.corpo.forma_pagamento, "pix");
+  atual = pedidoBase({ dia: HOJE, status: "realizado", forma_pagamento: "pix" });
+  r = await A.chamar(pedido, { metodo: "PATCH", corpo: { id: UUIDS.pedido, forma_pagamento: "debito" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  patch = chamadas.filter((c) => c.metodo === "PATCH").pop();
+  assert.deepEqual(patch.corpo, { forma_pagamento: "debito" }, "corrige só a forma, sem mexer no valor");
+  r = await A.chamar(pedido, { metodo: "PATCH", corpo: { id: UUIDS.pedido, status: "realizado", forma_pagamento: "fiado" }, token: "token-dono" });
+  assert.equal(r.statusCode, 400);
+  const fs = require("node:fs");
+  const agenda = fs.readFileSync(require("node:path").join(__dirname, "..", "painel-agenda.js"), "utf8");
+  assert.ok(agenda.includes('function (b) { realizado(p, ctx, b); }'), "o botão Realizado passa pela pergunta da forma");
+  assert.ok(agenda.includes('P.perguntarForma("Como o cliente pagou?"'));
+  assert.ok(agenda.includes('forma_pagamento: forma.value'), "a venda no balcão manda a forma");
+  const fin = fs.readFileSync(require("node:path").join(__dirname, "..", "financeiro.html"), "utf8");
+  assert.ok(fin.includes('acao: "apagar"') && fin.includes("Como entrou"), "Financeiro: apagar produto e entradas por forma");
+});

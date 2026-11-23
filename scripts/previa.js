@@ -20,10 +20,13 @@ let googleAtivo = false; // como em produção: login com Google desligado no Su
 let seq = 1;
 // Confirmação de presença da prévia (/barbearia-modelo?confirmar=<id>.<assinatura>)
 const presencaPrev = { status: "confirmado", resposta: "", anterior: null, dia: null, horario: "15:00" };
+// Caixa do dia (lib/caixa.js): estado em memória
+let caixaPrev = null;
+const caixaMovPrev = [];
 const LINK_PREVIA = "/gw-barbearia?confirmar=8c484a0d-d00c-4915-971c-39f2a6c1e1c9.Qf4Fh7ASDkUGPZZY";
 const P = (extra) => ({ id: "p" + seq++, codigo: "K" + (100 + seq), servico: "Corte degradê", profissional: "Bruno", profissional_id: "b1", dia: hoje, horario: "10:00", horario_fim: "10:40", duracao_min: 40, cliente: "Carlos Souza", observacao: "", status: "confirmado", motivo: null, valor: 40, comissao_pct: null, simulado: false, ...extra });
 let pedidos = [
-  P({ horario: "09:00", horario_fim: "09:30", duracao_min: 30, servico: "Corte social", cliente: "João Pedro", status: "realizado", valor: 35, comissao_pct: 40 }),
+  P({ horario: "09:00", horario_fim: "09:30", duracao_min: 30, servico: "Corte social", cliente: "João Pedro", status: "realizado", valor: 35, comissao_pct: 40, forma_pagamento: "dinheiro" }),
   P({ horario: "10:00", cliente: "Carlos Souza", status: "confirmado", cliente_id: "c9", clientes: { nome: "Carlos Souza", telefone: "81999990009" } }),
   P({ horario: "11:30", horario_fim: "12:20", duracao_min: 50, servico: "Corte + barba", cliente: "Rafael Lima", status: "avulso", valor: 60, profissional: "Rafael", profissional_id: "b2" }),
   P({ horario: "14:00", horario_fim: "14:30", duracao_min: 30, servico: "Barba tradicional", cliente: "Marcos Vinícius", status: "pendente", valor: 25, observacao: "Prefiro máquina 2 nas laterais" }),
@@ -508,6 +511,24 @@ const servidor = http.createServer(async (req, res) => {
           return json(res, 200, { lembrete_em: a.lembrete_em, lembrete_pago_ate: a.lembrete_pago_ate });
         }
         return json(res, 400, { message: "Ação desconhecida." });
+      }
+      if (q.area === "caixa") {
+        const { calcularCaixa } = require("../lib/caixa");
+        const num = (v) => Number(String(v == null ? "" : v).replace(/[.]/g, "").replace(",", ".")) || 0;
+        const doDia = pedidos.filter((p) => p.dia === hoje);
+        if (metodo === "POST") {
+          if (b.acao === "abrir") caixaPrev = { id: "cx1", dia: hoje, troco: num(b.troco), aberto_em: new Date().toISOString(), fechado_em: null, observacao: "" };
+          if (b.acao === "movimento") caixaMovPrev.push({ id: "cm" + caixaMovPrev.length, tipo: b.tipo, valor: num(b.valor), motivo: b.motivo || "", criado_em: new Date().toISOString() });
+          if (b.acao === "reabrir") caixaPrev = { ...caixaPrev, fechado_em: null, contado: null, esperado: null, resumo: null };
+          if (b.acao === "fechar") {
+            const c = calcularCaixa(caixaPrev, caixaMovPrev, doDia, []);
+            caixaPrev = { ...caixaPrev, fechado_em: new Date().toISOString(), contado: num(b.contado), esperado: c.esperado, resumo: { entradas: c.entradas, total: c.total, troco: c.troco, retiradas: c.retiradas, reforcos: c.reforcos }, observacao: b.observacao || "" };
+            return json(res, 200, { esperado: c.esperado, contado: num(b.contado), diferenca: Math.round((num(b.contado) - c.esperado) * 100) / 100 });
+          }
+          return json(res, 200, { ok: true });
+        }
+        const c = calcularCaixa(caixaPrev, caixaMovPrev, doDia, []);
+        return json(res, 200, { dia: hoje, hoje, caixa: caixaPrev, movimentos: caixaMovPrev, ...c, pendentes: doDia.filter((p) => p.status === "confirmado" || p.status === "avulso").length, abertoAntes: null, historico: [{ dia: somaDias(hoje, -1), contado: 230, esperado: 230, diferenca: 0 }] });
       }
       if (q.area === "financeiro") {
         if (metodo === "GET") return json(res, 200, { ...financeiroPrevia(), plataforma: false });

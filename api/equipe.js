@@ -24,6 +24,7 @@ const clube = require("../lib/clube");
 const clientes = require("../lib/clientes");
 const produtos = require("../lib/produtos");
 const protese = require("../lib/protese");
+const caixa = require("../lib/caixa");
 
 const DIAS_CONVITE = 7;
 // Foto do barbeiro: JPG, PNG ou WebP até 5 MB, no bucket público "midia"
@@ -49,6 +50,7 @@ module.exports = async (req, res) => {
   if (req.query && req.query.area === "clientes") return clientes.area(req, res);
   if (req.query && req.query.area === "produtos") return produtos.area(req, res);
   if (req.query && req.query.area === "protese") return protese.area(req, res);
+  if (req.query && req.query.area === "caixa") return caixa.area(req, res);
   try {
     const u = await usuarioDaRequisicao(req);
     if (!u) return res.status(401).json({ message: "Entre na sua conta para continuar." });

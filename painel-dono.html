@@ -1135,6 +1135,7 @@
     P.trocar($("maisGrade"), [
       grupoMais("Gestão", [
         tile("grafico", "Financeiro", "Faturamento e gastos", { href: P.link("financeiro.html") }),
+        tile("dinheiro", "Caixa do dia", "Abrir e fechar a gaveta", { href: P.link("financeiro.html") + "#caixa" }),
         tile("equipe", "Equipe", "Agendas e convites", { href: "#equipe" }),
         tile("clube", "Clube", lembretesDoClube ? lembretesDoClube + " para lembrar" : "Planos e assinantes", { href: "#clube" }, lembretesDoClube ? "erro" : "info"),
         tile("dinheiro", "Produtos", "Estoque e vendas", { href: P.link("financeiro.html") + "#produtos" }, "ok"),

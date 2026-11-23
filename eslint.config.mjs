@@ -40,7 +40,7 @@ export default defineConfig([
   {
     // O gerador monta as páginas das barbearias: bioRuntime, agendaRuntime e appRuntime são funções
     // serializadas para dentro do HTML e rodam no navegador, não no Node.
-    files: ["lib/gerador.js"],
+    files: ["lib/gerador.js", "lib/gerador-*.js"],
     languageOptions: {
       globals: { ...globals.browser },
     },

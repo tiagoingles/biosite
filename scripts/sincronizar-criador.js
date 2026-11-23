@@ -1,6 +1,6 @@
 // Mantém o Criador (criador.html) igual aos arquivos do servidor:
-// - funções do gerador do site (lib/gerador.js): bioRuntime, agendaRuntime, as do app (appRuntime, nomeCurto,
-//   manifestJSON, desenharIcone) e o corpo de bioHTML;
+// - funções do gerador do site (lib/gerador.js e as partes lib/gerador-*.js): bioRuntime, agendaRuntime,
+//   bioEstilos, as do app (appRuntime, nomeCurto, manifestJSON, desenharIcone) e o corpo de bioHTML;
 // - versão do gerador (GERADOR_VERSAO), que impede um Criador antigo de publicar
 //   (o Criador manda a versão em cada gravação e o servidor recusa versão diferente).
 // Uso: node scripts/sincronizar-criador.js        (grava)
@@ -27,11 +27,13 @@ function faixaDaFuncao(src, nome) {
 }
 
 function sincronizado(criador) {
-  const ger = ler("lib/gerador.js");
+  // O gerador e as partes dele (scripts do site e estilos) lidos como um texto só
+  const ger = ["lib/gerador.js", "lib/gerador-pedido.js", "lib/gerador-agenda.js", "lib/gerador-app.js", "lib/gerador-estilos.js"]
+    .map(ler).join("\n");
   let c = criador;
 
   // Funções inteiras (as do app na tela do celular, gerador v12, entram antes de bioRuntime se faltarem)
-  for (const nome of ["bioRuntime", "agendaRuntime", "appRuntime", "nomeCurto", "manifestJSON", "desenharIcone"]) {
+  for (const nome of ["bioRuntime", "agendaRuntime", "appRuntime", "nomeCurto", "manifestJSON", "desenharIcone", "bioEstilos"]) {
     const g = faixaDaFuncao(ger, nome);
     if (c.indexOf("function " + nome + "(") < 0) {
       const i = c.indexOf("function bioRuntime(");

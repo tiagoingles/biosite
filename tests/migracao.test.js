@@ -510,7 +510,7 @@ test("ficha do cliente: o histórico do Booksy vem separado, marcado como do apl
   assert.equal(r.body.anteriores.length, 2);
   assert.deepEqual(r.body.anteriores[1], { dia: "2025-03-01", horario: "15:00", servico: "Barba simples", profissional: "", status: "faltou", origem: "booksy" });
   assert.deepEqual(r.body.visitas, [], "não se mistura com as visitas do barbeirotop");
-  const tela = ler("painel-clientes.js");
+  const tela = require("./ajuda").lerAbaClientes();
   assert.match(tela, /\(aplicativo anterior\)/);
   assert.match(tela, /não entram no financeiro nem nas comissões/);
   assert.match(tela, /"veio do " \+ APP_ANTERIOR\[c\.veioDe\]/);

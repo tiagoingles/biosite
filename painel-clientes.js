@@ -102,18 +102,18 @@
     el.mais = h("button", { type: "button", class: "botao p", hidden: true, texto: "Mostrar mais" });
     el.mais.onclick = function () { limite += LOTE; desenharLista(); };
     var bNovo = h("button", { type: "button", class: "botao p principal" }, [P.icone("mais_um"), "Novo cliente"]);
-    bNovo.onclick = function () { formulario(null); };
+    bNovo.onclick = function () { Aba.formulario(null); };
     var bConvite = h("button", { type: "button", class: "botao p" }, [P.icone("qr"), "Cadastro pelo celular"]);
-    bConvite.onclick = function () { convite({}); };
+    bConvite.onclick = function () { Aba.convite({}); };
     var ferramentas = [bConvite];
     if (op.dono) {
       var bImportar = h("button", { type: "button", class: "botao p" }, [P.icone("enviar"), "Importar planilha"]);
-      bImportar.onclick = importar;
+      bImportar.onclick = Aba.importar;
       var bExportar = h("button", { type: "button", class: "botao p" }, [P.icone("baixar"), "Exportar"]);
-      bExportar.onclick = exportar;
+      bExportar.onclick = Aba.exportar;
       ferramentas.push(bImportar, bExportar);
       el.avisoTodos = h("button", { type: "button", class: "botao p", hidden: true });
-      el.avisoTodos.onclick = function () { avisoNoCelular({ segmento: "todos", n: el.avisoTodos._n || 0 }); };
+      el.avisoTodos.onclick = function () { Aba.avisoNoCelular({ segmento: "todos", n: el.avisoTodos._n || 0 }); };
       ferramentas.unshift(el.avisoTodos);
     }
     el.campanhas = h("div", { class: "lista" });
@@ -196,7 +196,7 @@
       return b;
     }));
     desenharLista();
-    if (op.dono) carregarCampanhas();
+    if (op.dono) Aba.carregarCampanhas();
   }
 
   function filtrados() {
@@ -221,13 +221,13 @@
       var acoes = [h("span", { texto: EXPLICA[seg] })];
       if (op.dono && comZap.length) {
         var b = h("button", { type: "button", class: "botao p whats" }, [P.icone("whats"), "Mandar mensagem (" + comZap.length + ")"]);
-        b.onclick = function () { campanha(seg, comZap); };
+        b.onclick = function () { Aba.campanha(seg, comZap); };
         acoes.push(b);
       }
       var comApp = comAppNoGrupo(lista);
       if (op.dono && comApp.length) {
         var bApp = h("button", { type: "button", class: "botao p" }, [P.icone("sino"), "Aviso no celular (" + comApp.length + ")"]);
-        bApp.onclick = function () { avisoNoCelular({ segmento: seg, n: comApp.length }); };
+        bApp.onclick = function () { Aba.avisoNoCelular({ segmento: seg, n: comApp.length }); };
         acoes.push(bApp);
       }
       faixa = h("div", { class: "aviso-faixa info" }, acoes);
@@ -263,9 +263,9 @@
     var bZap = c.telefone ? h("button", { type: "button", class: "botao p whats" }, [P.icone("whats"), "WhatsApp"]) : null;
     if (bZap) bZap.onclick = function () { abrirLink(linkZap(c.telefone, sugestao(c))); };
     var bFicha = h("button", { type: "button", class: "botao p" }, [P.icone("perfil"), "Ficha"]);
-    bFicha.onclick = function () { ficha(c.id); };
+    bFicha.onclick = function () { Aba.ficha(c.id); };
     var bAviso = op.dono && c.app ? h("button", { type: "button", class: "botao p" }, [P.icone("sino"), "Aviso"]) : null;
-    if (bAviso) bAviso.onclick = function () { avisoNoCelular({ cliente: c }); };
+    if (bAviso) bAviso.onclick = function () { Aba.avisoNoCelular({ cliente: c }); };
     return h("div", { class: "cliente" }, [
       h("div", { class: "assinante-topo" }, [
         h("div", { class: "cresce" }, [h("div", { class: "nome", texto: c.nome }), h("div", { class: "det", texto: det.join(" · ") })]),
@@ -277,456 +277,15 @@
     ]);
   }
 
-  // ---------- ficha ----------
-  function ficha(id) {
-    P.api("/api/equipe?area=clientes&id=" + id).then(function (f) {
-      var c = f.cliente;
-      var resumo = (dados && dados.clientes.filter(function (x) { return x.id === id; })[0]) || {};
-      var linhas = [
-        ["WhatsApp", c.telefone ? whatsBr(c.telefone) : "—"],
-        ["Aniversário", c.nascimento ? dataBrAno(c.nascimento) : c.aniversario || "—"],
-        op.dono ? ["CPF", c.cpfMascarado || "—"] : null,
-        ["Retorno", resumo.status ? (STATUS[resumo.status] || [resumo.status])[0] + " · " + linhaRetorno(resumo) : "—"],
-        ["Novidades", c.saiu_em ? "Pediu para não receber (" + P.dataBr(String(c.saiu_em).slice(0, 10)) + ")" : c.aceita ? "Aceitou em " + P.dataBr(String(c.aceite_em || c.criado_em).slice(0, 10)) + (c.aceite_origem ? " (" + (ORIGEM[c.aceite_origem] || c.aceite_origem).replace(/^se /, "") + ")" : "") : "Ainda não aceitou"],
-        ["Origem", c.veioDe && APP_ANTERIOR[c.veioDe] ? "veio do " + APP_ANTERIOR[c.veioDe] + " (aplicativo anterior)" : ORIGEM[c.origem] || c.origem],
-        c.ultima_visita_externa ? ["Antes do Bio Site", "última visita em " + dataBrAno(c.ultima_visita_externa)] : null,
-      ].filter(Boolean);
-      var visitas = f.visitas.length ? h("ul", { class: "mini-lista visitas" }, f.visitas.slice(0, 30).map(function (v) {
-        var st = (P.STATUS && P.STATUS[v.status]) || [v.status];
-        return h("li", null, [
-          h("span", null, [h("b", { texto: P.dataBr(v.dia) + "/" + v.dia.slice(2, 4) + " · " + v.servico }), h("small", { texto: (v.profissional ? "com " + v.profissional + " · " : "") + st[0] })]),
-          h("b", { texto: v.valor == null ? "—" : P.brl(v.valor) }),
-        ]);
-      })) : h("p", { class: "nota p", texto: "Nenhum atendimento ligado a este cliente ainda." });
-      // Atendimentos no aplicativo anterior (migração do Booksy): separados, só como histórico
-      var ant = f.anteriores || [];
-      var app = ant.length ? (APP_ANTERIOR[ant[0].origem] || "aplicativo anterior") : "";
-      var anteriores = ant.length ? h("details", { class: "anteriores" }, [
-        h("summary", { texto: "No " + app + " (aplicativo anterior) · " + (ant.length >= 300 ? "os 300 atendimentos mais recentes" : ant.length + (ant.length === 1 ? " atendimento" : " atendimentos")) + ", de " + ant[ant.length - 1].dia.slice(0, 4) + " a " + ant[0].dia.slice(0, 4) }),
-        h("p", { class: "nota p", texto: "Feitos antes do barbeirotop, no " + app + ". Ficam só como histórico: não entram no financeiro nem nas comissões." }),
-        h("ul", { class: "mini-lista visitas" }, ant.map(function (v) {
-          return h("li", null, [h("span", null, [
-            h("b", { texto: P.dataBr(v.dia) + "/" + v.dia.slice(2, 4) + " · " + (v.servico || "Atendimento") }),
-            h("small", { texto: (v.profissional ? "com " + v.profissional + " · " : "") + (v.status === "faltou" ? "não compareceu" : "atendido") + " · " + app }),
-          ])]);
-        })),
-      ]) : null;
-      var conteudo = [
-        h("dl", { class: "ficha-dados" }, linhas.map(function (l) { return h("div", null, [h("dt", { texto: l[0] }), h("dd", { texto: l[1] })]); })),
-        c.observacao ? h("p", { class: "obs", texto: c.observacao }) : null,
-        h("h3", { class: "sub-titulo", texto: "Visitas" }),
-        visitas,
-        anteriores,
-        f.campanhas.length ? h("p", { class: "nota p", texto: "Campanhas recebidas: " + f.campanhas.map(function (x) { return x.nome + " (" + P.dataBr(String(x.enviado_em).slice(0, 10)) + ")"; }).join(", ") }) : null,
-      ];
-      var j = janela(c.nome, conteudo);
-      var acoes = [];
-      if (op.dono) acoes.push({ texto: "Apagar dados", classe: "perigo", icone: "lixo", fn: function () { j.fechar(); apagar(c); } });
-      acoes.push({ texto: "Editar", icone: "lapis", fn: function () { j.fechar(); formulario(c); } });
-      if (c.telefone) acoes.push({ texto: "WhatsApp", classe: "whats", icone: "whats", fn: function () { abrirLink(linkZap(c.telefone, sugestao(Object.assign({}, resumo, c)))); } });
-      if (op.dono && resumo.app) acoes.push({ texto: "Aviso", icone: "sino", fn: function () { j.fechar(); avisoNoCelular({ cliente: Object.assign({}, resumo, c) }); } });
-      j.acoes(acoes);
-    }).catch(function (e) { P.toast(e.message, "erro"); });
-  }
-
-  function apagar(c) {
-    P.confirmar("Apagar os dados de " + c.nome + "?", "Use quando o cliente pedir (LGPD). O cadastro some para sempre; os atendimentos continuam no financeiro, sem o nome ligado ao cadastro.", "Apagar para sempre", true).then(function (ok) {
-      if (!ok) return;
-      api({ acao: "apagar", id: c.id }).then(function () { P.toast("Dados apagados.", "ok"); carregar(); }).catch(function (e) { P.toast(e.message, "erro"); });
-    });
-  }
-
-  // ---------- cadastro no painel ----------
-  function formulario(c, extra, rascunho) {
-    extra = extra || {};
-    var v = rascunho || (c ? { nome: c.nome, telefone: whatsBr(c.telefone), nascimento: c.nascimento ? dataBrAno(c.nascimento) : "", cpf: c.cpf || "", observacao: c.observacao || "", aceita: !!c.aceita, profissional_id: c.profissional_id || "" }
-      : { nome: extra.nome || "", telefone: extra.telefone || "", nascimento: "", cpf: "", observacao: "", aceita: false, profissional_id: "" });
-    var nome = h("input", { maxlength: "80", autocomplete: "off", value: v.nome });
-    var tel = h("input", { type: "tel", inputmode: "tel", maxlength: "20", placeholder: "(00) 00000-0000", value: v.telefone });
-    var nasc = h("input", { inputmode: "numeric", maxlength: "10", placeholder: "dd/mm/aaaa", value: v.nascimento });
-    // Barbeiro editando quem já tem aniversário: só mostra o dia e o mês (o dono cuida da data completa)
-    var nascFixo = !op.dono && c && c.aniversario ? h("p", { class: "nota p", texto: "Aniversário: " + c.aniversario }) : null;
-    var cpf = op.dono ? h("input", { inputmode: "numeric", maxlength: "14", placeholder: "Opcional", value: v.cpf }) : null;
-    var obs = h("input", { maxlength: "300", placeholder: "Ex.: prefere máquina 2 nas laterais", value: v.observacao });
-    var aceita = op.dono ? h("input", { type: "checkbox", checked: v.aceita }) : null;
-    var barbeiro = op.dono && dados && dados.equipe.length ? h("select", null, [h("option", { value: "", texto: "Ninguém em especial" })].concat(dados.equipe.map(function (e) { return h("option", { value: e.id, selected: e.id === v.profissional_id, texto: e.nome }); }))) : null;
-    function lido() {
-      return { nome: nome.value.trim(), telefone: tel.value.trim(), nascimento: nasc.value.trim(), cpf: cpf ? cpf.value.trim() : "", observacao: obs.value.trim(), aceita: aceita ? aceita.checked : false, profissional_id: barbeiro ? barbeiro.value : "" };
-    }
-    P.janela({
-      titulo: c ? "Editar cliente" : "Novo cliente",
-      conteudo: h("div", { class: "grade" }, [
-        h("label", { class: "campo" }, ["Nome", nome]),
-        nascFixo ? h("label", { class: "campo" }, ["WhatsApp", tel]) : h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["WhatsApp", tel]), h("label", { class: "campo" }, ["Nascimento", nasc])]),
-        nascFixo,
-        cpf ? h("label", { class: "campo" }, ["CPF (opcional)", cpf]) : null,
-        cpf ? h("p", { class: "nota p", texto: "Serve só para identificar o cliente. Pela LGPD, não condicione desconto ao CPF." }) : null,
-        h("label", { class: "campo" }, ["Observação", obs]),
-        barbeiro ? h("label", { class: "campo" }, ["Barbeiro de referência", barbeiro]) : null,
-        aceita ? h("label", { class: "check-linha" }, [aceita, "O cliente aceitou receber promoções e novidades pelo WhatsApp"]) : null,
-        aceita ? h("p", { class: "nota p", texto: "Marque só se ele disse que sim. Fica registrado quando e por onde ele aceitou. Desmarcar conta como pedido para sair." }) : null,
-      ]),
-      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: c ? "Salvar" : "Cadastrar", classe: "principal", valor: "ok" }],
-      validar: function () {
-        var x = lido();
-        if (x.nome.length < 2) return "Informe o nome do cliente.";
-        var d = x.telefone.replace(/\D/g, "");
-        if (d && (d.length < 10 || d.length > 13)) return "Confira o WhatsApp: DDD e número.";
-        return "";
-      },
-    }).then(function (r) {
-      if (r.valor !== "ok") return;
-      var x = lido();
-      var corpo = { acao: "salvar", id: c ? c.id : undefined, nome: x.nome, telefone: x.telefone, nascimento: x.nascimento, observacao: x.observacao, pedidoId: extra.pedidoId };
-      if (op.dono) { corpo.cpf = x.cpf; corpo.aceita = x.aceita; corpo.profissional_id = x.profissional_id; }
-      api(corpo).then(function () {
-        P.toast(c ? "Cliente salvo." : "Cliente cadastrado." + (extra.pedidoId ? " O atendimento já ficou ligado a ele." : ""), "ok");
-        carregar();
-        if (extra.aoSalvar) extra.aoSalvar();
-      }).catch(function (e) { P.toast(e.message, "erro"); formulario(c, extra, x); });
-    });
-  }
-
-  // ---------- cadastro pelo celular do cliente (link ou QR code) ----------
-  // extra: { pedidoId, nome, telefone, aoUsar }
-  function convite(extra) {
-    extra = extra || {};
-    var tel = h("input", { type: "tel", inputmode: "tel", maxlength: "20", placeholder: "(00) 00000-0000", value: extra.telefone ? whatsBr(extra.telefone) : "" });
-    var j = janela("Cadastro pelo celular do cliente", []);
-    function inicio() {
-      j.trocar([
-        h("p", { class: "nota", texto: "O cliente preenche os próprios dados (nome, WhatsApp, nascimento e, se quiser, CPF) e aceita ou não receber promoções. Conte que, cadastrado, ele não perde as novidades da casa." }),
-        h("label", { class: "campo" }, ["WhatsApp do cliente", tel]),
-        h("p", { class: "nota p", texto: "O link vale " + 3 + " dias e serve para um cadastro." }),
-      ]);
-      j.acoes([
-        { texto: "Mostrar QR code", icone: "qr", fn: function (b) { gerar(b, "qr"); } },
-        { texto: "Mandar pelo WhatsApp", classe: "whats", icone: "whats", fn: function (b) { gerar(b, "whats"); } },
-      ]);
-    }
-    function gerar(botao, modo) {
-      var d = tel.value.replace(/\D/g, "");
-      if (modo === "whats" && (d.length < 10 || d.length > 13)) { P.toast("Informe o WhatsApp do cliente com DDD.", "erro"); tel.focus(); return; }
-      P.acao(botao, api({ acao: "convite", pedidoId: extra.pedidoId, nome: extra.nome, telefone: d ? tel.value : "" }).then(function (r) {
-        var nome = P.primeiroNome(extra.nome || "");
-        var msg = "Olá" + (nome ? ", " + nome : "") + "! Para completar seu cadastro na " + (op.barbearia || "barbearia") + " e não perder as promoções e novidades, toque no link (leva menos de 1 minuto): " + r.link;
-        if (modo === "whats") {
-          abrirLink(linkZap(r.telefone, msg));
-          j.fechar();
-          P.toast("Link enviado. Quando o cliente preencher, o cadastro aparece aqui.", "ok");
-          return;
-        }
-        mostrarQr(r);
-      })).catch(function (e) { P.toast(e.message, "erro"); });
-    }
-    function mostrarQr(r) {
-      var caixa = h("div", { class: "qr-caixa" });
-      try { caixa.innerHTML = window.QR.svg(r.link, { rotulo: "QR code do cadastro" }); } catch (e) { caixa.textContent = "Não deu para desenhar o QR code. Use o link abaixo."; }
-      j.trocar([
-        h("p", { class: "nota", texto: "Peça para o cliente apontar a câmera do celular para o código." }),
-        caixa,
-        h("p", { class: "obs link-convite", texto: r.link }),
-        h("p", { class: "nota p", texto: "Vale até " + P.dataBr(String(r.expiraEm).slice(0, 10)) + ". Quando ele terminar, toque em Pronto para atualizar a lista." }),
-      ]);
-      j.acoes([
-        { texto: "Copiar link", icone: "copiar", fn: function () { P.copiar(r.link, "Link copiado."); } },
-        { texto: "Pronto", classe: "principal", fn: function () { j.fechar(); carregar(); if (extra.aoUsar) extra.aoUsar(); } },
-      ]);
-    }
-    inicio();
-  }
-
-  // ---------- a partir de um atendimento (cartão da agenda) ----------
-  function cadastrarDoAtendimento(p, ctx) {
-    var j = janela("Cadastrar " + P.primeiroNome(p.cliente), [
-      h("p", { class: "nota", texto: "Peça os dados agora, no balcão, e conte que cadastrado ele não perde as promoções e novidades." }),
-    ]);
-    function recarregar() { if (ctx && ctx.recarregar) ctx.recarregar(); }
-    var pelaCelular = opcao("qr", "Pelo celular dele", "Mostra um QR code ou manda o link no WhatsApp. Ele mesmo preenche.", function () { j.fechar(); convite({ pedidoId: p.id, nome: p.cliente, aoUsar: recarregar }); });
-    // A carteira é do dono: o barbeiro só manda o convite; preencher e ligar a um cadastro ficam com o dono
-    var opcoes = h("div", { class: "menu opcoes-cadastro" }, op.dono ? [
-      pelaCelular,
-      opcao("lapis", "Preencher agora", "Você digita os dados que ele passar.", function () { j.fechar(); garantirDados().then(function () { formulario(null, { pedidoId: p.id, nome: p.cliente, aoSalvar: recarregar }); }); }),
-      opcao("perfil", "Já tem cadastro", "Liga este atendimento ao cadastro que já existe.", function () { j.fechar(); escolherExistente(p, recarregar); }),
-    ] : [pelaCelular]);
-    j.corpo.appendChild(opcoes);
-  }
-  function opcao(icone, titulo, texto, fn) {
-    var b = h("button", { type: "button", class: "opcao" }, [P.icone(icone), h("span", null, [h("b", { texto: titulo }), h("small", { texto: texto })])]);
-    b.onclick = fn;
-    return b;
-  }
-  function garantirDados() { return dados ? Promise.resolve(dados) : api().then(function (j) { dados = j; return j; }); }
-
-  function escolherExistente(p, aoLigar) {
-    var campo = h("input", { type: "search", class: "busca-painel", placeholder: "Nome ou WhatsApp", value: P.primeiroNome(p.cliente) });
-    var lista = h("div", { class: "lista" }, h("div", { class: "esqueleto" }));
-    var j = janela("Ligar a um cadastro", [campo, lista]);
-    function desenhar() {
-      var t = campo.value.trim().toLowerCase(), dig = t.replace(/\D/g, "");
-      var achados = (dados ? dados.clientes : []).filter(function (c) { return !t || c.nome.toLowerCase().indexOf(t) > -1 || (dig.length >= 3 && c.telefone.indexOf(dig) > -1); }).slice(0, 8);
-      P.trocar(lista, achados.length ? achados.map(function (c) {
-        var b = opcao("perfil", c.nome, (c.telefone ? whatsBr(c.telefone) : "sem WhatsApp") + " · " + c.visitas + (c.visitas === 1 ? " visita" : " visitas"), function () {
-          api({ acao: "vincular", pedidoId: p.id, clienteId: c.id }).then(function () { j.fechar(); P.toast("Atendimento ligado a " + c.nome + ".", "ok"); if (aoLigar) aoLigar(); carregar(); }).catch(function (e) { P.toast(e.message, "erro"); });
-        });
-        return b;
-      }) : P.vazio("🔎", "Ninguém encontrado. Volte e use \"Pelo celular dele\" ou \"Preencher agora\"."));
-    }
-    campo.oninput = desenhar;
-    garantirDados().then(desenhar).catch(function (e) { P.toast(e.message, "erro"); });
-  }
-
-  // ---------- importação da planilha ----------
-  var COLUNAS = [
-    ["nome", /^(nome|cliente|nome completo|nome do cliente|name)$/],
-    ["telefone", /^(whats ?app|telefone|celular|fone|contato|tel|telefone celular|numero|phone)$/],
-    ["cpf", /^(cpf|cpf do cliente)$/],
-    ["nascimento", /^(nascimento|data de nascimento|data nascimento|dt nascimento|aniversario|nasc)$/],
-    ["observacao", /^(observacao|observacoes|obs|notas|anotacoes)$/],
-    ["ultima_visita", /^(ultima visita|data da ultima visita|ultimo atendimento|ultimo corte|ultima vez)$/],
-  ];
-  var ROTULO_COLUNA = { nome: "Nome", telefone: "WhatsApp", cpf: "CPF", nascimento: "Nascimento", observacao: "Observação", ultima_visita: "Última visita" };
-  function semAcento(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
-  // Texto colado do Excel/Google (tabulação) ou CSV (; ou ,), com aspas
-  function lerTabela(texto) {
-    texto = String(texto || "").replace(/^﻿/, "").replace(/\r\n?/g, "\n").trim();
-    if (!texto) return [];
-    var primeira = texto.split("\n")[0];
-    var sep = primeira.indexOf("\t") > -1 ? "\t" : primeira.indexOf(";") > -1 ? ";" : ",";
-    var linhas = [], linha = [], campo = "", aspas = false;
-    for (var i = 0; i < texto.length; i++) {
-      var ch = texto[i];
-      if (aspas) {
-        if (ch === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else aspas = false; } else campo += ch;
-      } else if (ch === '"' && campo === "") aspas = true;
-      else if (ch === sep) { linha.push(campo); campo = ""; }
-      else if (ch === "\n") { linha.push(campo); linhas.push(linha); linha = []; campo = ""; }
-      else campo += ch;
-    }
-    linha.push(campo);
-    linhas.push(linha);
-    return linhas.filter(function (l) { return l.some(function (c) { return String(c).trim(); }); });
-  }
-  function mapear(linhas) {
-    var cab = (linhas[0] || []).map(semAcento), mapa = {};
-    cab.forEach(function (t, i) { COLUNAS.forEach(function (c) { if (!(c[0] in mapa) && c[1].test(t)) mapa[c[0]] = i; }); });
-    return mapa;
-  }
-  function importar() {
-    var area = h("textarea", { rows: "7", class: "colar", placeholder: "Nome\tWhatsApp\tCPF\tNascimento\nJoão Silva\t(81) 99999-0000\t\t20/05/1990" });
-    var arquivo = h("input", { type: "file", accept: ".csv,.txt,text/csv,text/plain" });
-    var modelo = h("button", { type: "button", class: "botao mini" }, [P.icone("baixar"), "Baixar modelo"]);
-    modelo.onclick = function () { P.baixarCsv("modelo-clientes.csv", [["Nome", "WhatsApp", "CPF", "Nascimento", "Observação", "Última visita"], ["João da Silva", "(81) 99999-0000", "", "20/05/1990", "Prefere máquina 2", "02/11/2026"]]); };
-    arquivo.onchange = function () {
-      var f = arquivo.files && arquivo.files[0];
-      if (!f) return;
-      if (f.size > 2 * 1024 * 1024) { P.toast("Arquivo grande demais (máximo 2 MB).", "erro"); return; }
-      var leitor = new FileReader();
-      leitor.onload = function () { area.value = String(leitor.result || ""); };
-      leitor.readAsText(f, "utf-8");
-    };
-    var j = janela("Importar clientes", []);
-    var linhasLidas = [];
-    function passo1() {
-      j.trocar([
-        h("p", { class: "nota", texto: "Abra sua planilha (Excel ou Google), selecione as colunas com os títulos, copie e cole aqui. Ou envie um arquivo CSV." }),
-        area,
-        h("div", { class: "linha" }, [h("label", { class: "botao mini arquivo" }, [P.icone("enviar"), "Enviar CSV", arquivo]), modelo]),
-        h("p", { class: "nota p", texto: "Colunas aceitas: Nome (obrigatória), WhatsApp, CPF, Nascimento, Observação e Última visita. O painel confere tudo antes de gravar e não repete quem já está cadastrado." }),
-      ]);
-      j.acoes([{ texto: "Voltar", fn: j.fechar }, { texto: "Conferir", classe: "principal", fn: conferir }]);
-    }
-    function conferir(botao) {
-      var tabela = lerTabela(area.value);
-      if (tabela.length < 2) { P.toast("Cole as linhas da planilha, com a linha dos títulos.", "erro"); return; }
-      var mapa = mapear(tabela);
-      if (!("nome" in mapa)) { P.toast("Não achei a coluna Nome. A primeira linha precisa ter os títulos (Nome, WhatsApp, CPF, Nascimento).", "erro"); return; }
-      linhasLidas = tabela.slice(1).map(function (l) {
-        var o = {};
-        Object.keys(mapa).forEach(function (k) { o[k] = String(l[mapa[k]] == null ? "" : l[mapa[k]]).trim(); });
-        return o;
-      });
-      if (linhasLidas.length > 2000) { P.toast("Importe no máximo 2.000 clientes por vez.", "erro"); return; }
-      P.acao(botao, api({ acao: "importar", simular: true, linhas: linhasLidas }).then(function (r) { passo2(r, mapa); })).catch(function (e) { P.toast(e.message, "erro"); });
-    }
-    var aceitaram = h("input", { type: "checkbox" });
-    function passo2(r, mapa) {
-      var cols = Object.keys(mapa).map(function (k) { return ROTULO_COLUNA[k]; }).join(" · ");
-      j.trocar([
-        h("p", { class: "nota", texto: "Colunas encontradas: " + cols + "." }),
-        h("div", { class: "kpis", style: "grid-template-columns:repeat(3,minmax(0,1fr))" }, [kpi("Novos", String(r.inseridos)), kpi("Completados", String(r.atualizados), "já existiam"), kpi("De fora", String(r.totalIgnorados))]),
-        r.ignorados.length ? h("ul", { class: "mini-lista ignorados" }, r.ignorados.slice(0, 8).map(function (x) { return h("li", null, [h("span", { texto: "Linha " + (x.linha + 1) + (x.nome ? " · " + x.nome : "") }), h("small", { texto: x.motivo })]); })) : null,
-        r.totalIgnorados > 8 ? h("p", { class: "nota p", texto: "E mais " + (r.totalIgnorados - 8) + ". Corrija na planilha e importe de novo: quem já entrou não se repete." }) : null,
-        h("label", { class: "check-linha" }, [aceitaram, "Estes clientes aceitaram receber promoções e novidades da barbearia"]),
-        h("p", { class: "nota p", texto: "Marque só se eles deram esse aceite (por exemplo, numa ficha de cadastro). Sem aceite, eles ficam na carteira, mas fora das campanhas de promoção." }),
-      ]);
-      j.acoes([{ texto: "Voltar", fn: passo1 }, { texto: "Importar " + (r.inseridos + r.atualizados), classe: "principal", fn: function (b) { gravar(b); } }]);
-      if (!(r.inseridos + r.atualizados)) j.acoes([{ texto: "Voltar", fn: passo1 }]);
-    }
-    function gravar(botao) {
-      P.acao(botao, api({ acao: "importar", linhas: linhasLidas, aceitaram: aceitaram.checked }).then(function (r) {
-        j.trocar([
-          h("p", { class: "nota", texto: "Pronto! " + r.inseridos + (r.inseridos === 1 ? " cliente cadastrado" : " clientes cadastrados") + (r.atualizados ? " e " + r.atualizados + " completados" : "") + "." + (r.totalIgnorados ? " " + r.totalIgnorados + " ficaram de fora." : "") }),
-        ]);
-        j.acoes([{ texto: "Fechar", classe: "principal", fn: j.fechar }]);
-        carregar();
-      })).catch(function (e) { P.toast(e.message, "erro"); });
-    }
-    passo1();
-  }
-
-  // ---------- exportação ----------
-  function limparVcf(t) { return String(t || "").replace(/[\r\n;,\\]/g, " ").trim(); }
-  function exportar() {
-    if (!dados || !dados.clientes.length) { P.toast("Ainda não há clientes para exportar."); return; }
-    var j = janela("Exportar clientes", [
-      h("div", { class: "menu opcoes-cadastro" }, [
-        opcao("baixar", "Planilha (CSV)", "Abre no Excel e no Google Planilhas.", function () {
-          P.baixarCsv("clientes.csv", [["Nome", "WhatsApp", "Aniversário", "Situação", "Última visita", "Visitas", "Ticket médio", "Aceita novidades"]].concat(dados.clientes.map(function (c) {
-            return [c.nome, whatsBr(c.telefone), c.aniversario ? c.aniversario.dia : "", (STATUS[c.status] || [c.status])[0], c.ultima ? P.dataBr(c.ultima) + "/" + c.ultima.slice(0, 4) : "", c.visitas, c.ticket ? String(c.ticket).replace(".", ",") : "", c.aceita ? "sim" : "não"];
-          })));
-          j.fechar();
-        }),
-        opcao("perfil", "Contatos para o celular (vCard)", "Salva os clientes na agenda do celular, para usar nas listas de transmissão do WhatsApp.", function () {
-          var vcf = dados.clientes.filter(function (c) { return c.telefone && !c.saiu; }).map(function (c) {
-            return ["BEGIN:VCARD", "VERSION:3.0", "FN:" + limparVcf(c.nome), "N:" + limparVcf(c.nome) + ";;;;", "TEL;TYPE=CELL:+55" + c.telefone, "END:VCARD"].join("\r\n");
-          }).join("\r\n");
-          var a = h("a", { href: URL.createObjectURL(new Blob([vcf], { type: "text/vcard;charset=utf-8" })), download: "clientes.vcf" });
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-          j.fechar();
-        }),
-      ]),
-      h("p", { class: "nota p", texto: "Lembrete: a lista de transmissão só chega a quem salvou o número da barbearia e aceita até 256 contatos. As campanhas daqui chegam a todos." }),
-    ]);
-  }
-
-  // ---------- campanha: um por um pelo WhatsApp ----------
-  function campanha(segmento, grupo) {
-    var aceitos = grupo.filter(function (c) { return c.aceita; });
-    var nome = h("input", { maxlength: "80", value: (SEGMENTOS.filter(function (s) { return s[0] === segmento; })[0] || ["", "Novidades"])[1] + " · " + P.dataBr(P.hoje()) });
-    var msg = h("textarea", { rows: "5", maxlength: "1000" });
-    msg.value = MODELOS[segmento] || MODELOS[""];
-    var soAceitos = h("input", { type: "checkbox", checked: true });
-    var exemplo = h("p", { class: "obs", style: "white-space:pre-line" });
-    function atualizar() { exemplo.textContent = preencher(msg.value, grupo[0]); }
-    msg.oninput = atualizar;
-    atualizar();
-    var j = janela("Mandar mensagem", [
-      h("label", { class: "campo" }, ["Nome da campanha", nome]),
-      h("label", { class: "campo" }, ["Mensagem", msg]),
-      h("p", { class: "nota p", texto: "{nome} vira o primeiro nome do cliente, {dias} os dias sem vir e {site} o link de agendamento. Exemplo com " + grupo[0].nome + ":" }),
-      exemplo,
-      h("label", { class: "check-linha" }, [soAceitos, "Só quem aceitou receber novidades (" + aceitos.length + " de " + grupo.length + ")"]),
-      h("p", { class: "nota p", texto: "É o que pede a LGPD para promoções. Quem pediu para sair nunca entra." }),
-    ]);
-    j.acoes([{ texto: "Voltar", fn: j.fechar }, {
-      texto: "Começar", classe: "principal", fn: function (b) {
-        var alvo = soAceitos.checked ? aceitos : grupo;
-        if (!alvo.length) { P.toast("Ninguém deste grupo aceitou receber novidades ainda.", "erro"); return; }
-        if (nome.value.trim().length < 2 || msg.value.trim().length < 2) { P.toast("Dê um nome e escreva a mensagem.", "erro"); return; }
-        P.acao(b, api({ acao: "campanha-criar", nome: nome.value.trim(), segmento: segmento, mensagem: msg.value.trim() }).then(function (r) {
-          j.fechar();
-          enviarUmPorUm(r.campanha.id, nome.value.trim(), msg.value.trim(), alvo);
-        })).catch(function (e) { P.toast(e.message, "erro"); });
-      },
-    }]);
-  }
-  function enviarUmPorUm(campanhaId, nome, modelo, alvo) {
-    var i = 0, enviados = 0;
-    var j = janela(nome, []);
-    function tela() {
-      if (i >= alvo.length) {
-        j.trocar([h("p", { class: "nota", texto: "Pronto! " + enviados + (enviados === 1 ? " mensagem enviada." : " mensagens enviadas.") + " Em até 30 dias, a campanha mostra quantos voltaram." })]);
-        j.acoes([{ texto: "Fechar", classe: "principal", fn: function () { j.fechar(); campanhasCache = null; carregar(); } }]);
-        return;
-      }
-      var c = alvo[i], texto = preencher(modelo, c), feito = false;
-      j.trocar([
-        h("p", { class: "nota", texto: (i + 1) + " de " + alvo.length }),
-        h("div", { class: "barra" }, h("i", { style: "width:" + Math.round((i / alvo.length) * 100) + "%" })),
-        h("p", null, [h("b", { texto: c.nome }), " · " + whatsBr(c.telefone)]),
-        h("p", { class: "obs", style: "white-space:pre-line", texto: texto }),
-      ]);
-      var proximo = { texto: "Próximo", fn: function () { i++; tela(); } };
-      j.acoes([
-        { texto: "Pular", fn: function () { i++; tela(); } },
-        {
-          texto: "Abrir WhatsApp", classe: "whats", icone: "whats", fn: function (b) {
-            abrirLink(linkZap(c.telefone, texto));
-            if (!feito) { feito = true; enviados++; api({ acao: "campanha-envio", campanhaId: campanhaId, clienteId: c.id }).catch(function () {}); }
-            b.textContent = "Abrir de novo";
-            j.acoes([{ texto: "Abrir de novo", classe: "", fn: function () { abrirLink(linkZap(c.telefone, texto)); } }, Object.assign({}, proximo, { classe: "principal" })]);
-          },
-        },
-      ]);
-    }
-    tela();
-  }
-
-  // ---------- aviso no celular (app da barbearia) ----------
-  var MODELOS_AVISO = {
-    cliente: "Olá, {nome}! ",
-    chamar: "Olá, {nome}! Já está na hora de dar um trato no visual. Toque para agendar.",
-    segunda: "Olá, {nome}! Gostou da primeira visita? Agende a próxima por aqui.",
-    sumidos: "Olá, {nome}! Sentimos sua falta. Que tal voltar esta semana? Toque para agendar.",
-    aniversario: "Feliz aniversário, {nome}! Venha comemorar de visual novo.",
-    todos: "Novidade na barbearia: ",
-  };
-  // alvo: { cliente } para um cliente, ou { segmento, n } para um grupo ("todos" = todos com o app)
-  function avisoNoCelular(alvo) {
-    var umCliente = !!alvo.cliente;
-    var chave = umCliente ? "cliente" : alvo.segmento;
-    var msg = h("textarea", { rows: "3", maxlength: "180" });
-    msg.value = MODELOS_AVISO[chave] || "";
-    var abrir = h("select", null, [h("option", { value: "agendar", texto: "O agendamento (já abre para marcar o horário)" }), h("option", { value: "site", texto: "O site da barbearia" })]);
-    var titulo = h("b", { texto: op.barbearia || "Barbearia" });
-    var corpo = h("span");
-    var conta = h("small", { class: "nota" });
-    var exemplo = umCliente ? P.primeiroNome(alvo.cliente.nome) : "Ana";
-    function atualizar() { corpo.textContent = msg.value.split("{nome}").join(exemplo); conta.textContent = msg.value.length + " de 180"; }
-    msg.oninput = atualizar;
-    atualizar();
-    var quem = umCliente ? alvo.cliente.nome : (alvo.segmento === "todos" ? "todos com o app" : (SEGMENTOS.filter(function (s) { return s[0] === alvo.segmento; })[0] || ["", ""])[1].toLowerCase()) + " (" + alvo.n + (alvo.n === 1 ? " pessoa)" : " pessoas)");
-    var j = janela("Aviso no celular", [
-      h("p", { class: "nota p", texto: "Para " + quem + ". Chega como notificação, no celular de quem ligou os avisos da barbearia no site." }),
-      h("div", { class: "previa-aviso", "aria-label": "Como o aviso aparece" }, [h("span", { class: "previa-icone", texto: P.iniciais(op.barbearia || "B") }), h("div", null, [titulo, corpo])]),
-      h("label", { class: "campo" }, ["Mensagem", msg]),
-      conta,
-      h("label", { class: "campo" }, ["Ao tocar no aviso, abre", abrir]),
-      h("p", { class: "nota p", texto: umCliente ? "{nome} vira o primeiro nome do cliente." : "{nome} vira o primeiro nome de cada cliente. Vai só para quem aceitou receber novidades; quem pediu para sair nunca recebe. No máximo 2 avisos para grupos por dia." }),
-    ]);
-    j.acoes([{ texto: "Voltar", fn: j.fechar }, {
-      texto: "Enviar aviso", classe: "principal", icone: "sino", fn: function (b) {
-        if (msg.value.trim().length < 3) { P.toast("Escreva a mensagem do aviso.", "erro"); return; }
-        var corpoApi = { acao: "aviso", mensagem: msg.value.trim(), abrir: abrir.value };
-        if (umCliente) corpoApi.clienteId = alvo.cliente.id; else corpoApi.segmento = alvo.segmento;
-        P.acao(b, api(corpoApi).then(function (r) {
-          j.fechar();
-          P.toast(r.entregues ? "Aviso enviado para " + r.entregues + (r.entregues === 1 ? " celular." : " celulares.") : "Nenhum celular respondeu agora. Tente mais tarde ou use o WhatsApp.", r.entregues ? "ok" : "erro");
-        })).catch(function (e) { P.toast(e.message, "erro"); });
-      },
-    }]);
-  }
   function comAppNoGrupo(lista) { return lista.filter(function (c) { return c.appNovidades && !c.saiu; }); }
   function filtrar(s) { seg = s || ""; limite = LOTE; if (dados && raiz) desenhar(); }
 
-  function carregarCampanhas() {
-    if (campanhasCache) return desenharCampanhas();
-    P.api("/api/equipe?area=clientes&campanhas=1").then(function (r) { campanhasCache = r.campanhas; desenharCampanhas(); }).catch(function () {});
-  }
-  function desenharCampanhas() {
-    var l = campanhasCache || [];
-    P.trocar(el.campanhas, l.length ? l.map(function (c) {
-      var pct = c.enviados ? Math.round((c.voltaram / c.enviados) * 100) : 0;
-      return h("div", { class: "campanha" }, [
-        h("div", { class: "assinante-topo" }, [h("div", { class: "cresce" }, [h("div", { class: "nome", texto: c.nome }), h("div", { class: "det", texto: P.dataBr(String(c.criado_em).slice(0, 10)) + " · " + c.enviados + (c.enviados === 1 ? " mensagem" : " mensagens") })]), h("span", { class: "selo " + (c.voltaram ? "selo-ok" : "selo-neutro"), texto: c.voltaram + " voltaram" })]),
-        h("div", { class: "barra" }, h("i", { style: "width:" + pct + "%" })),
-        h("p", { class: "nota p", texto: c.voltaram ? pct + "% voltaram em até 30 dias · " + P.brl(c.faturou) + " em atendimentos" : "Ainda ninguém voltou. O resultado conta até 30 dias depois de cada mensagem." }),
-      ]);
-    }) : P.vazio("📣", "Nenhuma campanha ainda."));
-  }
-
-  window.Clientes = { configurar: configurar, montar: montar, carregar: carregar, filtrar: filtrar, avisoNoCelular: avisoNoCelular, cadastrarDoAtendimento: cadastrarDoAtendimento, convite: convite, _: { lerTabela: lerTabela, mapear: mapear, preencher: preencher } };
+  // Partes da aba em arquivos próprios (painel-clientes-ficha.js, painel-clientes-cadastro.js, painel-clientes-planilha.js, painel-clientes-campanhas.js):
+  // usam o que o núcleo compartilha aqui e acrescentam as funções delas. O estado da aba fica no núcleo.
+  const Aba = { P: P, h: h, STATUS: STATUS, SEGMENTOS: SEGMENTOS, MODELOS: MODELOS, ORIGEM: ORIGEM, APP_ANTERIOR: APP_ANTERIOR, el: el, api: api, whatsBr: whatsBr, dataBrAno: dataBrAno, abrirLink: abrirLink, linkZap: linkZap, preencher: preencher, sugestao: sugestao, kpi: kpi, janela: janela, carregar: carregar, linhaRetorno: linhaRetorno };
+  Object.defineProperty(Aba, "op", { get: function () { return op; }, set: function (v) { op = v; } });
+  Object.defineProperty(Aba, "dados", { get: function () { return dados; }, set: function (v) { dados = v; } });
+  Object.defineProperty(Aba, "campanhasCache", { get: function () { return campanhasCache; }, set: function (v) { campanhasCache = v; } });
+  window.Clientes = { configurar: configurar, montar: montar, carregar: carregar, filtrar: filtrar, _: { preencher: preencher } };
+  window.Clientes.interno = Aba; // só para as partes da aba
 })();

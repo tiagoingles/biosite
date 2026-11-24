@@ -449,13 +449,13 @@ test("telas: aba Clientes só no painel do dono, Cadastrar no atendimento e pág
     assert.equal(/data-aba="clientes"/.test(html), p === "painel-dono.html", p);
     assert.match(html, /<script src="\/qr\.js"><\/script>\s*<script src="\/painel-clientes\.js"><\/script>/);
   }
-  assert.match(ler("painel-clientes.js"), /op\.dono \? \[/, "o barbeiro só vê a opção do QR code ao cadastrar");
+  assert.match(require("./ajuda").lerAbaClientes(), /op\.dono \? \[/, "o barbeiro só vê a opção do QR code ao cadastrar");
   assert.match(ler("painel-agenda.js"), /window\.Clientes\.cadastrarDoAtendimento\(p, ctx\)/);
   const cadastro = ler("cadastro.html");
   assert.match(cadastro, /<input type="checkbox" id="novidades">/, "aceite começa desmarcado");
   assert.match(cadastro, /CPF <small>\(opcional\)<\/small>/);
   assert.match(ler("vercel.json"), /criador\|cadastro\)/, "página de cadastro fora do Google");
-  const painel = ler("painel-clientes.js");
+  const painel = require("./ajuda").lerAbaClientes();
   assert.match(painel, /Só quem aceitou receber novidades/, "campanha respeita o aceite");
   assert.match(painel, /acao: "importar", simular: true/, "importação confere antes de gravar");
 });

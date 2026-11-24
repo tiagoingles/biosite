@@ -141,7 +141,7 @@ test("painel do dono: 5 abas, Mais em ícones com telas próprias e atalhos na t
   assert.match(barbeiro, /id="maisGrade"/);
   assert.match(barbeiro, /data-tela="ganhos" data-pai="mais"/);
   assert.match(barbeiro, /id="atalhos"/);
-  const clientes = ler("painel-clientes.js");
+  const clientes = require("./ajuda").lerAbaClientes();
   assert.match(clientes, /function avisoNoCelular\(alvo\)/);
   assert.match(clientes, /filtrar: filtrar/);
 });

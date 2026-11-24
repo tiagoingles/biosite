@@ -173,19 +173,42 @@ async function rotaEquipe({ res, q, metodo, b, json }) {
         const { calcularCaixa } = require("../lib/caixa");
         const num = (v) => Number(String(v == null ? "" : v).replace(/[.]/g, "").replace(",", ".")) || 0;
         const doDia = pedidos.filter((p) => p.dia === hoje);
+        const equipe = [{ id: "b1", nome: "Bruno" }, { id: "b2", nome: "Rafael" }];
         if (metodo === "POST") {
           if (b.acao === "abrir") D.caixaPrev = { id: "cx1", dia: hoje, troco: num(b.troco), aberto_em: new Date().toISOString(), fechado_em: null, observacao: "" };
-          if (b.acao === "movimento") caixaMovPrev.push({ id: "cm" + caixaMovPrev.length, tipo: b.tipo, valor: num(b.valor), motivo: b.motivo || "", criado_em: new Date().toISOString() });
-          if (b.acao === "reabrir") D.caixaPrev = { ...D.caixaPrev, fechado_em: null, contado: null, esperado: null, resumo: null };
+          if (b.acao === "movimento") {
+            if (b.tipo === "retirada" && !b.categoria) return json(res, 400, { message: "Escolha para que é a retirada." });
+            caixaMovPrev.push({ id: "cm" + Date.now(), tipo: b.tipo, valor: num(b.valor), motivo: b.motivo || "", categoria: b.tipo === "retirada" ? b.categoria : null, profissional_id: b.categoria === "vale" ? b.profissionalId : null, criado_em: new Date().toISOString() });
+          }
+          if (b.acao === "apagar-movimento") { const i = caixaMovPrev.findIndex((m) => m.id === b.id); if (i > -1) caixaMovPrev.splice(i, 1); }
+          if (b.acao === "reabrir") D.caixaPrev = { ...D.caixaPrev, fechado_em: null, contado: null, esperado: null, fica_troco: null, resumo: null };
           if (b.acao === "fechar") {
             const c = calcularCaixa(D.caixaPrev, caixaMovPrev, doDia, []);
-            D.caixaPrev = { ...D.caixaPrev, fechado_em: new Date().toISOString(), contado: num(b.contado), esperado: c.esperado, resumo: { entradas: c.entradas, total: c.total, troco: c.troco, retiradas: c.retiradas, reforcos: c.reforcos }, observacao: b.observacao || "" };
-            return json(res, 200, { esperado: c.esperado, contado: num(b.contado), diferenca: Math.round((num(b.contado) - c.esperado) * 100) / 100 });
+            const contado = num(b.contado);
+            const fica = b.ficaTroco == null || b.ficaTroco === "" ? Math.min(contado, c.troco) : num(b.ficaTroco);
+            if (fica > contado) return json(res, 400, { message: "O troco que fica na gaveta não pode ser maior que o dinheiro contado." });
+            const resumo = { entradas: c.entradas, total: c.total, troco: c.troco, retiradas: c.retiradas, retiradasPor: c.retiradasPor, reforcos: c.reforcos, recolhido: contado - fica };
+            D.caixaPrev = { ...D.caixaPrev, fechado_em: new Date().toISOString(), contado, esperado: c.esperado, fica_troco: fica, resumo, observacao: b.observacao || "" };
+            return json(res, 200, { esperado: c.esperado, contado, diferenca: Math.round((contado - c.esperado) * 100) / 100, ficaTroco: fica, recolhido: contado - fica });
           }
           return json(res, 200, { ok: true });
         }
+        // Dois fechamentos de exemplo: ontem bateu; anteontem faltaram R$ 5 (pagou R$ 35 de produto de limpeza pela gaveta)
+        const passados = [
+          { dia: somaDias(hoje, -1), troco: 100, contado: 230, esperado: 230, fica: 100, entradas: { dinheiro: 130, pix: 180, debito: 60, credito: 40, sem: 0 }, por: { despesa: 0, vale: 0, dono: 0, guardar: 0 } },
+          { dia: somaDias(hoje, -2), troco: 100, contado: 180, esperado: 185, fica: 100, entradas: { dinheiro: 120, pix: 150, debito: 50, credito: 45, sem: 0 }, por: { despesa: 35, vale: 0, dono: 0, guardar: 0 } },
+        ];
+        const historico = passados.map((x) => ({ dia: x.dia, contado: x.contado, esperado: x.esperado, diferenca: x.contado - x.esperado, ficaTroco: x.fica, total: x.entradas.dinheiro + x.entradas.pix + x.entradas.debito + x.entradas.credito }));
+        const comuns = { hoje, trocoSugerido: 100, profissionais: equipe, historico, abertoAntes: null };
+        const antigo = q.dia && q.dia !== hoje ? passados.find((x) => x.dia === q.dia) : null;
+        if (q.dia && q.dia !== hoje) {
+          const caixa = antigo ? { id: "cx-" + antigo.dia, dia: antigo.dia, troco: antigo.troco, aberto_em: antigo.dia + "T11:05:00Z", fechado_em: antigo.dia + "T22:40:00Z", contado: antigo.contado, esperado: antigo.esperado, fica_troco: antigo.fica, observacao: antigo.por.despesa ? "Faltou o troco de um cliente." : "", resumo: { entradas: antigo.entradas, total: historico.find((x) => x.dia === antigo.dia).total, troco: antigo.troco, retiradas: antigo.por.despesa, retiradasPor: antigo.por, reforcos: 0, recolhido: antigo.contado - antigo.fica } } : null;
+          const movimentos = antigo && antigo.por.despesa ? [{ id: "cm-a", tipo: "retirada", valor: 35, motivo: "Produto de limpeza", categoria: "despesa", profissional: null, criado_em: antigo.dia + "T17:12:00Z" }] : [];
+          return json(res, 200, { ...comuns, dia: q.dia, caixa, movimentos, ...calcularCaixa(caixa, movimentos, [], []), entradas: antigo ? antigo.entradas : calcularCaixa(null, [], [], []).entradas, pendentes: 0 });
+        }
         const c = calcularCaixa(D.caixaPrev, caixaMovPrev, doDia, []);
-        return json(res, 200, { dia: hoje, hoje, caixa: D.caixaPrev, movimentos: caixaMovPrev, ...c, pendentes: doDia.filter((p) => p.status === "confirmado" || p.status === "avulso").length, abertoAntes: null, historico: [{ dia: somaDias(hoje, -1), contado: 230, esperado: 230, diferenca: 0 }] });
+        const movimentos = caixaMovPrev.map((m) => ({ ...m, profissional: m.profissional_id ? (equipe.find((p) => p.id === m.profissional_id) || {}).nome || "Barbeiro" : null }));
+        return json(res, 200, { ...comuns, dia: hoje, caixa: D.caixaPrev, movimentos, ...c, pendentes: doDia.filter((p) => p.status === "confirmado" || p.status === "avulso").length });
       }
       if (q.area === "financeiro") {
         if (metodo === "GET") return json(res, 200, { ...financeiroPrevia(), plataforma: false });

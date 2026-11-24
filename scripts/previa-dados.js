@@ -182,6 +182,16 @@ function financeiroPrevia() {
     precos,
     profissionais: [{ id: "b1", nome: "Bruno", comissao_pct: 40 }, { id: "b2", nome: "Rafael", comissao_pct: 45 }],
     pagamentosClube: clubePagamentos.map((pg) => ({ id: pg.id, valor: pg.valor, data: pg.data })),
+    // Aba Caixa (fase 35): um gasto pago pela gaveta, um vale do Bruno, uma retirada do dono e dois fechamentos
+    retiradasCaixa: [
+      { id: "r1", valor: 35, categoria: "despesa", profissional_id: null, dia: somaDias(hoje, -2) },
+      { id: "r2", valor: 100, categoria: "vale", profissional_id: "b1", dia: somaDias(hoje, -1) },
+      { id: "r3", valor: 200, categoria: "dono", profissional_id: null, dia: somaDias(hoje, -1) },
+    ],
+    fechamentosCaixa: [
+      { id: "c1", dia: somaDias(hoje, -2), contado: 180, esperado: 185 },
+      { id: "c2", dia: somaDias(hoje, -1), contado: 230, esperado: 230 },
+    ],
   });
 }
 

@@ -613,3 +613,27 @@ html.q-sem-rolagem, html.q-sem-rolagem body { overflow: hidden; }
 .sugestao { text-align: left; padding: 10px 12px; border: 1px solid var(--linha, #e7e5e4); border-radius: 10px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .sugestao span { opacity: .7; }
 .sugestao.novo { border-style: dashed; color: var(--cor, #a16207); }
+
+/* Aba Caixa (fase 35): a gaveta, a conta e as retiradas */
+.cx-avisos { display: grid; gap: 8px; }
+.cx-avisos:empty { display: none; }
+.cx-gaveta { display: grid; gap: 2px; }
+.cx-grande { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.15; }
+.cx-linhas { display: grid; gap: 6px; }
+.cx-linha { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.cx-linha b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cx-linha.total { border-top: 1px solid var(--linha); padding-top: 8px; font-weight: 800; }
+.cx-mov { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--linha); border-radius: 12px; background: var(--cartao-2); }
+.cx-mov .cresce { display: grid; gap: 2px; }
+.cx-mov small { color: var(--suave); font-size: 13px; }
+.cx-mov .hora { flex: none; width: 42px; color: var(--fraco); font-size: 13px; font-variant-numeric: tabular-nums; }
+.cx-mov .valor { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cx-opcoes { display: grid; gap: 8px; }
+.cx-opcao { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--linha); border-radius: 12px; cursor: pointer; }
+.cx-opcao input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--acento); }
+.cx-opcao span { display: grid; gap: 2px; }
+.cx-opcao small { color: var(--suave); font-size: 13px; font-weight: 400; }
+.cx-opcao:has(input:checked) { border-color: var(--acento); background: var(--acento-fundo); }
+.cx-resultado { font-weight: 700; }
+.cx-resultado.ok { color: var(--ok); }
+.cx-resultado.alerta { color: var(--alerta); }

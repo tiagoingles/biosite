@@ -23,6 +23,7 @@
   <a href="#agenda" data-aba="agenda"></a>
   <a href="#clientes" data-aba="clientes"></a>
   <a href="#protese" data-aba="protese" hidden></a>
+  <a href="#caixa" data-aba="caixa"></a>
   <a href="#mais" data-aba="mais"></a>
 </nav>
 
@@ -162,6 +163,9 @@
   <!-- ===== Prótese capilar (painel-protese.js) ===== -->
   <section class="tela duas" data-tela="protese" id="telaProtese" hidden></section>
 
+  <!-- ===== Caixa do dia (painel-caixa.js): abrir, retirada, reforço, fechar ===== -->
+  <section class="tela duas" data-tela="caixa" id="telaCaixa" hidden></section>
+
   <!-- ===== Mais: o que não é do dia a dia, em ícones. Cada ícone abre a sua tela, com "‹ Mais" para voltar ===== -->
   <section class="tela" data-tela="mais" hidden>
     <div class="mais" id="maisGrade"></div>
@@ -247,13 +251,14 @@
 <script src="/painel-clientes-campanhas.js"></script>
 <script src="/painel-premium.js"></script>
 <script src="/painel-protese.js"></script>
+<script src="/painel-caixa.js"></script>
 <script>
 (function () {
   var P = window.Painel, h = P.h, $ = P.$;
   if (!P.exigirLogin()) return;
   P.monitorar();
 
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["protese", "protese", "Prótese"], ["mais", "mais", "Mais"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["protese", "protese", "Prótese"], ["caixa", "dinheiro", "Caixa"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
@@ -269,7 +274,7 @@
   P.trocar($("btnConvidar"), [P.icone("email"), "Gerar convite"]);
   P.trocar($("virarBarbeiro"), [P.icone("tesoura"), "Também atendo clientes"]);
 
-  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false, proteseMontada = false, lembretesDoClube = 0;
+  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false, proteseMontada = false, caixaMontado = false, lembretesDoClube = 0;
   var ctx = { barbearia: "", equipe: [], servicos: [], dono: true, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#equipe") carregarEquipe(); } };
 
   P.api("/api/eu").then(function (d) {
@@ -298,16 +303,17 @@
       if (aba === "equipe") carregarEquipe();
       if (aba === "clube") carregarClube();
       if (aba === "protese") { if (!proteseMontada) { window.Protese.montar($("telaProtese")); proteseMontada = true; } window.Protese.carregar(); }
+      if (aba === "caixa") { if (!caixaMontado) { window.Caixa.montar($("telaCaixa")); caixaMontado = true; } window.Caixa.carregar(); }
       if (aba === "mais") { montarMais(); carregarSaude(); carregarAssinatura(); }
       if (aba === "ajuste-sinal") montarSinal();
       if (aba === "ajuste-assinatura") carregarAssinatura();
       if (aba === "ajuste-saude") carregarSaude();
     });
     carregar();
-    P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); }, 30000);
+    P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#caixa") window.Caixa.carregar(); }, 30000);
   }).catch(function (e) { $("sub").textContent = e.message; });
 
-  $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); if (location.hash === "#agenda") carregarDia(); };
+  $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#caixa") window.Caixa.carregar(); };
 
   function kpi(rotulo, valor, detalhe, barra) {
     return h("div", { class: "kpi" }, [h("span", { texto: rotulo }), h("b", { texto: valor }), detalhe ? h("small", { texto: detalhe }) : null, barra != null ? h("div", { class: "barra" }, h("i", { style: "width:" + Math.max(0, Math.min(100, barra)) + "%" })) : null]);
@@ -1139,7 +1145,6 @@
     P.trocar($("maisGrade"), [
       grupoMais("Gestão", [
         tile("grafico", "Financeiro", "Faturamento e gastos", { href: P.link("financeiro.html") }),
-        tile("dinheiro", "Caixa do dia", "Abrir e fechar a gaveta", { href: P.link("financeiro.html") + "#caixa" }),
         tile("equipe", "Equipe", "Agendas e convites", { href: "#equipe" }),
         tile("clube", "Clube", lembretesDoClube ? lembretesDoClube + " para lembrar" : "Planos e assinantes", { href: "#clube" }, lembretesDoClube ? "erro" : "info"),
         tile("dinheiro", "Produtos", "Estoque e vendas", { href: P.link("financeiro.html") + "#produtos" }, "ok"),

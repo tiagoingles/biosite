@@ -92,9 +92,9 @@ button.perigo{color:var(--erro)}
   </section>
 
   <section class="largo" id="secCaixa" hidden>
-    <div class="topo"><h2>Caixa do dia</h2><span class="note" id="caixaDia"></span></div>
-    <div id="caixaCorpo" style="display:grid;gap:10px"></div>
-    <p class="msg" id="msgCaixa" role="status"></p>
+    <div class="topo"><h2>Caixa do dia</h2><a class="botao" id="linkCaixa" href="painel-dono.html#caixa">Abrir a aba Caixa</a></div>
+    <p class="note" id="caixaStatus"></p>
+    <p class="note">Abrir, retirar e fechar ficam na aba Caixa do painel. Aqui no Financeiro entram os gastos pagos com o dinheiro da gaveta, os vales dos barbeiros e as sobras e faltas dos fechamentos.</p>
   </section>
 
   <section class="largo" id="secPeriodos" hidden>
@@ -208,6 +208,8 @@ button.perigo{color:var(--erro)}
     $("linkPainel").href = "painel-dono.html?barbearia=" + encodeURIComponent(q);
     $("linkAdmin").hidden = false;
   }
+  // Endereço antigo do caixa (financeiro.html#caixa): o caixa agora é uma aba do painel do dono
+  if (location.hash === "#caixa") { location.replace(linkCaixa()); return; }
   var CATEGORIAS = { aluguel: "Aluguel", contas: "Contas", software: "Software", servicos: "Serviços", impostos: "Impostos", outros: "Outros" };
   var hoje = new Date(Date.now() - 3 * 36e5).toISOString().slice(0, 10);
 
@@ -254,6 +256,7 @@ button.perigo{color:var(--erro)}
       ? "Faturamento = atendimentos realizados + mensalidades do clube (no dia em que você tocou em \"Recebi\"). Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos."
       : "Faturamento = atendimentos realizados. Lucro = faturamento − comissões − gastos fixos (proporcionais aos dias do período) − compras de insumos.";
     if (j.temProdutos) $("notaFaturamento").textContent += " Produtos: o que foi vendido entra no faturamento e o preço de compra sai do lucro.";
+    if (j.temCaixa) $("notaFaturamento").textContent += " Caixa: o gasto pago com o dinheiro da gaveta sai do lucro, e a sobra ou a falta do fechamento entra.";
     ["dia", "semana", "ultimos30", "mes", "trimestre"].forEach(function (k) {
       var p = j.resumo[k];
       var c = el("div", "card");
@@ -270,11 +273,15 @@ button.perigo{color:var(--erro)}
         linhas.push(["Produtos vendidos" + (p.produtosVendidos ? " (" + p.produtosVendidos + ")" : ""), p.produtos]);
         linhas.push(["Custo dos produtos", p.custoProdutos]);
       }
-      linhas.push(["Comissões", p.comissoes], ["Gastos fixos", p.gastosFixos], ["Insumos comprados", p.insumosComprados], ["Lucro", p.lucro, "total"]);
+      linhas.push(["Comissões", p.comissoes], ["Gastos fixos", p.gastosFixos], ["Insumos comprados", p.insumosComprados]);
+      // Caixa: gasto pago com o dinheiro da gaveta sai do lucro; sobra ou falta do fechamento entra
+      if (j.temCaixa && p.gastosCaixa) linhas.push(["Gastos pagos pelo caixa", p.gastosCaixa]);
+      if (j.temCaixa && p.diferencaCaixa) linhas.push(["Sobras e faltas do caixa", p.diferencaCaixa, "", (p.diferencaCaixa > 0 ? "+" : "−") + brl(Math.abs(p.diferencaCaixa))]);
+      linhas.push(["Lucro", p.lucro, "total"]);
       linhas.forEach(function (linha) {
         var d = el("div", "detalhe" + (linha[2] ? " " + linha[2] : ""));
         d.appendChild(el("span", null, linha[0]));
-        d.appendChild(el("b", null, brl(linha[1])));
+        d.appendChild(el("b", null, linha[3] || brl(linha[1])));
         c.appendChild(d);
       });
       // Como entrou: atendimentos e produtos por forma de pagamento, quando já há forma registrada
@@ -289,6 +296,18 @@ button.perigo{color:var(--erro)}
           c.appendChild(d);
         });
       }
+      // O que mais saiu da gaveta e não muda o lucro (o vale já está na comissão)
+      if (j.temCaixa && (p.valesCaixa || p.retiradasDono || p.guardadoCaixa)) {
+        c.appendChild(el("span", "note", "Saiu da gaveta (não muda o lucro)"));
+        [["valesCaixa", "Vales para barbeiros"], ["retiradasDono", "Retiradas do dono"], ["guardadoCaixa", "Guardado ou depositado"]].forEach(function (x) {
+          if (!p[x[0]]) return;
+          var d = el("div", "detalhe");
+          d.appendChild(el("span", null, x[1]));
+          d.appendChild(el("b", null, brl(p[x[0]])));
+          c.appendChild(d);
+        });
+      }
+      if (j.temCaixa && p.caixasFechados) c.appendChild(el("span", "note", p.caixasFechados + (p.caixasFechados === 1 ? " caixa fechado" : " caixas fechados") + " no período"));
       if (p.semPreco) c.appendChild(el("span", "aviso-card", p.semPreco + " atendimento(s) sem preço"));
       box.appendChild(c);
     });
@@ -325,7 +344,8 @@ button.perigo{color:var(--erro)}
       var item = el("div", "item");
       var topo = el("div", "topo");
       topo.appendChild(el("b", null, p.nome));
-      topo.appendChild(el("span", "note", p.atendimentos + " atend. no mês · faturamento " + brl(p.faturamento) + " · comissão " + brl(p.comissao)));
+      topo.appendChild(el("span", "note", p.atendimentos + " atend. no mês · faturamento " + brl(p.faturamento) + " · comissão " + brl(p.comissao)
+        + (p.vales ? " · vales pelo caixa " + brl(p.vales) + " · saldo depois dos vales " + brl(p.saldo) : "")));
       var linha = el("div", "linha");
       var inp = el("input"); inp.type = "number"; inp.min = "0"; inp.max = "100"; inp.step = "1"; inp.value = p.comissaoPct;
       inp.style.width = "120px"; inp.setAttribute("aria-label", "Comissão de " + p.nome + " em porcentagem");
@@ -378,121 +398,21 @@ button.perigo{color:var(--erro)}
       .catch(function (err) { msg("msgDespesas", err.message, "erro"); });
   });
 
-  // ---------- caixa do dia (lib/caixa.js) ----------
-  // Abre com o troco, registra retirada e reforço, fecha contando a gaveta. Entradas pela forma de pagamento.
-  var diaCaixa = null; // null = hoje; outro dia = caixa que ficou aberto ou um fechamento antigo
-  function apiCaixa(corpo) {
-    var url = "/api/equipe?area=caixa" + (!corpo && diaCaixa ? "&dia=" + diaCaixa : "") + (q ? "&barbearia=" + encodeURIComponent(q) : "");
-    return Conta.api(url, corpo ? { corpo: Object.assign({ dia: diaCaixa || undefined }, corpo) } : undefined);
-  }
-  function carregarCaixa() {
-    apiCaixa().then(function (j) {
-      $("secCaixa").hidden = false;
-      desenharCaixa(j);
-      if (location.hash === "#caixa") setTimeout(function () { $("secCaixa").scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
-    }).catch(function (err) { $("secCaixa").hidden = false; msg("msgCaixa", err.message, "erro"); });
-  }
-  function horaBr(iso) { return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }); }
-  function linhaValor(box, rotulo, valor, cls) {
-    var d = el("div", "detalhe" + (cls ? " " + cls : ""));
-    d.appendChild(el("span", null, rotulo));
-    d.appendChild(el("b", null, brl(valor)));
-    box.appendChild(d);
-  }
+  // ---------- caixa do dia ----------
+  // Abrir, retirar e fechar ficam na aba Caixa do painel do dono (painel-caixa.js). Aqui, só a situação de hoje.
+  function linkCaixa() { return "painel-dono.html" + (q ? "?barbearia=" + encodeURIComponent(q) : "") + "#caixa"; }
+  $("linkCaixa").href = linkCaixa();
   function textoDiferenca(dif) { return dif === 0 ? "bateu certinho" : dif > 0 ? "sobrou " + brl(dif) : "faltou " + brl(-dif); }
-  function botao(texto, cls, acao) { var b = el("button", cls, texto); b.type = "button"; b.onclick = function () { acao(b); }; return b; }
-  function falhaCaixa(err) { msg("msgCaixa", err.message, "erro"); }
-
-  function desenharCaixa(j) {
-    var box = $("caixaCorpo"); box.textContent = "";
-    var ehHoje = j.dia === j.hoje;
-    $("caixaDia").textContent = (ehHoje ? "Hoje, " : "") + dataBr(j.dia);
-    if (j.abertoAntes && j.abertoAntes !== j.dia) {
-      var av = el("p", "faixa-repor", "O caixa de " + dataBr(j.abertoAntes) + " ficou aberto. ");
-      av.appendChild(botao("Ver e fechar", null, function () { diaCaixa = j.abertoAntes; carregarCaixa(); }));
-      box.appendChild(av);
-    }
-    if (!ehHoje) box.appendChild(el("div", "linha")).appendChild(botao("Voltar para hoje", null, function () { diaCaixa = null; carregarCaixa(); }));
-    var c = j.caixa;
-    if (!c) {
-      if (!ehHoje) { box.appendChild(el("p", "vazio", "Não houve caixa neste dia.")); desenharHistorico(box, j.historico); return; }
-      box.appendChild(el("p", "note", "Abra o caixa com o dinheiro que já está na gaveta (o troco). Ao fechar, você conta a gaveta e o sistema mostra se bateu."));
-      var t = campo("Troco na gaveta (R$)", "", { inputmode: "decimal", maxlength: "12", placeholder: "Ex.: 50,00" });
-      var la = el("div", "linha"); la.appendChild(t.label);
-      la.appendChild(botao("Abrir o caixa", "main", function (b) { ocupado(b, apiCaixa({ acao: "abrir", troco: t.input.value })).then(function () { msg("msgCaixa", "Caixa aberto.", "ok"); carregarCaixa(); }).catch(falhaCaixa); }));
-      box.appendChild(la);
-      desenharHistorico(box, j.historico);
-      return;
-    }
-    // Aberto: a conta ao vivo. Fechado: a foto do fechamento.
-    var r = c.fechado_em && c.resumo ? c.resumo : j;
-    var esperado = c.fechado_em ? Number(c.esperado) : j.esperado;
-    var cards = el("div", "cards"), card = el("div", "card");
-    card.appendChild(el("span", "note", c.fechado_em ? "Fechado às " + horaBr(c.fechado_em) : "Aberto às " + horaBr(c.aberto_em)));
-    linhaValor(card, "Troco inicial", r.troco);
-    [["dinheiro", "Dinheiro"], ["pix", "Pix"], ["debito", "Débito"], ["credito", "Crédito"], ["sem", "Sem forma informada"]].forEach(function (f) {
-      if (f[0] !== "sem" || r.entradas.sem) linhaValor(card, f[1], r.entradas[f[0]]);
-    });
-    linhaValor(card, "Total do dia", r.total, "total");
-    if (r.reforcos) linhaValor(card, "Reforços", r.reforcos);
-    if (r.retiradas) linhaValor(card, "Retiradas", -r.retiradas);
-    linhaValor(card, "Dinheiro esperado na gaveta", esperado, "total");
-    if (c.fechado_em) {
-      var dif = Math.round((Number(c.contado) - esperado) * 100) / 100;
-      linhaValor(card, "Dinheiro contado", c.contado);
-      card.appendChild(el("span", dif === 0 ? "note" : "aviso-card", "Fechamento: " + textoDiferenca(dif) + "."));
-      if (c.observacao) card.appendChild(el("span", "note", c.observacao));
-    }
-    cards.appendChild(card);
-    box.appendChild(cards);
-    j.movimentos.forEach(function (m) {
-      box.appendChild(el("p", "note", (m.tipo === "retirada" ? "Retirada de " : "Reforço de ") + brl(m.valor) + " às " + horaBr(m.criado_em) + (m.motivo ? " · " + m.motivo : "")));
-    });
-    if (c.fechado_em) {
-      if (ehHoje) box.appendChild(el("div", "linha")).appendChild(botao("Reabrir o caixa", null, function (b) {
-        if (!confirm("Reabrir o caixa de hoje? O fechamento é desfeito.")) return;
-        ocupado(b, apiCaixa({ acao: "reabrir" })).then(carregarCaixa).catch(falhaCaixa);
-      }));
-      desenharHistorico(box, j.historico);
-      return;
-    }
-    if (j.pendentes) box.appendChild(el("p", "faixa-repor", j.pendentes + " atendimento(s) deste dia ainda sem Realizado ou Não realizado. Encerre na agenda antes de fechar o caixa, senão o valor fica de fora."));
-    // Retirada (sangria) ou reforço de troco
-    var tipo = el("select");
-    [["retirada", "Retirada (sangria)"], ["reforco", "Reforço de troco"]].forEach(function (x) { var o = el("option", null, x[1]); o.value = x[0]; tipo.appendChild(o); });
-    var lt = el("label", null, "Movimento"); lt.appendChild(tipo);
-    var vm = campo("Valor (R$)", "", { inputmode: "decimal", maxlength: "12" });
-    var mm = campo("Motivo", "", { maxlength: "80", placeholder: "Ex.: depósito no banco" });
-    var l1 = el("div", "linha");
-    [lt, vm.label, mm.label, botao("Registrar", null, function (b) {
-      ocupado(b, apiCaixa({ acao: "movimento", tipo: tipo.value, valor: vm.input.value, motivo: mm.input.value })).then(function () { msg("msgCaixa", "Registrado.", "ok"); carregarCaixa(); }).catch(falhaCaixa);
-    })].forEach(function (x) { l1.appendChild(x); });
-    box.appendChild(l1);
-    // Fechar: conta a gaveta
-    var ct = campo("Dinheiro contado na gaveta (R$)", "", { inputmode: "decimal", maxlength: "12" });
-    var ob = campo("Observação (opcional)", "", { maxlength: "300" });
-    var l2 = el("div", "linha");
-    [ct.label, ob.label, botao("Fechar o caixa", "main", function (b) {
-      if (!ct.input.value.trim()) { msg("msgCaixa", "Conte o dinheiro da gaveta e informe o valor.", "erro"); return; }
-      ocupado(b, apiCaixa({ acao: "fechar", contado: ct.input.value, observacao: ob.input.value })).then(function (x) {
-        msg("msgCaixa", "Caixa fechado: " + textoDiferenca(x.diferenca) + ".", x.diferenca === 0 ? "ok" : "");
-        carregarCaixa();
-      }).catch(falhaCaixa);
-    })].forEach(function (x) { l2.appendChild(x); });
-    box.appendChild(l2);
-    desenharHistorico(box, j.historico);
-  }
-  function desenharHistorico(box, h) {
-    if (!h || !h.length) return;
-    var det = document.createElement("details");
-    det.appendChild(el("summary", null, "Últimos fechamentos"));
-    h.forEach(function (x) {
-      var d = el("div", "detalhe");
-      d.appendChild(el("span", null, dataBr(x.dia) + " · " + textoDiferenca(x.diferenca)));
-      d.appendChild(botao("Ver", null, function () { diaCaixa = x.dia; carregarCaixa(); }));
-      det.appendChild(d);
-    });
-    box.appendChild(det);
+  function carregarCaixa() {
+    Conta.api("/api/equipe?area=caixa" + (q ? "&barbearia=" + encodeURIComponent(q) : "")).then(function (j) {
+      var c = j.caixa, t;
+      if (!c) t = "O caixa de hoje ainda não foi aberto.";
+      else if (!c.fechado_em) t = "Caixa aberto: deve ter " + brl(j.esperado) + " na gaveta. Entrou hoje " + brl(j.total) + ".";
+      else t = "Caixa de hoje fechado: " + textoDiferenca(Math.round((Number(c.contado) - Number(c.esperado)) * 100) / 100) + ". Entrou " + brl((c.resumo || j).total) + ".";
+      if (j.abertoAntes) t += " O caixa de " + dataBr(j.abertoAntes) + " ficou aberto: feche na aba Caixa.";
+      $("caixaStatus").textContent = t;
+      $("secCaixa").hidden = false;
+    }).catch(function () { $("secCaixa").hidden = true; });
   }
 
   // ---------- produtos e estoque (lib/produtos.js) ----------

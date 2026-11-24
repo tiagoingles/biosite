@@ -63,7 +63,7 @@ test("mensalidades do clube entram no faturamento e no lucro, no dia do registro
   assert.equal(f.temClube, true);
 
   // Comissão por barbeiro no mês: a fixa do clube entra para quem atendeu
-  assert.deepEqual(f.comissoes.find((c) => c.id === "b1"), { id: "b1", nome: "Bruno", comissaoPct: 40, atendimentos: 2, faturamento: 40, comissao: 31 });
+  assert.deepEqual(f.comissoes.find((c) => c.id === "b1"), { id: "b1", nome: "Bruno", comissaoPct: 40, atendimentos: 2, faturamento: 40, comissao: 31, vales: 0, saldo: 31 });
   assert.deepEqual(f.servicosSemPreco, []);
 });
 
@@ -114,4 +114,47 @@ test("tela do Financeiro mostra as mensalidades do clube e o gráfico com as dua
   assert.match(html, /p\.entradas/);
   assert.match(html, /id="legendaGrafico"/);
   assert.match(html, /desenharGrafico\(j\.serie, j\.temClube\)/);
+});
+
+// Aba Caixa (fase 35, pedido do Manolo): tudo o que sai da gaveta aparece no Financeiro
+test("caixa no Financeiro: gasto pago pela gaveta sai do lucro, sobra ou falta entra, vale fica ao lado da comissão", () => {
+  const retiradasCaixa = [
+    { id: "r1", valor: "18", categoria: "despesa", profissional_id: null, dia: "2026-11-14" },
+    { id: "r2", valor: "50", categoria: "vale", profissional_id: "b1", dia: "2026-11-14" },
+    { id: "r3", valor: "100", categoria: "dono", profissional_id: null, dia: "2026-11-14" },
+    { id: "r4", valor: "200", categoria: null, profissional_id: null, dia: "2026-11-14" }, // antiga, sem destino: guardar
+    { id: "r5", valor: "30", categoria: "vale", profissional_id: "b1", dia: "2026-10-20" }, // mês passado
+  ];
+  const fechamentosCaixa = [{ id: "c1", dia: "2026-11-14", contado: "95", esperado: "100" }, { id: "c2", dia: "2026-11-10", contado: "52", esperado: "50" }];
+  const sem = calcularFinanceiro(HOJE, { ...comum, pedidos: pedidosBase });
+  const com = calcularFinanceiro(HOJE, { ...comum, pedidos: pedidosBase, retiradasCaixa, fechamentosCaixa });
+  assert.deepEqual([sem.temCaixa, com.temCaixa], [false, true]);
+  const d = com.resumo.dia;
+  assert.deepEqual([d.gastosCaixa, d.valesCaixa, d.retiradasDono, d.guardadoCaixa, d.diferencaCaixa, d.caixasFechados], [18, 50, 100, 200, -5, 1]);
+  assert.equal(d.lucro, Math.round((sem.resumo.dia.lucro - 18 - 5) * 100) / 100, "só a despesa e a falta mudam o lucro");
+  assert.equal(com.resumo.semana.diferencaCaixa, -3, "faltaram 5 num dia e sobraram 2 no outro");
+  assert.equal(com.resumo.semana.lucro, Math.round((sem.resumo.semana.lucro - 18 - 3) * 100) / 100);
+  const bruno = com.comissoes.find((c) => c.id === "b1");
+  assert.deepEqual([bruno.vales, bruno.saldo], [50, Math.round((bruno.comissao - 50) * 100) / 100], "o vale de outubro não entra no mês");
+  assert.deepEqual([com.comissoes.find((c) => c.id === "b2").vales, sem.comissoes[0].vales], [0, 0]);
+  const html = fs.readFileSync(path.join(__dirname, "..", "financeiro.html"), "utf8");
+  for (const t of ["Gastos pagos pelo caixa", "Sobras e faltas do caixa", "Vales para barbeiros", "vales pelo caixa"]) assert.ok(html.includes(t), t);
+});
+
+test("o financeiro lê as retiradas e os fechamentos do caixa da própria barbearia", async () => {
+  const hoje = A.hoje();
+  const lista = (corpo) => ({ corpo });
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { padrao: /\/rest\/v1\/caixa_movimentos\?barbearia_id=eq\./, resposta: lista([{ id: "r1", valor: "20", categoria: "despesa", profissional_id: null, dia: hoje }]) },
+    { padrao: /\/rest\/v1\/caixas\?barbearia_id=eq\./, resposta: lista([{ id: "c1", dia: hoje, contado: "98", esperado: "100" }]) },
+    { padrao: /\/rest\/v1\/(pedidos|despesas|insumos|insumo_movimentos|servicos_precos|profissionais|clube_pagamentos|produto_movimentos)\?barbearia_id=eq\./, resposta: lista([]) },
+  ]);
+  const r = await A.chamar(equipe, { query: { area: "financeiro" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.resumo.dia.gastosCaixa, r.body.resumo.dia.diferencaCaixa, r.body.resumo.dia.lucro, r.body.temCaixa], [20, -2, -22, true]);
+  const retiradas = chamadas.find((c) => /caixa_movimentos\?/.test(c.url)).url;
+  assert.ok(retiradas.includes(`barbearia_id=eq.${UUIDS.barbearia}&tipo=eq.retirada&dia=gte.${inicioDaLeitura(hoje)}&dia=lte.${hoje}`), retiradas);
+  const fechados = chamadas.find((c) => /caixas\?/.test(c.url)).url;
+  assert.ok(fechados.includes(`barbearia_id=eq.${UUIDS.barbearia}`) && fechados.includes("fechado_em=not.is.null"), fechados);
 });

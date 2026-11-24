@@ -13,9 +13,10 @@ const { rest } = require("../lib/supabase");
 const { codigoNovo, texto } = require("../lib/agenda");
 const painel = require("../lib/pedidos-painel");
 const { avisarNovoPedido } = require("../lib/avisos");
-const { disponibilidadeDoDia, escolherLivre } = require("../lib/disponibilidade");
+const { disponibilidadeDoDia, escolherLivre, dadosDoDia, cabe } = require("../lib/disponibilidade");
 const { precoDoServico } = require("../lib/precos");
-const { dataValida, horaValida, hojeBr, somaDias } = require("../lib/horarios");
+const { dataValida, horaValida, hojeBr, somaDias, minutos, agoraMinBr } = require("../lib/horarios");
+const { randomUUID } = require("crypto");
 const { origemDe, falha, corpoDe, UUID, bloqueadoPorTentativas, registrarErroDeSenha } = require("../lib/seguranca");
 const sinal = require("../lib/sinal");
 const clube = require("../lib/clube");
@@ -35,6 +36,81 @@ function erro(res, status, message) {
 async function somaDosPrecos(barbeariaId, servicos) {
   const precos = await Promise.all(servicos.map((s) => precoDoServico(barbeariaId, s.nome, s.preco)));
   return precos.some((p) => p == null) ? null : Math.round(precos.reduce((t, p) => t + p, 0) * 100) / 100;
+}
+const duracaoOk = (v) => (Number.isInteger(Number(v)) && Number(v) >= 5 && Number(v) <= 240 ? Number(v) : 30);
+
+// Vários serviços com barbeiros ou horários diferentes (fase 38): o site manda o plano (barbeiro e horário de cada
+// serviço). Confere todos antes de gravar; com o mesmo barbeiro, um logo depois do outro, vira um atendimento só
+// (como antes). Senão, um atendimento por serviço, ligados pelo grupo. Se um deles não entrar, os outros são cancelados.
+async function pedidoEmGrupo(o) {
+  const { res, req, b, itens, barbearia_id, barb, equipe, automatico, cliente, observacao, dia, slug, zapCliente } = o;
+  const porId = Object.fromEntries(equipe.map((p) => [p.id, p]));
+  if (itens.some((x) => !porId[x.profissionalId])) return erro(res, 400, "Profissional não encontrado nesta barbearia.");
+  const dados = {};
+  await Promise.all([...new Set(itens.map((x) => x.profissionalId))].map(async (id) => (dados[id] = await dadosDoDia(id, dia))));
+  const agoraMin = dia === hojeBr() ? agoraMinBr() : -1;
+  for (let i = 0; i < itens.length; i++) {
+    const x = itens[i];
+    const ini = minutos(x.horario);
+    const doMesmo = itens.slice(0, i).some((y) => y.profissionalId === x.profissionalId && ini < minutos(y.horario) + y.duracao && minutos(y.horario) < ini + x.duracao);
+    if (doMesmo || !cabe(dados[x.profissionalId], ini, x.duracao, agoraMin)) return erro(res, 409, "Este horário não está mais livre. Escolha outro.");
+  }
+  const emSequencia = itens.every((x, i) => x.profissionalId === itens[0].profissionalId && (i === 0 || minutos(x.horario) === minutos(itens[i - 1].horario) + itens[i - 1].duracao));
+  const linhas = emSequencia
+    ? [{ servico: itens.map((x) => x.servico).join(" + "), duracao: itens.reduce((t, x) => t + x.duracao, 0), horario: itens[0].horario, profissionalId: itens[0].profissionalId, itens }]
+    : itens.map((x) => ({ servico: x.servico, duracao: x.duracao, horario: x.horario, profissionalId: x.profissionalId, itens: [x] }));
+  for (const l of linhas) l.valor = await somaDosPrecos(barbearia_id, l.itens.map((x) => ({ nome: x.servico, preco: x.preco })));
+  const total = linhas.every((l) => l.valor != null) ? Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100 : null;
+  // Sinal no Pix: um só, no primeiro atendimento, sobre o total (vale se algum dos serviços pede sinal)
+  const valorSinal = Math.max(0, ...itens.map((x) => sinal.valorDoSinal(barb.sinal, { dia, servico: x.servico, preco: total })));
+  const confirmaSozinho = automatico && !valorSinal;
+  const origem = origemDe(req);
+  const limiteBarbearia = automatico ? Math.max(60, (LIMITE_DIA_POR_BARBEIRO + 4) * equipe.length) : Math.max(40, LIMITE_DIA_POR_BARBEIRO * equipe.length);
+  const feitos = [];
+  for (let k = 0; k < linhas.length; k++) {
+    const l = linhas[k];
+    let r = null;
+    let codigo = null;
+    for (let tentativa = 0; tentativa < 4 && !r; tentativa++) {
+      codigo = codigoNovo(tentativa < 2 ? 4 : 5);
+      try {
+        r = await rest("rpc/criar_pedido", {
+          metodo: "POST",
+          corpo: {
+            p: {
+              slug, barbearia_id, profissional_id: l.profissionalId, profissional: porId[l.profissionalId].nome, codigo, servico: l.servico, dia, horario: l.horario,
+              cliente, observacao, duracao_min: l.duracao, valor: l.valor, status: confirmaSozinho ? "confirmado" : "pendente",
+              sinal_valor: k === 0 && valorSinal ? valorSinal : null, origem, limite_hora_origem: LIMITE_HORA_ORIGEM, limite_dia_origem: LIMITE_DIA_ORIGEM, limite_dia_barbearia: limiteBarbearia,
+            },
+          },
+        });
+      } catch (e) {
+        if (!/duplicate|unique/i.test(e.message)) throw e;
+      }
+    }
+    if (!r || r.erro || !r.id) {
+      if (feitos.length) await rest(`pedidos?id=in.(${feitos.map((f) => f.id).join(",")})`, { metodo: "PATCH", prefer: "return=minimal", corpo: { status: "cancelado" } });
+      if (!r) throw new Error("Não foi possível gerar um código livre para o pedido.");
+      if (r.erro === "limite_origem") return erro(res, 429, "Você já fez vários pedidos agora há pouco. Se precisar de mais, fale com a barbearia pelo WhatsApp.");
+      if (r.erro === "limite_barbearia") return erro(res, 429, "A barbearia recebeu muitos pedidos hoje. Fale com ela pelo WhatsApp.");
+      return erro(res, 409, "Este horário acabou de ser reservado. Escolha outro.");
+    }
+    feitos.push({ id: r.id, codigo, linha: l });
+  }
+  if (feitos.length > 1) await rest(`pedidos?id=in.(${feitos.map((f) => f.id).join(",")})`, { metodo: "PATCH", prefer: "return=minimal", corpo: { grupo_id: randomUUID() } });
+  for (const f of feitos) {
+    if (zapCliente) {
+      await clientes.clienteDoAgendamento({ barbeariaId: barbearia_id, pedidoId: f.id, nome: cliente, telefone: zapCliente, novidades: b.novidades === true }).catch((e) => console.error("cliente do agendamento:", e.message));
+    }
+    await avisarNovoPedido({ barbearia_id, profissional_id: f.linha.profissionalId, cliente, servico: f.linha.servico, dia, horario: f.linha.horario, confirmado: confirmaSozinho }).catch((e) =>
+      console.error("aviso de pedido:", e.message)
+    );
+  }
+  const nomes = [...new Set(feitos.map((f) => porId[f.linha.profissionalId].nome))];
+  return res.status(201).json({
+    codigo: feitos[0].codigo, codigos: feitos.map((f) => f.codigo), profissional: nomes.join(" e "), verificado: true, clube: false, confirmado: confirmaSozinho,
+    sinal: valorSinal ? sinal.pixDoPedido(barb.sinal, valorSinal, feitos[0].codigo) : null, whatsapp: barb.whatsapp || undefined,
+  });
 }
 
 module.exports = async (req, res) => {
@@ -63,6 +139,11 @@ module.exports = async (req, res) => {
   if (lista.length > 4) return erro(res, 400, "Escolha até 4 serviços.");
   const varios = lista.map((s) => ({ nome: texto(s && s.nome, 80), preco: s && s.preco })).filter((s) => s.nome);
   const servico = varios.length > 1 ? varios.map((s) => s.nome).join(" + ") : texto(b.servico, 80);
+  // Plano com barbeiro e horário de cada serviço (fase 38): no mesmo horário com barbeiros diferentes, ou em sequência
+  const brutos = Array.isArray(b.itens) ? b.itens : [];
+  if (brutos.length > 4) return erro(res, 400, "Escolha até 4 serviços.");
+  const itens = brutos.map((x) => ({ servico: texto(x && x.servico, 80), preco: x && x.preco, duracao: duracaoOk(x && x.duracao), profissionalId: texto(x && x.profissionalId, 36), horario: texto(x && x.horario, 5) }));
+  if (itens.length > 1 && itens.some((x) => !x.servico || !UUID.test(x.profissionalId) || !horaValida(x.horario))) return erro(res, 400, "Serviço, barbeiro ou horário inválido.");
   const profissionalNome = texto(b.profissional, 80);
   const profissionalId = texto(b.profissionalId, 36);
   // Cliente sem preferência de barbeiro: o sistema escolhe um livre naquele horário
@@ -83,7 +164,7 @@ module.exports = async (req, res) => {
   if (!profissionalNome && !profissionalId && !qualquer) return erro(res, 400, "Escolha o profissional.");
   const peloClube = b.clube === true;
   if (peloClube && !clube.normalizarWhats(b.clubeWhatsapp)) return res.status(400).json({ message: "Informe o WhatsApp do clube com DDD.", clube: true });
-  if (peloClube && varios.length > 1) return res.status(400).json({ message: "Pelo clube, marque um serviço por vez.", clube: true });
+  if (peloClube && (varios.length > 1 || itens.length > 1)) return res.status(400).json({ message: "Pelo clube, marque um serviço por vez.", clube: true });
   // WhatsApp do cliente (opcional): liga o agendamento ao cadastro dele. Pelo clube, vale o número do clube.
   const temZap = String(b.whatsapp || "").replace(/\D/g, "").length > 0;
   const zapCliente = temZap ? clube.normalizarWhats(b.whatsapp) : peloClube ? clube.normalizarWhats(b.clubeWhatsapp) : "";
@@ -111,6 +192,7 @@ module.exports = async (req, res) => {
     // O nome do serviço vai escrito como está no plano (o banco compara o texto exato)
     const servicoPedido = assinante ? clube.servicoDoPlano(assinante.servicos, servico) : servico;
     const equipe = await rest(`profissionais?barbearia_id=eq.${barbearia_id}&ativo=eq.true&select=id,nome&order=criado_em.asc`);
+    if (itens.length > 1) return await pedidoEmGrupo({ res, req, b, itens, barbearia_id, barb: barb[0], equipe, automatico, cliente, observacao, dia, slug, zapCliente });
 
     // Quem vai atender: o escolhido, um livre da equipe, ou (site antigo, sem id) o barbeiro com aquele nome
     let escolhido = null;

@@ -184,6 +184,8 @@ dialog[open]::backdrop{animation:dialogFade .4s ease both;backdrop-filter:blur(3
 a.ag-op{text-decoration:none}
 .erro .ag-op{margin-top:8px;color:var(--texto);font-weight:600}
 .ag-steps{display:grid;gap:12px}
+.ag-op[hidden]{display:none!important}
+.ag-busca{font:inherit;font-size:16px;width:100%;padding:11px 14px;border:1px solid var(--linha);border-radius:12px;background:var(--suave);color:var(--texto)}
 .ag-chips{display:flex;flex-wrap:wrap;gap:8px}
 .ag-chips button{border:1px solid var(--linha);background:var(--fundo);color:inherit;border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;transition:background .3s,color .3s,transform .3s var(--ease)}
 .ag-chips button:hover{transform:translateY(-1px)}
@@ -482,11 +484,20 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
   // Serviços que ainda dá para somar: até 4 e 240 minutos no total, e que o barbeiro já escolhido faz
   function candidatos(){var l=escolhidos(),t=duracaoTotal();return (AG.servicos||[]).filter(function(s){return l.indexOf(s)<0&&t+duracaoDe(s)<=240&&(!sel.prof||(sel.prof.servicos||[]).indexOf(s.id)>-1)})}
   function podeMais(){return !oferta&&!!sel.servico&&escolhidos().length<4&&candidatos().length>0}
+  // Com a agenda no banco (gerador v20), o cliente escolhe como fazer os vários serviços: "um depois do outro"
+  // (mesmo barbeiro ou outro, em horários próximos) ou "no mesmo horário" (cada serviço com um barbeiro)
+  function temBanco(){return !semCadastro&&(equipe||[]).some(function(p){return p.dbId})}
+  function multi(){return escolhidos().length>1&&temBanco()&&!oferta}
+  function junto(){return multi()&&sel.modo==="junto"}
   function blocoServicos(){
     if(oferta||!sel.servico)return "";
-    var h='<p class="cobertura"><b>'+esc(nomeServicos())+'</b><br><small>'+duracaoTotal()+' min'+(escolhidos().length>1?' no total, um serviço depois do outro':'')+'</small></p>';
+    var varios=escolhidos().length>1;
+    var como=!varios?"":junto()?" · cada serviço com um barbeiro, no mesmo horário":multi()?" no total · um depois do outro, com o mesmo barbeiro ou em horários próximos":" no total · um depois do outro, com o mesmo barbeiro";
+    var tempo=junto()?escolhidos().map(function(s){return duracaoDe(s)+" min"}).join(" e "):duracaoTotal()+" min";
+    var h='<p class="cobertura"><b>'+esc(nomeServicos())+'</b><br><small>'+tempo+como+'</small></p>';
     if(sel.mais&&sel.mais.length)h+='<div class="ag-chips">'+sel.mais.map(function(s,i){return '<button type="button" data-ag="tirar" data-i="'+i+'" aria-label="Tirar '+esc(s.nome)+'">'+esc(s.nome)+' ✕</button>'}).join("")+'</div>';
-    if(podeMais())h+='<button type="button" class="ag-op" data-ag="mais"><b>+ Adicionar outro serviço</b><small>Faça mais de um no mesmo horário, um depois do outro</small></button>';
+    if(multi()&&!profFixo)h+='<p class="ag-sub">Como prefere?</p><div class="ag-chips"><button type="button" data-ag="modo" data-v="seguido"'+(junto()?'':' aria-pressed="true"')+'>Um depois do outro</button><button type="button" data-ag="modo" data-v="junto"'+(junto()?' aria-pressed="true"':'')+'>No mesmo horário, com outro barbeiro</button></div>';
+    if(podeMais())h+='<button type="button" class="ag-op" data-ag="mais"><b>+ Adicionar outro serviço</b><small>Faça mais de um serviço na mesma visita</small></button>';
     return h;
   }
   function isoDe(dt){return dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate())}
@@ -516,6 +527,29 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     }
     return null;
   }
+  // Vários serviços: os planos do servidor (quem faz cada serviço e a que horas). Devolve null enquanto carrega.
+  function planosDoBanco(dia){
+    var modo=junto()?"junto":"seguido";
+    var pid=junto()||sel.qualquer?"qualquer":sel.prof.dbId;
+    var ds=escolhidos().map(duracaoDe).join(",");
+    var k="planos|"+pid+"|"+dia+"|"+ds+"|"+modo;
+    if(cacheHoras[k])return cacheHoras[k];
+    if(!cacheHoras[k+"!"]){
+      cacheHoras[k+"!"]=1;
+      fetch("/api/horarios?slug="+encodeURIComponent(C.slug)+"&profissional="+encodeURIComponent(pid)+"&dia="+dia+"&duracoes="+ds+"&modo="+modo).then(function(r){return r.ok?r.json():{planos:[]}}).catch(function(){return {planos:[]}}).then(function(j){cacheHoras[k]=j.planos||[];render()});
+    }
+    return null;
+  }
+  function nomesDoPlano(p){var n=[];((p&&p.itens)||[]).forEach(function(x){if(n.indexOf(x.nome)<0)n.push(x.nome)});return n.join(" e ")}
+  function linhasDoPlano(p){return escolhidos().map(function(s,i){var x=(p.itens||[])[i]||{};return esc(s.nome)+" com "+esc(x.nome||"")+" às "+esc(x.horario||"")}).join("<br>")}
+  function minDe(t){var p=String(t||"0:0").split(":");return +p[0]*60+ +p[1]}
+  // Busca de serviço quando a lista é grande: esconde os que não têm o texto digitado
+  function campoBusca(n){return n>6?'<input type="search" id="agBusca" class="ag-busca" placeholder="Buscar serviço (ex.: barba)" aria-label="Buscar serviço" autocomplete="off" value="'+esc(sel.busca||"")+'"><p class="note" id="agSemBusca" hidden>Nenhum serviço com esse nome.</p>':""}
+  function filtrarServicos(){
+    var q=chave(sel.busca||""),bs=document.querySelectorAll("#agSteps [data-busca]"),n=0;
+    for(var i=0;i<bs.length;i++){var ok=!q||bs[i].getAttribute("data-busca").indexOf(q)>-1;bs[i].hidden=!ok;if(ok)n++}
+    var v=$("agSemBusca");if(v)v.hidden=n>0||!q;
+  }
   function rotuloDia(dt){return DIAS[dt.getDay()]+" "+pad(dt.getDate())+"/"+pad(dt.getMonth()+1)}
   function porId(lista,id){return lista.filter(function(x){return x.id===id})[0]}
   function whats(){var w=String(C.whatsapp||"").replace(/\D/g,"");if(w&&w.indexOf("55")!==0)w="55"+w;return w}
@@ -538,9 +572,9 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
       if(depois==="servico"){sel.pref=null;sel.prof=null;sel.qualquer=false}
       if(depois==="servico"||depois==="pref"){sel.prof=null;sel.qualquer=false}
     }
-    if(depois!=="dados"){sel.hora=null}
+    if(depois!=="dados"){sel.hora=null;sel.plano=null}
     if(depois==="servico"||depois==="pref"||depois==="prof"||depois==="dia"){sel.dia=null}
-    if(depois==="servico"){sel.mais=[]}
+    if(depois==="servico"){sel.mais=[];sel.modo=null;sel.busca=""}
   }
   function escolherDia(i){var dt=dias[i];if(!dt)return;sel.dia=i;sel.diaTxt=rotuloDia(dt);sel.diaISO=isoDe(dt);sel.hora=null}
   // Arquivo de calendário (.ics) do agendamento, para o cliente salvar no celular
@@ -559,16 +593,21 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     if(etapa==="servico"){
       titulo="Escolha o serviço";
       if(oferta&&sel.prof)h+=notaOferta();
-      (AG.servicos||[]).forEach(function(s){
+      var todos=AG.servicos||[];
+      h+=campoBusca(todos.length);
+      todos.forEach(function(s){
         var preco=precoTxt(s.preco);
         var info=[s.duracao,preco].filter(Boolean).join(" · ");
-        h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
+        h+='<button type="button" class="ag-op" data-ag="servico" data-id="'+esc(s.id)+'" data-busca="'+esc(chave(s.nome))+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
       });
     }else if(etapa==="pref"){
-      titulo="Você tem preferência de barbeiro?";
+      titulo=junto()?"No mesmo horário":"Você tem preferência de barbeiro?";
       h+=blocoServicos();
-      h+='<button type="button" class="ag-op" data-ag="tem-pref"><b>Sim, quero escolher</b><small>Ver os barbeiros disponíveis</small></button>';
-      h+='<button type="button" class="ag-op" data-ag="sem-pref"><b>Não, tanto faz</b><small>Vejo os horários livres de toda a equipe</small></button>';
+      if(junto())h+='<button type="button" class="ag-op" data-ag="sem-pref"><b>Ver os horários</b><small>Mostro os horários com barbeiros livres ao mesmo tempo</small></button>';
+      else{
+        h+='<button type="button" class="ag-op" data-ag="tem-pref"><b>Sim, quero escolher</b><small>Ver os barbeiros disponíveis</small></button>';
+        h+='<button type="button" class="ag-op" data-ag="sem-pref"><b>Não, tanto faz</b><small>Vejo os horários livres de toda a equipe</small></button>';
+      }
     }else if(etapa==="prof"){
       titulo="Escolha seu barbeiro";
       h+=blocoServicos();
@@ -590,24 +629,35 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
         else{
           if(sel.dia==null)escolherDia(0);
           h+='<div class="ag-chips">'+dias.map(function(dt,i){return '<button type="button" data-ag="dia" data-i="'+i+'"'+(sel.dia===i?' aria-pressed="true"':'')+'>'+rotuloDia(dt)+'</button>'}).join("")+'</div>';
-          var hs=doBanco()?horasDoBanco(sel.diaISO):horasDe(sel.prof);
-          if(hs===null)h+='<p class="note">Carregando horários…</p>';
-          else if(!hs.length)h+='<p class="note">Sem horários livres neste dia. Escolha outro dia.</p>';
-          else h+='<p class="ag-sub">Horários</p><div class="ag-chips">'+hs.map(function(t){return '<button type="button" data-ag="hora" data-v="'+t+'">'+t+'</button>'}).join("")+'</div>';
+          if(multi()){
+            // Vários serviços: cada horário é um plano com o barbeiro e a hora de cada serviço
+            var ps=planosDoBanco(sel.diaISO);
+            if(ps===null)h+='<p class="note">Procurando horários para os serviços…</p>';
+            else if(!ps.length)h+='<p class="note">'+(junto()?"Sem barbeiros livres ao mesmo tempo neste dia. Escolha outro dia ou \"Um depois do outro\".":"Sem horário para todos os serviços neste dia. Escolha outro dia"+(sel.prof&&!sel.qualquer?" ou volte e escolha \"Não, tanto faz\" para ver outros barbeiros":" ou \"No mesmo horário\"")+".")+'</p>';
+            else{sel.planos=ps;h+='<p class="ag-sub">Horários</p><div class="ag-chips">'+ps.map(function(p,i){return '<button type="button" data-ag="plano" data-i="'+i+'">'+esc(p.horario)+'</button>'}).join("")+'</div>'}
+          }else{
+            var hs=doBanco()?horasDoBanco(sel.diaISO):horasDe(sel.prof);
+            if(hs===null)h+='<p class="note">Carregando horários…</p>';
+            else if(!hs.length)h+='<p class="note">Sem horários livres neste dia. Escolha outro dia.</p>';
+            else h+='<p class="ag-sub">Horários</p><div class="ag-chips">'+hs.map(function(t){return '<button type="button" data-ag="hora" data-v="'+t+'">'+t+'</button>'}).join("")+'</div>';
+          }
         }
       }
     }else if(etapa==="mais"){
       // Somar outro serviço ao mesmo horário: fica depois do anterior, com o mesmo barbeiro
       titulo="Adicionar outro serviço";
-      h+='<p class="note">Os serviços ficam um depois do outro, com o mesmo barbeiro.</p>';
-      candidatos().forEach(function(s){
+      h+='<p class="note">'+(temBanco()&&!profFixo?"Depois você escolhe: um depois do outro ou no mesmo horário, com outro barbeiro.":"Os serviços ficam um depois do outro, com o mesmo barbeiro.")+'</p>';
+      var cands=candidatos();
+      h+=campoBusca(cands.length);
+      cands.forEach(function(s){
         var info=[s.duracao,precoTxt(s.preco)].filter(Boolean).join(" · ");
-        h+='<button type="button" class="ag-op" data-ag="mais-servico" data-id="'+esc(s.id)+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
+        h+='<button type="button" class="ag-op" data-ag="mais-servico" data-id="'+esc(s.id)+'" data-busca="'+esc(chave(s.nome))+'"><b>'+esc(s.nome)+'</b>'+(info?'<small>'+esc(info)+'</small>':"")+'</button>';
       });
     }else if(etapa==="dados"){
       titulo="Seus dados";
-      var com=sel.qualquer?"Qualquer barbeiro disponível":sel.prof.nome;
-      h+='<p class="cobertura">'+esc(nomeServicos())+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora)+'</p>';
+      var com=sel.qualquer?"Qualquer barbeiro disponível":sel.prof?sel.prof.nome:"";
+      // Com o plano: quem faz cada serviço e a que horas
+      h+='<p class="cobertura">'+(sel.plano?linhasDoPlano(sel.plano)+'<br>'+esc(sel.diaTxt):esc(nomeServicos())+' com '+esc(com)+'<br>'+esc(sel.diaTxt)+' às '+esc(sel.hora))+'</p>';
       // Pelo clube, um serviço por vez
       var doClube=!(sel.mais&&sel.mais.length)&&noClube(sel.servico)?clubeSalvo():null;
       var zap=doClube||salvo("zap");
@@ -650,6 +700,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     }
     $("agTitulo").textContent=titulo;
     $("agSteps").innerHTML=h;
+    if(etapa==="servico"||etapa==="mais")filtrarServicos();
     if(etapa==="ok"&&ultimo&&ultimo.sinal)desenharQrPix();
   }
   function abrir(){pilha=[];etapa="servico";sel={};oferta=null;profFixo=false;cacheHoras={};cacheDias={};$("agErro").textContent="";render();if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")}
@@ -722,6 +773,8 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
   // "Quero assinar": abre o WhatsApp da barbearia com o plano escolhido
   document.addEventListener("click",function(e){var c=e.target.closest("[data-plano]");if(!c)return;var pl=porId(clube||[],c.getAttribute("data-plano"));if(pl)abrirLink(linkWhats("Olá! Quero assinar o plano "+pl.nome+" do clube ("+brl(Number(pl.preco))+" por mês). Como faço?"))});
   // Marcar "Sou assinante" (ou as novidades) leva ao campo do WhatsApp, se estiver vazio
+  // Busca de serviço: filtra a lista enquanto o cliente digita (sem redesenhar, para não perder o foco)
+  $("agSteps").addEventListener("input",function(e){if(e.target.id!=="agBusca")return;sel.busca=e.target.value;filtrarServicos()});
   $("agSteps").addEventListener("change",function(e){if(e.target.id!=="agClube"&&e.target.id!=="agNovidades")return;if(e.target.checked&&$("agWhats")&&!$("agWhats").value.trim())$("agWhats").focus()});
   dlg.querySelector("[data-close]").addEventListener("click",fechar);
   function cliqueWhats(){abrirLink(linkWhats("Olá! Quero agendar um horário"+(sel.servico?" para "+nomeServicos():"")+"."))}
@@ -838,11 +891,14 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     if(a==="voltar"){
       if(pilha.length){etapa=pilha.pop();limpar(etapa)}
     }
-    else if(a==="servico"){sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));if(sel.prof){ir("dia")}else{ir("pref")}}
+    else if(a==="servico"){sel.busca="";sel.servico=porId(AG.servicos||[],b.getAttribute("data-id"));if(sel.prof){ir("dia")}else{ir("pref")}}
     // Vários serviços: somar outro (volta para a etapa em que estava) ou tirar um dos somados
-    else if(a==="mais"){ir("mais");return}
-    else if(a==="mais-servico"){var ms=porId(AG.servicos||[],b.getAttribute("data-id"));if(ms){sel.mais=(sel.mais||[]).concat([ms]);sel.hora=null}etapa=pilha.pop()||"pref"}
-    else if(a==="tirar"){(sel.mais||[]).splice(+b.getAttribute("data-i"),1);sel.hora=null}
+    else if(a==="mais"){sel.busca="";ir("mais");return}
+    else if(a==="mais-servico"){var ms=porId(AG.servicos||[],b.getAttribute("data-id"));if(ms){sel.mais=(sel.mais||[]).concat([ms]);sel.hora=null;sel.plano=null}sel.busca="";etapa=pilha.pop()||"pref"}
+    else if(a==="tirar"){(sel.mais||[]).splice(+b.getAttribute("data-i"),1);sel.hora=null;sel.plano=null}
+    // Como fazer os serviços: um depois do outro, ou no mesmo horário (aí o sistema escolhe os barbeiros livres)
+    else if(a==="modo"){sel.modo=b.getAttribute("data-v")==="junto"?"junto":"seguido";sel.hora=null;sel.plano=null;if(sel.modo==="junto"&&!profFixo){sel.qualquer=true;sel.prof=null;if(etapa==="prof")etapa="dia"}}
+    else if(a==="plano"){var pl=(sel.planos||[])[+b.getAttribute("data-i")];if(pl){sel.plano=pl;sel.hora=pl.horario;ir("dados")}}
     else if(a==="tem-pref"){ir("prof")}
     else if(a==="sem-pref"){sel.qualquer=true;sel.prof=null;sel.dia=null;ir("dia")}
     else if(a==="prof"){sel.prof=porId(equipe||[],b.getAttribute("data-id"));sel.qualquer=false;sel.dia=null;ir("dia")}
@@ -866,8 +922,11 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     if(semCadastro){concluir(nome,obs,{});return}
     if(demo){pilha=[];etapa="demo";render();return}
     var corpo={slug:C.slug,servico:nomeServicos(),profissional:sel.qualquer?"":sel.prof.nome,profissionalId:sel.qualquer?"":(sel.prof.dbId||""),qualquer:!!sel.qualquer,preco:sel.servico.preco||"",duracao:duracaoTotal(),dia:sel.diaISO,horario:sel.hora,cliente:nome,observacao:obs,website:$("agSite")?$("agSite").value:""};
-    // Vários serviços: a lista com o preço de cada um (o servidor soma)
-    if(sel.mais&&sel.mais.length)corpo.servicos=escolhidos().map(function(s){return {nome:s.nome,preco:s.preco||""}});
+    // Vários serviços com o plano (gerador v20): barbeiro e horário de cada um; sem agenda no banco, a lista (o servidor soma)
+    if(sel.plano){
+      corpo.itens=escolhidos().map(function(s,i){var x=sel.plano.itens[i]||{};return {servico:s.nome,preco:s.preco||"",duracao:duracaoDe(s),profissionalId:x.id,horario:x.horario}});
+      corpo.profissionalId=sel.plano.itens[0].id;corpo.profissional=nomesDoPlano(sel.plano);corpo.qualquer=false;corpo.horario=sel.plano.horario;
+    }else if(sel.mais&&sel.mais.length)corpo.servicos=escolhidos().map(function(s){return {nome:s.nome,preco:s.preco||""}});
     if(digitos){corpo.whatsapp=zap;corpo.novidades=novidades}
     if(peloClube){corpo.clube=true;corpo.clubeWhatsapp=zap}
     var botao=$("agEnviar"),rotulo=botao.querySelector("span"),original=rotulo?rotulo.textContent:"";
@@ -875,7 +934,7 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     // Grava o pedido (pendente, ou já confirmado quando a barbearia confirma sozinha) e recebe o código; se o horário já foi ocupado, avisa e volta à escolha da hora
     fetch("/api/pedido",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corpo)}).then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {status:r.status,ok:r.ok,j:j}})}).catch(function(){return {status:0,ok:false,j:{}}}).then(function(res){
       enviando=false;botao.disabled=false;if(rotulo)rotulo.textContent=original;
-      if(res.status===409){$("agErro").textContent=res.j.message||"Este horário não está mais livre. Escolha outro.";sel.hora=null;cacheHoras={};etapa="dia";render();return}
+      if(res.status===409){$("agErro").textContent=res.j.message||"Este horário não está mais livre. Escolha outro.";sel.hora=null;sel.plano=null;cacheHoras={};etapa="dia";render();return}
       if(!res.ok&&res.j&&res.j.clube){$("agErro").textContent=res.j.message||"Não conseguimos conferir sua assinatura do clube.";return}
       if(!res.ok){
         var m=(res.j&&res.j.message)||(res.status===0?"Sem conexão com a internet.":"Não conseguimos registrar seu pedido agora.");
@@ -892,13 +951,13 @@ body.tem-cat .app-faixa:not(.app-avisos){bottom:calc(88px + env(safe-area-inset-
     // O número vem do pedido recém-gravado (sem cache): a mensagem vai para o WhatsApp atual da barbearia
     if(j.whatsapp)trocarWhats(j.whatsapp);
     var cod=j.codigo||"";
-    var quem=sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
+    var quem=sel.plano?(j.profissional||nomesDoPlano(sel.plano)):sel.qualquer?(j.profissional||"Qualquer barbeiro disponível"):sel.prof.nome;
     var txt=(AG.msg||MSG_PADRAO).split("{servico}").join(nomeServicos()).split("{profissional}").join(quem).split("{dia}").join(sel.diaTxt).split("{horario}").join(sel.hora).split("{nome}").join(nome).split("{obs}").join(obs?"\nObs.: "+obs:"").split("{codigo}").join(cod);
     if(cod&&txt.indexOf(cod)<0)txt+="\nCódigo: "+cod;
     if(j.clube)txt+="\n*Assinante do clube*";
     if(j.confirmado){txt=txt.replace("Olá! Quero agendar:","Olá! Agendei pelo site:");txt+="\nHorário já confirmado pelo site."}
     var txtPago=j.sinal?"Olá! Paguei o sinal de R$ "+Number(j.sinal.valor).toFixed(2).replace(".",",")+" do meu agendamento (código "+cod+"): "+nomeServicos()+" com "+quem+", "+sel.diaTxt+" às "+sel.hora+".":"";
-    ultimo={servico:nomeServicos(),quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:duracaoTotal(),clube:!!j.clube,confirmado:!!j.confirmado,link:linkWhats(txt),sinal:j.sinal||null,linkPago:j.sinal?linkWhats(txtPago):""};
+    ultimo={servico:nomeServicos(),quem:quem,diaTxt:sel.diaTxt,diaISO:sel.diaISO,hora:sel.hora,codigo:cod,duracao:sel.plano?minDe(sel.plano.fim)-minDe(sel.plano.horario):duracaoTotal(),clube:!!j.clube,confirmado:!!j.confirmado,link:linkWhats(txt),sinal:j.sinal||null,linkPago:j.sinal?linkWhats(txtPago):""};
     pilha=[];etapa="ok";render();
     // Quem já ligou os avisos neste celular: o pedido novo fica ligado sem tocar em nada
     var A=window.BioApp;

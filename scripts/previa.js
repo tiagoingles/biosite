@@ -146,6 +146,19 @@ const servidor = http.createServer(async (req, res) => {
     }
     if (u.pathname === "/api/horarios") {
       if (q.dias === "1") return json(res, 200, { dias: [hoje, somaDias(hoje, 1), somaDias(hoje, 2)] });
+      // Vários serviços (fase 38): planos com os barbeiros da prévia, a partir dos pedidos de mentira do dia
+      if (q.duracoes) {
+        const { planosDoDia } = require("../lib/disponibilidade");
+        const modo = q.modo === "junto" ? "junto" : "seguido";
+        const equipe = D.equipeGestao.filter((p) => modo === "junto" || q.profissional === "qualquer" || p.id === q.profissional);
+        const barbeiros = equipe.map((p) => {
+          const ocupados = pedidos
+            .filter((x) => x.dia === q.dia && (x.profissional_id || "b1") === p.id && ["pendente", "confirmado", "avulso", "realizado"].includes(x.status))
+            .map((x) => ({ inicio: x.horario.slice(0, 5), duracaoMin: x.duracao_min || 30 }));
+          return { id: p.id, nome: p.nome, dados: { publicada: true, agenda: { inicio: "09:00", fim: "18:00" }, bloqueios: [{ inicio: "12:00", fim: "13:00" }], ocupados, pedidos: ocupados.length } };
+        });
+        return json(res, 200, { planos: planosDoDia({ barbeiros, duracoes: String(q.duracoes).split(",").map(Number), modo }) });
+      }
       return json(res, 200, { horarios: ["10:00", "10:30", "14:00", "15:30", "17:00"] });
     }
     if (u.pathname === "/api/pedido") {

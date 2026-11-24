@@ -242,7 +242,9 @@
       if (!ok) return;
       return P.acao(botao, P.api("/api/pedido", { metodo: "PATCH", corpo: { id: p.id, status: status } }))
         .then(function (r) {
-          P.toast(status === "confirmado" ? "Pedido confirmado." : "Pedido recusado.", "ok");
+          // Marcação com vários serviços (fase 38): os outros serviços do mesmo pedido vão junto
+          var junto = r.grupo ? " Junto: mais " + r.grupo + (r.grupo === 1 ? " serviço" : " serviços") + " da mesma marcação." : "";
+          P.toast((status === "confirmado" ? "Pedido confirmado." : "Pedido recusado.") + junto, "ok");
           ctx.recarregar();
           return oferecerWhats(status, Object.assign({}, p, r.pedido || {}), ctx, status === "confirmado" ? "Confirmado!" : "Recusado");
         })

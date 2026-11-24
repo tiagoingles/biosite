@@ -343,3 +343,100 @@ test("encaixe: cliente que não está na carteira é cadastrado ali mesmo, com o
   assert.ok(js.includes('acao: "salvar", nome: corpo.cliente, telefone: novoTel.value.trim()'), "cadastra na carteira antes");
   assert.ok(js.includes("corpo.clienteId = j.cliente.id; mandar();"), "e liga o encaixe ao cliente novo");
 });
+
+// ---------- fase 36: horário que se repete, tempo do serviço e "marcar outro junto" (pedidos do Manolo) ----------
+const SERIE = "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e5e";
+const CLIENTE = "c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c1c1";
+
+test("encaixe que se repete: só o dono; cria as datas, pula folga e horário ocupado, liga a série e o cliente", async () => {
+  const [d0, d7, d14, d21, d28] = [1, 8, 15, 22, 29].map(A.daquiA);
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { padrao: /servicos_precos[?]barbearia_id=eq[.][^&]+&nome=eq[.]Corte&select=nome/, resposta: { corpo: [{ nome: "Corte" }] } },
+    { padrao: /servicos_precos[?]barbearia_id=eq[.][^&]+&nome=eq[.]Corte&select=preco/, resposta: { corpo: [{ preco: "40" }] } },
+    { padrao: /rest[/]v1[/]profissionais[?]id=eq[.]/, resposta: { corpo: [{ id: UUIDS.bruno, nome: "Bruno" }] } },
+    { padrao: /rest[/]v1[/]barbearias[?]id=eq[.]/, resposta: { corpo: [{ slug: "gw-teste" }] } },
+    { padrao: /rest[/]v1[/]clientes[?]id=eq[.]/, resposta: { corpo: [{ id: CLIENTE }] } },
+    // Folga marcada no terceiro sábado
+    { padrao: /rest[/]v1[/]bloqueios[?]/, resposta: { corpo: [{ tipo: "pontual", data: d14, inicio: "00:00", fim: "23:59" }] } },
+    { padrao: /rest[/]v1[/]rpc[/]criar_pedido/, resposta: (u, o, c) => ({ corpo: c.p.dia === d21 ? { erro: "conflito", horario: "10:00" } : { id: "id-" + c.p.dia } }) },
+    { metodo: "POST", padrao: /rest[/]v1[/]pedido_series$/, resposta: (u, o, c) => ({ status: 201, corpo: [{ id: SERIE, ...c }] }) },
+    { metodo: "PATCH", padrao: /rest[/]v1[/]pedidos[?]id=/, resposta: { status: 204 } },
+    { padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: { corpo: [pedidoBase({ status: "avulso" })] } },
+  ]);
+  const corpo = { acao: "avulso", servico: "Corte", cliente: "Claudio", clienteId: CLIENTE, dia: d0, horario: "10:00", duracao: 40, profissionalId: UUIDS.bruno, repetir: { cada: 7, ate: d28 } };
+  let r = await A.chamar(pedido, { metodo: "POST", corpo, token: "token-dono" });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  assert.deepEqual(r.body.serie.pulados, [{ dia: d14, motivo: "bloqueio" }, { dia: d21, motivo: "ocupado", horario: "10:00" }]);
+  assert.deepEqual([r.body.serie.criados, r.body.serie.cada, r.body.serie.ate], [3, 7, d28]);
+  assert.ok(chamadas.find((c) => /bloqueios[?]/.test(c.url)).url.includes(`data.in.(${[d0, d7, d14, d21, d28].join(",")})`), "folgas de todas as datas numa consulta");
+  const serie = chamadas.find((c) => c.metodo === "POST" && /pedido_series$/.test(c.url)).corpo;
+  assert.deepEqual([serie.barbearia_id, serie.cada_dias, serie.ate], [UUIDS.barbearia, 7, d28]);
+  const ligar = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("id=in."));
+  assert.ok(ligar.url.includes(`id=in.(id-${d0},id-${d7},id-${d28})`), ligar.url);
+  assert.deepEqual(ligar.corpo, { cliente_id: CLIENTE, serie_id: SERIE }, "todas as datas na ficha do cliente e na série");
+  // Só o dono repete; e as regras da repetição
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, profissionalId: undefined }, token: "token-bruno" });
+  assert.equal(r.statusCode, 403, "barbeiro não marca horário que se repete");
+  for (const repetir of [{ cada: 10, ate: d28 }, { cada: 7, ate: A.daquiA(400) }, { cada: 7, ate: A.daquiA(3) }]) {
+    r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, repetir }, token: "token-dono" });
+    assert.equal(r.statusCode, 400, JSON.stringify(repetir));
+  }
+  // Sem repetir: continua como antes (um atendimento, sem série)
+  const antes = chamadas.length;
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, repetir: undefined }, token: "token-dono" });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  assert.equal(r.body.serie, undefined);
+  const depois = chamadas.slice(antes);
+  assert.ok(!depois.some((c) => /pedido_series/.test(c.url)), "sem série");
+  assert.deepEqual(depois.find((c) => c.metodo === "PATCH").corpo, { cliente_id: CLIENTE });
+});
+
+test("horário que se repete: cancelar e remarcar este e os próximos (só o dono)", async () => {
+  const [d1, d2, d8, d9, d15, d16] = [1, 2, 8, 9, 15, 16].map(A.daquiA);
+  const atual = pedidoBase({ dia: d1, horario: "10:00", serie_id: SERIE, status: "avulso" });
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { metodo: "PATCH", padrao: /rest[/]v1[/]pedidos[?]serie_id=eq[.]/, resposta: { corpo: [{ ...atual, status: "cancelado" }, { ...atual, id: "outro", dia: d8, status: "cancelado" }] } },
+    { metodo: "GET", padrao: /rest[/]v1[/]pedidos[?]serie_id=eq[.]/, resposta: { corpo: [{ ...atual, id: "seg", dia: d8 }, { ...atual, id: "ter", dia: d15 }] } },
+    { metodo: "GET", padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: { corpo: [atual] } },
+    { metodo: "PATCH", padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: { corpo: [{ ...atual, status: "cancelado" }] } },
+    { metodo: "DELETE", padrao: /rest[/]v1[/]avisos_pedido/, resposta: { status: 204 } },
+    { padrao: /rest[/]v1[/]rpc[/]remarcar_pedido/, resposta: (u, o, c) => ({ corpo: c.p.dia === d16 ? { erro: "conflito", horario: "11:00" } : { pedido: { ...atual, id: c.p.id, dia: c.p.dia, horario: c.p.horario } } }) },
+  ]);
+  let r = await A.chamar(pedido, { metodo: "POST", corpo: { acao: "cancelar", id: UUIDS.pedido, serie: "proximos" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.equal(r.body.cancelados, 2);
+  const cancela = chamadas.find((c) => c.metodo === "PATCH" && c.url.includes("serie_id="));
+  assert.ok(cancela.url.includes(`serie_id=eq.${SERIE}&barbearia_id=eq.${UUIDS.barbearia}&dia=gte.${d1}&status=in.(pendente,confirmado,avulso)`), cancela.url);
+  // O barbeiro cancela só o dele, um dia
+  const antes = chamadas.length;
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { acao: "cancelar", id: UUIDS.pedido, serie: "proximos" }, token: "token-bruno" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.ok(!chamadas.slice(antes).some((c) => c.url.includes("serie_id=")), "barbeiro não mexe na série");
+  // Remarcar: este vai para o dia seguinte às 11h, e os próximos andam junto (um deles já está ocupado)
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { acao: "remarcar", id: UUIDS.pedido, dia: d2, horario: "11:00", serie: "proximos" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.serie, { mudados: 2, naoMudaram: [{ dia: d15, motivo: "ocupado" }] });
+  const movidos = chamadas.filter((c) => c.url.includes("remarcar_pedido")).map((c) => [c.corpo.p.id, c.corpo.p.dia, c.corpo.p.horario]);
+  assert.deepEqual(movidos.slice(1), [["seg", d9, "11:00"], ["ter", d16, "11:00"]], "mesmo deslocamento de dias e o novo horário");
+  assert.deepEqual(movidos[0], [UUIDS.pedido, d2, "11:00"]);
+  // Só este dia: a série não é lida
+  const antes2 = chamadas.length;
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { acao: "remarcar", id: UUIDS.pedido, dia: d2, horario: "11:00" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.ok(!chamadas.slice(antes2).some((c) => c.url.includes("serie_id=")), "só este dia");
+});
+
+test("encaixe: tempo do serviço vem do site, marcar outro junto e repetir; remarcar e cancelar perguntam na série", () => {
+  const js = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "painel-agenda.js"), "utf8");
+  assert.ok(js.includes('getElementById("bio-config")') && js.includes("cfg.agenda.servicos"), "lê o tempo dos serviços do site");
+  assert.ok(js.includes("usarDuracao(padrao.duracao || 30)") && js.includes("tempoDoServico()"), "a duração segue o serviço escolhido");
+  assert.ok(js.includes('{ texto: "Registrar e marcar outro", valor: "mais" }') && js.includes("Logo depois ("), "marcar outro junto");
+  for (const t of ["Toda semana", "A cada 15 dias", "A cada 3 semanas", "A cada 4 semanas (1 vez por mês)"]) assert.ok(js.includes(t), t);
+  assert.ok(js.includes("corpo.repetir = { cada: Number(repetir.value), ate: ate.value }"), "envia a repetição");
+  assert.ok(js.includes('"Este e os próximos"') && js.includes('corpo.serie = "proximos"'), "cancelar e remarcar a série");
+  assert.ok(js.includes("↻ Repete"), "selo no cartão");
+  const sql = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "supabase", "fase36-recorrente.sql"), "utf8");
+  assert.ok(sql.includes("create table if not exists public.pedido_series") && sql.includes("add column if not exists serie_id"), "fase 36 aditiva");
+});

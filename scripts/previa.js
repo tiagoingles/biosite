@@ -173,6 +173,12 @@ const servidor = http.createServer(async (req, res) => {
       if (metodo === "GET") return json(res, 200, { pedidos: pedidos.filter((p) => p.dia === q.dia) });
       const p = pedidos.find((x) => x.id === b.id);
       if (metodo === "PATCH" && p) { if (b.status) { p.status = b.status; p.motivo = b.motivo || null; } if (b.valor !== undefined) p.valor = b.valor ? Number(String(b.valor).replace(",", ".")) : null; return json(res, 200, { pedido: p }); }
+      // Série (fase 36): "este e os próximos" cancela também as próximas datas
+      if (b.acao === "cancelar" && p && b.serie === "proximos" && p.serie_id) {
+        const lista = pedidos.filter((x) => x.serie_id === p.serie_id && x.dia >= p.dia && ["pendente", "confirmado", "avulso"].includes(x.status));
+        lista.forEach((x) => { x.status = "cancelado"; });
+        return json(res, 200, { pedido: p, cancelados: lista.length });
+      }
       if (b.acao === "cancelar" && p) { p.status = "cancelado"; return json(res, 200, { pedido: p }); }
       if (b.acao === "remarcar" && p) {
         const ini = Number(b.horario.slice(0, 2)) * 60 + Number(b.horario.slice(3, 5)), dur = Number(b.duracao) || p.duracao_min || 30, prof = b.profissionalId || p.profissional_id;
@@ -180,8 +186,17 @@ const servidor = http.createServer(async (req, res) => {
         if (conflito) return json(res, 409, { message: `Conflito com outro atendimento (das ${conflito.horario.slice(0, 5)}). Escolha outro horário.` });
         const pedirAceite = !!(b.avisar || b.whatsapp);
         if (pedirAceite) { Object.assign(presencaPrev, { anterior: { dia: p.dia, horario: p.horario.slice(0, 5) }, dia: b.dia, horario: b.horario, resposta: "", status: "confirmado" }); p.remarcado_em = new Date().toISOString(); p.dia_anterior = p.dia; p.horario_anterior = p.horario.slice(0, 5); p.cliente_resposta = null; }
-        p.dia = b.dia; p.horario = b.horario; p.profissional_id = prof; p.profissional = prof === "b2" ? "Rafael" : "Bruno";
-        return json(res, 200, { pedido: p, avisados: b.avisar ? 1 : 0, link: pedirAceite ? LINK_PREVIA : "" });
+        const diaAntes = p.dia;
+        p.dia = b.dia; p.horario = b.horario; p.profissional_id = prof; p.profissional = prof === "b2" ? "Rafael" : "Bruno"; p.duracao_min = dur;
+        // Série (fase 36): as próximas datas andam junto (mesmo horário, barbeiro e duração)
+        let serie;
+        if (b.serie === "proximos" && p.serie_id) {
+          const andou = Math.round((Date.parse(b.dia) - Date.parse(diaAntes)) / 864e5);
+          const proximos = pedidos.filter((x) => x.serie_id === p.serie_id && x.id !== p.id && x.dia > diaAntes && ["pendente", "confirmado", "avulso"].includes(x.status));
+          proximos.forEach((x) => { x.dia = somaDias(x.dia, andou); x.horario = b.horario; x.profissional_id = prof; x.profissional = p.profissional; x.duracao_min = dur; });
+          serie = { mudados: proximos.length + 1, naoMudaram: [] };
+        }
+        return json(res, 200, { pedido: p, avisados: b.avisar ? 1 : 0, link: pedirAceite ? LINK_PREVIA : "", ...(serie ? { serie } : {}) });
       }
       if (b.acao === "atrasar") {
         const prof = D.papel === "barbeiro" ? "b1" : b.profissionalId;
@@ -192,7 +207,23 @@ const servidor = http.createServer(async (req, res) => {
       }
       // Conflito de horário (fase 34): o dono confirma e marca os dois no mesmo horário
       if (b.acao === "avulso" && !b.sobrepor && pedidos.some((x) => x.dia === b.dia && x.horario === b.horario && (x.profissional_id || "b1") === (b.profissionalId || "b1") && ["pendente", "confirmado", "avulso"].includes(x.status))) return json(res, 409, { message: "Este horário já está ocupado (das " + b.horario + ").", conflito: true, podeSobrepor: true });
-      if (b.acao === "avulso") { const n = P({ servico: b.servico, cliente: b.cliente, dia: b.dia, horario: b.horario, status: "avulso", duracao_min: b.duracao }); pedidos.push(n); return json(res, 201, { pedido: n }); }
+      // Encaixe, com ou sem repetição (fase 36): data já ocupada da série fica de fora e volta em pulados
+      if (b.acao === "avulso") {
+        const datas = [b.dia];
+        if (b.repetir) for (let d = somaDias(b.dia, b.repetir.cada); d <= b.repetir.ate; d = somaDias(d, b.repetir.cada)) datas.push(d);
+        const serieId = datas.length > 1 ? "serie-" + Date.now() : null;
+        const prof = b.profissionalId || "b1";
+        const pulados = [];
+        const criados = [];
+        datas.forEach((d, i) => {
+          const ocupado = pedidos.some((x) => x.dia === d && x.horario === b.horario && (x.profissional_id || "b1") === prof && ["pendente", "confirmado", "avulso"].includes(x.status));
+          if (i > 0 && ocupado && !b.sobrepor) { pulados.push({ dia: d, motivo: "ocupado", horario: b.horario }); return; }
+          const n = P({ servico: b.servico, cliente: b.cliente, dia: d, horario: b.horario, status: "avulso", duracao_min: b.duracao, profissional_id: prof, profissional: prof === "b2" ? "Rafael" : "Bruno", serie_id: serieId });
+          pedidos.push(n);
+          criados.push(n);
+        });
+        return json(res, 201, { pedido: criados[0], ...(serieId ? { serie: { id: serieId, cada: b.repetir.cada, ate: b.repetir.ate, criados: criados.length, pulados } } : {}) });
+      }
       // Pedido feito no site (prévia): assinante do clube pelo WhatsApp cadastrado
       if (metodo === "POST" && b.slug) {
         let a = null;

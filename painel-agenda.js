@@ -75,7 +75,7 @@
     return h("article", { class: classe + (clube ? " do-clube" : ""), dataset: { id: p.id } }, [
       h("div", { class: "hora" }, [h("b", { texto: P.hm(p.horario) }), opcoes.mostrarDia || p.dia !== hoje ? h("small", { texto: P.diaCurto(p.dia) }) : h("small", { texto: P.hm(p.horario_fim) ? "até " + P.hm(p.horario_fim) : "" })]),
       h("div", { class: "info" }, [
-        h("div", { class: "titulo" }, [h("b", { texto: p.servico }), h("span", { class: "selos" }, [clube ? h("span", { class: "selo selo-clube", texto: "Clube · não cobrar" }) : null, P.selo(p)])]),
+        h("div", { class: "titulo" }, [h("b", { texto: p.servico }), h("span", { class: "selos" }, [clube ? h("span", { class: "selo selo-clube", texto: "Clube · não cobrar" }) : null, p.serie_id ? h("span", { class: "selo selo-neutro", texto: "↻ Repete" }) : null, P.selo(p)])]),
         h("div", { class: "meta" }, meta),
         p.observacao ? h("p", { class: "obs", texto: p.observacao }) : null,
         acoes.childNodes.length ? acoes : null,
@@ -274,10 +274,25 @@
   }
 
   function cancelar(p, ctx) {
-    P.confirmar("Cancelar este horário?", p.cliente + " · " + P.dataLonga(p.dia) + " às " + P.hm(p.horario) + ". O horário volta a ficar livre no site.", "Cancelar horário", true).then(function (ok) {
-      if (!ok) return;
-      P.api("/api/pedido", { corpo: { acao: "cancelar", id: p.id } })
-        .then(function () { P.toast("Horário cancelado.", "ok"); ctx.recarregar(); return oferecerWhats("cancelado", p, ctx, "Cancelado"); })
+    var texto = p.cliente + " · " + P.dataLonga(p.dia) + " às " + P.hm(p.horario) + ". O horário volta a ficar livre no site.";
+    // Horário que se repete (fase 36): o dono escolhe cancelar só este dia ou também os próximos
+    var pergunta = p.serie_id && ctx.dono
+      ? P.janela({
+        titulo: "Cancelar horário que se repete",
+        conteudo: h("p", { class: "nota", texto: texto + " Este horário se repete: cancelar só este dia ou também os próximos?" }),
+        acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Só este dia", classe: "perigo", valor: "este" }, { texto: "Este e os próximos", classe: "perigo", valor: "proximos" }],
+      }).then(function (r) { return r.valor === "este" || r.valor === "proximos" ? r.valor : null; })
+      : P.confirmar("Cancelar este horário?", texto, "Cancelar horário", true).then(function (ok) { return ok ? "este" : null; });
+    pergunta.then(function (escolha) {
+      if (!escolha) return;
+      var corpo = { acao: "cancelar", id: p.id };
+      if (escolha === "proximos") corpo.serie = "proximos";
+      P.api("/api/pedido", { corpo: corpo })
+        .then(function (res) {
+          P.toast(res && res.cancelados > 1 ? res.cancelados + " horários cancelados: este e os próximos." : "Horário cancelado.", "ok");
+          ctx.recarregar();
+          return oferecerWhats("cancelado", p, ctx, "Cancelado");
+        })
         .catch(erro);
     });
   }
@@ -308,10 +323,18 @@
     var prof = ctx.dono && ctx.equipe && ctx.equipe.length > 1
       ? h("select", { name: "prof" }, ctx.equipe.map(function (e) { var o = h("option", { value: e.id, texto: e.nome }); if (e.id === p.profissional_id) o.selected = true; return o; }))
       : null;
+    // Horário que se repete (fase 36): o dono escolhe mudar só este dia ou também os próximos
+    var proximos = h("input", { type: "radio", name: "alcance", value: "proximos" });
+    var alcance = p.serie_id && ctx.dono ? h("fieldset", { class: "campo-grupo" }, [
+      h("legend", { texto: "Este horário se repete. Mudar:" }),
+      h("label", { class: "check-linha" }, [h("input", { type: "radio", name: "alcance", value: "este", checked: true }), "Só este dia"]),
+      h("label", { class: "check-linha" }, [proximos, "Este e os próximos (mesmo horário, barbeiro e duração)"]),
+    ]) : null;
     P.janela({
       titulo: "Remarcar " + P.primeiroNome(p.cliente),
       conteudo: h("div", { class: "grade" }, [
         h("p", { class: "nota", texto: p.servico + " · agora: " + P.dataLonga(p.dia) + " às " + P.hm(p.horario) }),
+        alcance,
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Novo dia", dia]), h("label", { class: "campo" }, ["Novo horário", hora])]),
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Duração (min)", dur]), prof ? h("label", { class: "campo" }, ["Barbeiro", prof]) : null]),
         h("label", { class: "check-linha" }, [avisar, "Avisar o cliente no celular (se ele ligou os avisos da barbearia)"]),
@@ -324,10 +347,13 @@
       if (r.valor !== "ok") return;
       var corpo = { acao: "remarcar", id: p.id, dia: dia.value, horario: hora.value, duracao: Number(dur.value) || p.duracao_min || 30, avisar: avisar.checked, whatsapp: zap.checked };
       if (prof) corpo.profissionalId = prof.value;
+      if (alcance && proximos.checked) corpo.serie = "proximos";
       // Horário ocupado: o dono pode confirmar e deixar os dois no mesmo horário (fase 34)
       var mandar = function () { P.api("/api/pedido", { corpo: corpo })
         .then(function (res) {
-          P.toast("Remarcado para " + P.dataLonga(dia.value) + " às " + hora.value + "." + (res.avisados ? " Cliente avisado no celular." : ""), "ok");
+          var s = res.serie;
+          var daSerie = s ? " " + s.mudados + (s.mudados === 1 ? " horário mudou" : " horários mudaram") + (s.naoMudaram.length ? "; ficaram como estavam (horário ocupado): " + s.naoMudaram.map(function (x) { return P.dataBr(x.dia); }).join(", ") : "") + "." : "";
+          P.toast("Remarcado para " + P.dataLonga(dia.value) + " às " + hora.value + "." + daSerie + (res.avisados ? " Cliente avisado no celular." : ""), s && s.naoMudaram.length ? "erro" : "ok");
           ctx.recarregar();
           var novo = Object.assign({}, p, res.pedido || {}, { dia: dia.value, horario: hora.value });
           var extra = { link: res.link ? location.origin + res.link : "", era: P.horarioAnterior(p, dia.value) };
@@ -341,7 +367,36 @@
     });
   }
 
-  // Encaixe: cliente que chegou sem agendar (vai direto para a agenda, sem confirmação)
+  // Tempo de cada serviço (fase 36): o mesmo do site da barbearia (bio-config), lido uma vez por tela.
+  // Chave: o nome do serviço em minúsculas; vale só de 5 a 240 minutos, como no site.
+  var temposDoSite = {};
+  function temposDosServicos(slug) {
+    if (!slug) return Promise.resolve({});
+    if (!temposDoSite[slug]) {
+      temposDoSite[slug] = fetch("/" + encodeURIComponent(slug), { credentials: "omit" })
+        .then(function (r) { return r.ok ? r.text() : ""; })
+        .then(function (html) {
+          var el = new DOMParser().parseFromString(html, "text/html").getElementById("bio-config");
+          var cfg = el ? JSON.parse(el.textContent) : {};
+          var mapa = {};
+          // Os serviços com tempo ficam na agenda do site (o mesmo que o cliente vê ao marcar)
+          ((cfg.agenda && cfg.agenda.servicos) || cfg.servicos || []).forEach(function (s) {
+            var m = parseInt(String((s && s.duracao) || ""), 10);
+            if (s && s.nome && m >= 5 && m <= 240) mapa[String(s.nome).trim().toLowerCase()] = m;
+          });
+          return mapa;
+        })
+        .catch(function () { return {}; });
+    }
+    return temposDoSite[slug];
+  }
+  // "10:40" + 40 min -> "11:20"
+  function horaMais(hhmm, min) { var t = P.min(hhmm) + (Number(min) || 0); return String(Math.floor(t / 60) % 24).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); }
+  var REPETIR = [["", "Não repete"], ["7", "Toda semana"], ["14", "A cada 15 dias"], ["21", "A cada 3 semanas"], ["28", "A cada 4 semanas (1 vez por mês)"]];
+
+  // Encaixe: cliente que chegou sem agendar (vai direto para a agenda, sem confirmação).
+  // padrao (opcional): { dia, horario, profissionalId, servico, duracao, cliente, clienteId, anterior, fimAnterior, repetir }
+  // anterior/fimAnterior: "marcar outro junto" (o barbeiro do encaixe anterior e a hora em que ele termina).
   function encaixe(ctx, padrao) {
     padrao = padrao || {};
     if (!ctx.servicos || !ctx.servicos.length) {
@@ -349,7 +404,7 @@
       return;
     }
     var agora = P.agoraMin(), arred = Math.ceil(agora / 5) * 5;
-    var servico = h("select", { name: "servico" }, ctx.servicos.map(function (s) { return h("option", { value: s.nome, texto: s.nome + (s.preco != null ? " · " + P.brl(s.preco) : "") }); }));
+    var servico = h("select", { name: "servico" }, ctx.servicos.map(function (s) { var o = h("option", { value: s.nome, texto: s.nome + (s.preco != null ? " · " + P.brl(s.preco) : "") }); if (s.nome === padrao.servico) o.selected = true; return o; }));
     var cliente = h("input", { name: "cliente", maxlength: 80, autocomplete: "off", placeholder: ctx.dono ? "Nome ou final do telefone" : "Nome do cliente", required: true });
     // Dono: busca na carteira pelo nome ou pelo final do telefone; escolhido, o encaixe fica na ficha do cliente
     var escolhido = null, sugestoes = h("div", { class: "sugestoes" }), espera = null;
@@ -392,36 +447,115 @@
         }).catch(function () { P.limpar(sugestoes); });
       }, 250);
     });
+    // "Marcar outro junto": o mesmo cliente já vem preenchido (e ligado à ficha, se era da carteira)
+    if (padrao.cliente) {
+      cliente.value = padrao.cliente;
+      if (padrao.clienteId) {
+        escolhido = { id: padrao.clienteId, nome: padrao.cliente };
+        P.trocar(sugestoes, h("p", { class: "nota p", texto: "Cliente da carteira. O encaixe fica na ficha dele." }));
+      }
+    }
     var dia = h("input", { type: "date", name: "dia", value: padrao.dia || P.hoje() });
     var hora = h("input", { type: "time", name: "hora", step: 300, value: padrao.horario || String(Math.floor(arred / 60) % 24).padStart(2, "0") + ":" + String(arred % 60).padStart(2, "0") });
-    var dur = h("select", { name: "duracao" }, [15, 20, 30, 40, 45, 50, 60, 75, 90, 120].map(function (m) { var o = h("option", { value: m, texto: P.duracao(m) }); if (m === 30) o.selected = true; return o; }));
-    var prof = ctx.dono ? h("select", { name: "prof" }, (ctx.equipe || []).map(function (e) { var o = h("option", { value: e.id, texto: e.nome }); if (e.id === padrao.profissionalId) o.selected = true; return o; })) : null;
+    // Duração: o tempo do serviço no site (fase 36), e dá para mudar. Tempo fora da lista (35, 160 min) entra nela.
+    var dur = h("select", { name: "duracao" }, [15, 20, 30, 40, 45, 50, 60, 75, 90, 120].map(function (m) { return h("option", { value: m, texto: P.duracao(m) }); }));
+    function usarDuracao(m) {
+      m = Number(m) || 30;
+      if (!dur.querySelector('option[value="' + m + '"]')) {
+        var depois = Array.prototype.filter.call(dur.options, function (o) { return Number(o.value) > m; })[0];
+        dur.insertBefore(h("option", { value: m, texto: P.duracao(m) }), depois || null);
+      }
+      dur.value = String(m);
+    }
+    usarDuracao(padrao.duracao || 30);
+    var tempos = {}, durMexida = !!padrao.duracao;
+    function tempoDoServico() { var m = tempos[String(servico.value).trim().toLowerCase()]; if (m) usarDuracao(m); }
+    dur.addEventListener("change", function () { durMexida = true; });
+    servico.addEventListener("change", function () { durMexida = false; tempoDoServico(); });
+    temposDosServicos(ctx.slug).then(function (mapa) { tempos = mapa; if (!durMexida) tempoDoServico(); });
+    // Outro junto: já vem o próximo barbeiro da lista (o anterior está ocupado nesse horário)
+    var equipe = ctx.equipe || [];
+    var iAnterior = equipe.map(function (e) { return e.id; }).indexOf(padrao.anterior);
+    var escolherProf = padrao.anterior && equipe.length ? equipe[(iAnterior + 1) % equipe.length].id : padrao.profissionalId;
+    var prof = ctx.dono ? h("select", { name: "prof" }, equipe.map(function (e) { var o = h("option", { value: e.id, texto: e.nome }); if (e.id === escolherProf) o.selected = true; return o; })) : null;
+    // Repetir (fase 36, só o dono): o mesmo horário a cada 1, 2, 3 ou 4 semanas, até a data escolhida
+    var repetir = ctx.dono ? h("select", { name: "repetir" }, REPETIR.map(function (x) { var o = h("option", { value: x[0], texto: x[1] }); if (padrao.repetir && String(padrao.repetir.cada) === x[0]) o.selected = true; return o; })) : null;
+    var ate = h("input", { type: "date", name: "ate", value: padrao.repetir ? padrao.repetir.ate : "" });
+    var boxAte = h("label", { class: "campo" }, ["Até", ate]);
+    var resumoRepetir = h("p", { class: "nota p" });
+    function datasDaSerie() {
+      var cada = Number(repetir && repetir.value), lista = [];
+      if (!cada || !dia.value || !ate.value) return lista;
+      for (var d = dia.value; d <= ate.value && lista.length < 60; d = P.somaDias(d, cada)) lista.push(d);
+      return lista;
+    }
+    function atualizarRepetir() {
+      var cada = Number(repetir.value);
+      boxAte.hidden = !cada;
+      resumoRepetir.hidden = !cada;
+      if (!cada) return;
+      if (!ate.value || ate.value <= dia.value) ate.value = P.somaDias(dia.value || P.hoje(), 90);
+      ate.max = P.somaDias(dia.value || P.hoje(), 366);
+      var lista = datasDaSerie();
+      resumoRepetir.textContent = lista.length < 2 ? "Com essa data, o horário não chega a se repetir."
+        : lista.length + " horários: " + lista.slice(0, 3).map(P.diaCurto).join(", ") + (lista.length > 3 ? " … até " + P.diaCurto(lista[lista.length - 1]) : "") + ". Se alguma data cair em folga ou já tiver cliente, ela fica de fora e o painel avisa.";
+    }
+    if (repetir) {
+      [repetir, ate, dia].forEach(function (c) { c.addEventListener("change", atualizarRepetir); });
+      atualizarRepetir();
+    }
+    var juntos = padrao.anterior ? h("div", { class: "aviso-faixa info" }, [
+      h("span", { texto: "Outro junto: mesmo dia e horário. Troque o barbeiro, o serviço ou o nome." }),
+      padrao.fimAnterior ? h("button", { type: "button", class: "botao p", texto: "Logo depois (" + padrao.fimAnterior + ")", onclick: function () { hora.value = padrao.fimAnterior; } }) : null,
+    ]) : null;
     P.janela({
-      titulo: "Encaixe (sem agendamento)",
+      titulo: padrao.anterior ? "Encaixe: outro junto" : "Encaixe (sem agendamento)",
       conteudo: h("div", { class: "grade" }, [
+        juntos,
         h("label", { class: "campo" }, ["Serviço", servico]),
         h("label", { class: "campo" }, ["Cliente", cliente]),
         sugestoes,
         novoBox,
         prof ? h("label", { class: "campo" }, ["Barbeiro", prof]) : null,
         h("div", { class: "grade d3" }, [h("label", { class: "campo" }, ["Dia", dia]), h("label", { class: "campo" }, ["Horário", hora]), h("label", { class: "campo" }, ["Duração", dur])]),
+        repetir ? h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Repetir", repetir]), boxAte]) : null,
+        repetir ? resumoRepetir : null,
       ]),
-      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Registrar encaixe", classe: "principal", valor: "ok" }],
+      acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Registrar e marcar outro", valor: "mais" }, { texto: "Registrar encaixe", classe: "principal", valor: "ok" }],
       validar: function () {
         var t = cliente.value.trim(), d = novoTel.value.replace(/\D/g, "");
         if (t.length < 2) return novo ? "Escreva o nome do cliente novo." : "Informe o nome do cliente.";
         if (!escolhido && /^[\d\s().+-]+$/.test(t)) return novo ? "Escreva o nome do cliente novo." : "Escolha o cliente na lista ou escreva o nome.";
         if (novo && d && (d.length < 10 || d.length > 13)) return "Confira o WhatsApp: DDD e número.";
-        return !hora.value ? "Informe o horário." : "";
+        if (!hora.value) return "Informe o horário.";
+        if (repetir && repetir.value) {
+          if (datasDaSerie().length < 2) return "Escolha até quando o horário se repete.";
+          if (ate.value > P.somaDias(dia.value, 366)) return "Repita por no máximo 1 ano.";
+        }
+        return "";
       },
     }).then(function (r) {
-      if (r.valor !== "ok") return;
+      if (r.valor !== "ok" && r.valor !== "mais") return;
       var corpo = { acao: "avulso", servico: servico.value, cliente: cliente.value.trim(), dia: dia.value, horario: hora.value, duracao: Number(dur.value) };
       if (prof) corpo.profissionalId = prof.value;
       if (escolhido) corpo.clienteId = escolhido.id;
+      if (repetir && repetir.value) corpo.repetir = { cada: Number(repetir.value), ate: ate.value };
+      // Gravou: avisa (e mostra as datas da série que ficaram de fora); "marcar outro" abre o próximo já preenchido
+      var feito = function (res) {
+        var s = res && res.serie;
+        var comoRepete = s ? (REPETIR.filter(function (x) { return x[0] === String(s.cada); })[0] || ["", ""])[1].toLowerCase() : "";
+        P.toast(s ? (novo ? "Cliente cadastrado. " : "") + s.criados + " horários marcados, " + comoRepete + ", até " + P.dataBr(s.ate) + "."
+          : novo ? "Cliente cadastrado e encaixe registrado na agenda." : "Encaixe registrado na agenda.", "ok");
+        ctx.recarregar();
+        var depois = s && s.pulados && s.pulados.length ? avisarPulados(s.pulados) : Promise.resolve();
+        if (r.valor === "mais") depois.then(function () {
+          encaixe(ctx, { dia: corpo.dia, horario: corpo.horario, servico: corpo.servico, duracao: corpo.duracao, cliente: corpo.cliente, clienteId: corpo.clienteId,
+            anterior: corpo.profissionalId || "eu", fimAnterior: horaMais(corpo.horario, corpo.duracao), repetir: corpo.repetir });
+        });
+      };
       // Horário ocupado: o dono pode confirmar e marcar os dois no mesmo horário (fase 34)
       var mandar = function () {
-        P.api("/api/pedido", { corpo: corpo }).then(function () { P.toast(novo ? "Cliente cadastrado e encaixe registrado na agenda." : "Encaixe registrado na agenda.", "ok"); ctx.recarregar(); })
+        P.api("/api/pedido", { corpo: corpo }).then(feito)
           .catch(function (e) { P.sobrepor(e, function () { corpo.sobrepor = true; mandar(); }, erro); });
       };
       if (!novo) { mandar(); return; }
@@ -429,6 +563,19 @@
       P.api("/api/equipe?area=clientes", { corpo: { acao: "salvar", nome: corpo.cliente, telefone: novoTel.value.trim() } })
         .then(function (j) { corpo.clienteId = j.cliente.id; mandar(); })
         .catch(function (e) { P.toast(e.message + " Busque pelo final do telefone para escolher quem já está na carteira.", "erro"); });
+    });
+  }
+  // Datas da série que ficaram de fora (folga, bloqueio ou já com cliente): o dono marca à mão, se quiser
+  function avisarPulados(pulados) {
+    return P.janela({
+      titulo: "Algumas datas ficaram de fora",
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "nota", texto: "Estas datas não foram marcadas. Se quiser, marque à mão com outro horário ou com \"Marcar mesmo assim\":" }),
+        h("ul", null, pulados.map(function (x) {
+          return h("li", { texto: P.diaCurto(x.dia) + " · " + (x.motivo === "bloqueio" ? "folga ou horário bloqueado" : "já tem cliente" + (x.horario ? " às " + P.hm(x.horario) : "")) });
+        })),
+      ]),
+      acoes: [{ texto: "Entendi", classe: "principal", valor: "ok" }],
     });
   }
 

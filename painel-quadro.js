@@ -361,7 +361,7 @@
       conteudo: h("div", { class: "grade" }, [
         h("p", { class: "nota", texto: p.servico + ": de " + P.hm(p.horario) + " para " + para + (outroBarbeiro ? ", com " + destino.nome : "") + "." }),
         h("label", { class: "check-linha" }, [avisar, "Avisar no celular (se ele ligou os avisos da barbearia)"]),
-        h("label", { class: "check-linha" }, [zap, tel ? "Mandar no WhatsApp se ele não tiver os avisos no celular" : "Mandar no WhatsApp se ele não tiver os avisos (sem número no cadastro: você escolhe a conversa)"]),
+        h("label", { class: "check-linha" }, [zap, tel ? "Mandar também no WhatsApp (abre a conversa com a mensagem pronta)" : "Mandar também no WhatsApp (sem número no cadastro: você escolhe a conversa)"]),
         h("p", { class: "nota p", texto: "O cliente recebe o novo horário com \"Aceito\" e \"Não posso\". Até ele responder, o horário fica marcado como aguardando aceite." }),
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Mover", classe: "principal", valor: "ok" }],
@@ -375,11 +375,10 @@
         var novoPedido = Object.assign({}, p, res.pedido || {}, { horario: para, profissional: outroBarbeiro ? destino.nome : p.profissional });
         var extra = { link: res.link ? location.origin + res.link : "", era: P.horarioAnterior(p, p.dia) };
         ctx.recarregar();
-        // Recebeu no celular: o WhatsApp fica como opção no aviso; não recebeu: a mensagem já vai pronta
-        if (!zap.checked) { P.toast(msg, "ok"); return; }
-        if (res.avisados) { P.toast(msg, "ok", { texto: "WhatsApp também", acao: function () { P.abrirWhats(P.mensagem("remarcado", novoPedido, ctx.barbearia, extra), tel); } }); return; }
         P.toast(msg, "ok");
-        P.oferecerWhats("remarcado", novoPedido, ctx, "Mandar a mudança no WhatsApp", extra);
+        // A janela do WhatsApp abre sempre, mesmo quando o aviso chegou no celular (sem o WhatsApp automático do Premium)
+        if (!zap.checked) return;
+        P.oferecerWhats("remarcado", novoPedido, ctx, res.avisados ? "Avisado no celular. Mandar no WhatsApp também?" : "Mandar a mudança no WhatsApp", extra);
       }).catch(function (e) {
         P.sobrepor(e, function () { corpo.sobrepor = true; mandar(); }, function (e2) { P.toast(e2.message, "erro"); q.redesenhar(); ctx.recarregar(); }, function () { q.redesenhar(); });
       }); };
@@ -426,7 +425,7 @@
         h("label", { class: "campo" }, ["A partir de", aPartir]),
         h("div", { class: "campo" }, [h("span", { texto: "Quanto" }), chips]),
         h("label", { class: "check-linha" }, [avisar, "Avisar os clientes no celular (quem ligou os avisos)"]),
-        h("label", { class: "check-linha" }, [zap, "Mandar no WhatsApp para quem não tiver os avisos no celular"]),
+        h("label", { class: "check-linha" }, [zap, "Mandar também no WhatsApp (um botão por cliente, com a mensagem pronta)"]),
         h("p", { class: "nota p", texto: "Cada cliente recebe o novo horário com \"Aceito\" e \"Não posso\"." }),
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Atrasar", classe: "principal", valor: "ok" }],
@@ -438,8 +437,8 @@
         if (res.falhas && res.falhas.length) t += " Não couberam: " + res.falhas.map(function (x) { return x.cliente + " (" + x.horario + ", " + x.motivo + ")"; }).join("; ") + ".";
         P.toast(t, res.falhas && res.falhas.length ? "erro" : "ok");
         ctx.recarregar();
-        var semAviso = (res.lista || []).filter(function (x) { return !x.avisado; });
-        if (zap.checked && semAviso.length) whatsDosAtrasados(semAviso, ctx);
+        // Todos os empurrados, também quem recebeu no celular (o WhatsApp automático é do Premium)
+        if (zap.checked && res.lista && res.lista.length) whatsDosAtrasados(res.lista, ctx);
       }).catch(function (e) { P.toast(e.message, "erro"); });
     });
   }
@@ -454,11 +453,11 @@
         P.trocar(b, [P.icone("check"), "Aberto"]);
         b.classList.remove("whats");
       };
-      return h("li", null, [h("span", null, [h("b", { texto: x.cliente }), h("small", { texto: x.de + " → " + x.para + (x.telefone ? "" : " · sem WhatsApp no cadastro") })]), b]);
+      return h("li", null, [h("span", null, [h("b", { texto: x.cliente }), h("small", { texto: x.de + " → " + x.para + (x.avisado ? " · já avisado no celular" : "") + (x.telefone ? "" : " · sem WhatsApp no cadastro") })]), b]);
     });
     P.janela({
       titulo: "Avisar pelo WhatsApp",
-      conteudo: h("div", { class: "grade" }, [h("p", { class: "nota", texto: lista.length === 1 ? "Este cliente não recebeu o aviso no celular. A mensagem já vai pronta, com o link para aceitar ou recusar." : "Estes clientes não receberam o aviso no celular. Toque em cada um: a mensagem já vai pronta, com o link para aceitar ou recusar." }), h("ul", { class: "mini-lista zap-lista" }, linhas)]),
+      conteudo: h("div", { class: "grade" }, [h("p", { class: "nota", texto: lista.length === 1 ? "A mensagem já vai pronta, com o link para aceitar ou recusar o novo horário." : "Toque em cada cliente: a mensagem já vai pronta, com o link para aceitar ou recusar o novo horário." }), h("ul", { class: "mini-lista zap-lista" }, linhas)]),
       acoes: [{ texto: "Fechar", classe: "principal", valor: "ok" }],
     });
   }

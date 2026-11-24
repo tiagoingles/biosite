@@ -133,11 +133,16 @@ test("painel e site: WhatsApp quando não há aviso no celular, link de aceite n
   assert.match(comum, /P\.horarioAnterior = function/);
   const quadro = ler("painel-quadro.js");
   assert.match(quadro, /whatsapp: zap\.checked/);
-  assert.match(quadro, /P\.oferecerWhats\("remarcado", novoPedido, ctx, "Mandar a mudança no WhatsApp", extra\)/);
+  // Sem o WhatsApp automático (Premium), a janela do WhatsApp abre sempre, mesmo quando o aviso chegou no celular
+  assert.match(quadro, /P\.oferecerWhats\("remarcado", novoPedido, ctx, res\.avisados \? "Avisado no celular\. Mandar no WhatsApp também\?" : "Mandar a mudança no WhatsApp", extra\)/);
+  assert.doesNotMatch(quadro, /texto: "WhatsApp também"/, "o WhatsApp não fica só num aviso que some");
+  assert.match(quadro, /whatsDosAtrasados\(res\.lista, ctx\)/, "atrasar: botão de WhatsApp para todos os empurrados");
   assert.match(quadro, /function whatsDosAtrasados\(lista, ctx\)/);
   const agenda = ler("painel-agenda.js");
   assert.match(agenda, /aguardando o cliente aceitar o novo horário/);
   assert.match(agenda, /whatsapp: zap\.checked/);
+  assert.match(agenda, /return oferecerWhats\("remarcado", novo, ctx, res\.avisados \? "Avisado no celular\. Mandar no WhatsApp também\?" : "Mandar a mudança no WhatsApp", extra\);/);
+  assert.doesNotMatch(agenda, /texto: "WhatsApp também"/);
   const site = ler("gw-barbearia.html");
   // Obrigatório em toda barbearia; só a vitrine da página de vendas (gerador v15) deixa em branco
   assert.match(site, /maxlength="20"'\+\(demo\?'':' required'\)\+' value=/, "o campo do WhatsApp é obrigatório");

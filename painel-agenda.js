@@ -343,7 +343,7 @@
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Novo dia", dia]), h("label", { class: "campo" }, ["Novo horário", hora])]),
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Duração (min)", dur]), prof ? h("label", { class: "campo" }, ["Barbeiro", prof]) : null]),
         h("label", { class: "check-linha" }, [avisar, "Avisar o cliente no celular (se ele ligou os avisos da barbearia)"]),
-        h("label", { class: "check-linha" }, [zap, telefoneDe(p) ? "Mandar no WhatsApp se ele não tiver os avisos no celular" : "Mandar no WhatsApp se ele não tiver os avisos (sem número no cadastro: você escolhe a conversa)"]),
+        h("label", { class: "check-linha" }, [zap, telefoneDe(p) ? "Mandar também no WhatsApp (abre a conversa com a mensagem pronta)" : "Mandar também no WhatsApp (sem número no cadastro: você escolhe a conversa)"]),
         h("p", { class: "nota p", texto: "O cliente recebe o novo horário com \"Aceito\" e \"Não posso\". A resposta aparece aqui na agenda." }),
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Remarcar", classe: "principal", valor: "ok" }],
@@ -363,9 +363,9 @@
           var novo = Object.assign({}, p, res.pedido || {}, { dia: dia.value, horario: hora.value });
           var extra = { link: res.link ? location.origin + res.link : "", era: P.horarioAnterior(p, dia.value) };
           if (!zap.checked) return;
-          // Recebeu no celular: o WhatsApp fica como opção; não recebeu: a mensagem já vai pronta
-          if (res.avisados) { P.toast("Cliente avisado no celular.", "ok", { texto: "WhatsApp também", acao: function () { P.abrirWhats(P.mensagem("remarcado", novo, ctx.barbearia, extra), telefoneDe(p)); } }); return; }
-          return oferecerWhats("remarcado", novo, ctx, "Mandar a mudança no WhatsApp", extra);
+          // A janela do WhatsApp abre sempre, mesmo quando o aviso chegou no celular: sem o WhatsApp automático
+          // (Premium), é por ela que o cliente recebe a mensagem com o link para aceitar ou recusar
+          return oferecerWhats("remarcado", novo, ctx, res.avisados ? "Avisado no celular. Mandar no WhatsApp também?" : "Mandar a mudança no WhatsApp", extra);
         })
         .catch(function (e) { P.sobrepor(e, function () { corpo.sobrepor = true; mandar(); }, erro); }); };
       mandar();

@@ -637,3 +637,9 @@ html.q-sem-rolagem, html.q-sem-rolagem body { overflow: hidden; }
 .cx-resultado { font-weight: 700; }
 .cx-resultado.ok { color: var(--ok); }
 .cx-resultado.alerta { color: var(--alerta); }
+
+/* Encaixe com vários serviços (fase 37): uma caixa por serviço, com para quem é */
+.enc-linhas { display: grid; gap: 10px; }
+.enc-linha { border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+.enc-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; }
+.pedido .meta .para-quem { font-weight: 700; color: var(--acento-forte); }

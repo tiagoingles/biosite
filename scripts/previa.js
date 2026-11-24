@@ -207,22 +207,28 @@ const servidor = http.createServer(async (req, res) => {
       }
       // Conflito de horário (fase 34): o dono confirma e marca os dois no mesmo horário
       if (b.acao === "avulso" && !b.sobrepor && pedidos.some((x) => x.dia === b.dia && x.horario === b.horario && (x.profissional_id || "b1") === (b.profissionalId || "b1") && ["pendente", "confirmado", "avulso"].includes(x.status))) return json(res, 409, { message: "Este horário já está ocupado (das " + b.horario + ").", conflito: true, podeSobrepor: true });
-      // Encaixe, com ou sem repetição (fase 36): data já ocupada da série fica de fora e volta em pulados
+      // Encaixe, com ou sem repetição (fase 36) e com vários serviços (fase 37: b.itens, cada um para alguém).
+      // Data já ocupada da série fica de fora e volta em pulados.
       if (b.acao === "avulso") {
+        const linhas = Array.isArray(b.itens) && b.itens.length ? b.itens : [b];
         const datas = [b.dia];
         if (b.repetir) for (let d = somaDias(b.dia, b.repetir.cada); d <= b.repetir.ate; d = somaDias(d, b.repetir.cada)) datas.push(d);
-        const serieId = datas.length > 1 ? "serie-" + Date.now() : null;
-        const prof = b.profissionalId || "b1";
         const pulados = [];
         const criados = [];
-        datas.forEach((d, i) => {
-          const ocupado = pedidos.some((x) => x.dia === d && x.horario === b.horario && (x.profissional_id || "b1") === prof && ["pendente", "confirmado", "avulso"].includes(x.status));
-          if (i > 0 && ocupado && !b.sobrepor) { pulados.push({ dia: d, motivo: "ocupado", horario: b.horario }); return; }
-          const n = P({ servico: b.servico, cliente: b.cliente, dia: d, horario: b.horario, status: "avulso", duracao_min: b.duracao, profissional_id: prof, profissional: prof === "b2" ? "Rafael" : "Bruno", serie_id: serieId });
-          pedidos.push(n);
-          criados.push(n);
+        const grupos = {};
+        linhas.forEach((l, k) => {
+          const serieId = datas.length > 1 ? "serie-" + Date.now() + "-" + k : null;
+          const prof = l.profissionalId || "b1";
+          datas.forEach((d, i) => {
+            const ocupado = pedidos.some((x) => x.dia === d && x.horario === l.horario && (x.profissional_id || "b1") === prof && ["pendente", "confirmado", "avulso"].includes(x.status));
+            if (i > 0 && ocupado && !b.sobrepor) { pulados.push({ dia: d, motivo: "ocupado", horario: l.horario }); return; }
+            if (linhas.length > 1) grupos[d] = grupos[d] || "grupo-" + d + "-" + Date.now();
+            const n = P({ servico: l.servico, cliente: b.cliente, dia: d, horario: l.horario, status: "avulso", duracao_min: l.duracao, profissional_id: prof, profissional: prof === "b2" ? "Rafael" : "Bruno", serie_id: serieId, grupo_id: linhas.length > 1 ? grupos[d] : null, para_quem: l.paraQuem || null, para_nome: l.paraNome || null });
+            pedidos.push(n);
+            criados.push(n);
+          });
         });
-        return json(res, 201, { pedido: criados[0], ...(serieId ? { serie: { id: serieId, cada: b.repetir.cada, ate: b.repetir.ate, criados: criados.length, pulados } } : {}) });
+        return json(res, 201, { pedido: criados[0], ...(linhas.length > 1 ? { criados: criados.length } : {}), ...(datas.length > 1 ? { serie: { id: "serie", cada: b.repetir.cada, ate: b.repetir.ate, criados: criados.length, pulados } } : {}) });
       }
       // Pedido feito no site (prévia): assinante do clube pelo WhatsApp cadastrado
       if (metodo === "POST" && b.slug) {

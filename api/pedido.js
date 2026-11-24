@@ -31,6 +31,12 @@ function erro(res, status, message) {
   return res.status(status).json({ message });
 }
 
+// Vários serviços (fase 37): soma dos preços; se algum não tiver preço, o atendimento fica sem preço (o dono põe depois)
+async function somaDosPrecos(barbeariaId, servicos) {
+  const precos = await Promise.all(servicos.map((s) => precoDoServico(barbeariaId, s.nome, s.preco)));
+  return precos.some((p) => p == null) ? null : Math.round(precos.reduce((t, p) => t + p, 0) * 100) / 100;
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   // Cadastro do cliente pelo link de convite (público, sem login)
@@ -51,7 +57,12 @@ module.exports = async (req, res) => {
   const slug = texto(b.slug, 60).toLowerCase();
   const dia = texto(b.dia, 10);
   const horario = texto(b.horario, 5);
-  const servico = texto(b.servico, 80);
+  // Mais de um serviço no mesmo horário (fase 37): um atendimento só, com os serviços um depois do outro e o
+  // mesmo barbeiro; o site manda o tempo total, e o preço é a soma. Até 4 serviços.
+  const lista = Array.isArray(b.servicos) ? b.servicos : [];
+  if (lista.length > 4) return erro(res, 400, "Escolha até 4 serviços.");
+  const varios = lista.map((s) => ({ nome: texto(s && s.nome, 80), preco: s && s.preco })).filter((s) => s.nome);
+  const servico = varios.length > 1 ? varios.map((s) => s.nome).join(" + ") : texto(b.servico, 80);
   const profissionalNome = texto(b.profissional, 80);
   const profissionalId = texto(b.profissionalId, 36);
   // Cliente sem preferência de barbeiro: o sistema escolhe um livre naquele horário
@@ -72,6 +83,7 @@ module.exports = async (req, res) => {
   if (!profissionalNome && !profissionalId && !qualquer) return erro(res, 400, "Escolha o profissional.");
   const peloClube = b.clube === true;
   if (peloClube && !clube.normalizarWhats(b.clubeWhatsapp)) return res.status(400).json({ message: "Informe o WhatsApp do clube com DDD.", clube: true });
+  if (peloClube && varios.length > 1) return res.status(400).json({ message: "Pelo clube, marque um serviço por vez.", clube: true });
   // WhatsApp do cliente (opcional): liga o agendamento ao cadastro dele. Pelo clube, vale o número do clube.
   const temZap = String(b.whatsapp || "").replace(/\D/g, "").length > 0;
   const zapCliente = temZap ? clube.normalizarWhats(b.whatsapp) : peloClube ? clube.normalizarWhats(b.clubeWhatsapp) : "";
@@ -123,10 +135,11 @@ module.exports = async (req, res) => {
     }
 
     // Valor do atendimento já no agendamento: preço cadastrado pelo dono, ou o preço que o site mostrou
-    const valor = await precoDoServico(barbearia_id, servico, b.preco);
+    const valor = varios.length > 1 ? await somaDosPrecos(barbearia_id, varios) : await precoDoServico(barbearia_id, servico, b.preco);
     // Sinal no Pix (fase 22): o pedido fica aguardando o sinal; o dono confirma ao tocar em "Recebi o sinal".
-    // Assinante do clube não paga sinal (a mensalidade já garante).
-    const valorSinal = peloClube ? 0 : sinal.valorDoSinal(barb[0].sinal, { dia, servico, preco: valor });
+    // Assinante do clube não paga sinal (a mensalidade já garante). Vários serviços: vale se algum deles pede sinal.
+    const nomesSinal = varios.length > 1 ? varios.map((s) => s.nome) : [servico];
+    const valorSinal = peloClube ? 0 : Math.max(0, ...nomesSinal.map((nome) => sinal.valorDoSinal(barb[0].sinal, { dia, servico: nome, preco: valor })));
     const confirmaSozinho = automatico && !valorSinal;
     const origem = origemDe(req);
     // Com a confirmação automática, a trava conta também os confirmados do site: limite um pouco maior

@@ -203,3 +203,25 @@ test("site: confirmado mostra \"Horário confirmado\" e não abre o WhatsApp soz
   assert.match(fonte, /if\(!ultimo\.confirmado&&!ultimo\.sinal\)abrirLink\(ultimo\.link\)/, "confirmado ou com sinal a pagar não abre o WhatsApp sozinho");
   assert.match(fonte, /confirmado:!!j\.confirmado/);
 });
+
+// Vários serviços no site (fase 37): um atendimento só, com os nomes juntos, o tempo total e o preço somado
+test("site: vários serviços viram um atendimento com os nomes juntos, o tempo total e o preço somado", async () => {
+  const chamadas = A.instalarFetch(rotasDoSite());
+  const corpo = { ...base(), servico: "Corte + Barba", duracao: 70, servicos: [{ nome: "Corte", preco: "40,00" }, { nome: "Barba", preco: "30,00" }] };
+  let r = await A.chamar(pedido, { metodo: "POST", corpo });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  const p = chamadas.find((c) => c.url.includes("rpc/criar_pedido")).corpo.p;
+  assert.deepEqual([p.servico, p.duracao_min, p.valor], ["Corte + Barba", 70, 80], "o preço de cada um vem do financeiro (40 + 40)");
+  // Pelo clube, um serviço por vez; e no máximo 4 serviços
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, clube: true, clubeWhatsapp: "81999998888" } });
+  assert.deepEqual([r.statusCode, r.body.clube], [400, true]);
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, servicos: ["A", "B", "C", "D", "E"].map((nome) => ({ nome })) } });
+  assert.equal(r.statusCode, 400);
+  // O site soma outro serviço e manda a lista; os sites publicados já têm a versão nova
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const fonte = fs.readFileSync(path.join(__dirname, "..", "lib", "gerador-agenda.js"), "utf8");
+  assert.ok(fonte.includes("+ Adicionar outro serviço") && fonte.includes('data-ag="mais-servico"') && fonte.includes("corpo.servicos=escolhidos()"), "somar serviços no site");
+  assert.ok(fonte.includes("duracao:duracaoTotal()") && fonte.includes("t+duracaoDe(s)<=240"), "tempo total, no máximo 4 horas");
+  for (const site of ["dom-manolo-barbearia.html", "barbearia-modelo.html"]) assert.ok(fs.readFileSync(path.join(__dirname, "..", site), "utf8").includes("+ Adicionar outro serviço"), site);
+});

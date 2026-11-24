@@ -428,15 +428,65 @@ test("horário que se repete: cancelar e remarcar este e os próximos (só o don
   assert.ok(!chamadas.slice(antes2).some((c) => c.url.includes("serie_id=")), "só este dia");
 });
 
-test("encaixe: tempo do serviço vem do site, marcar outro junto e repetir; remarcar e cancelar perguntam na série", () => {
+test("encaixe: tempo do serviço vem do site, vários serviços com para quem é e repetir; remarcar e cancelar perguntam na série", () => {
   const js = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "painel-agenda.js"), "utf8");
   assert.ok(js.includes('getElementById("bio-config")') && js.includes("cfg.agenda.servicos"), "lê o tempo dos serviços do site");
-  assert.ok(js.includes("usarDuracao(padrao.duracao || 30)") && js.includes("tempoDoServico()"), "a duração segue o serviço escolhido");
-  assert.ok(js.includes('{ texto: "Registrar e marcar outro", valor: "mais" }') && js.includes("Logo depois ("), "marcar outro junto");
+  assert.ok(js.includes("tempoDoServico(l)") && js.includes("usarDuracao(l.dur"), "a duração segue o serviço de cada linha");
+  assert.ok(js.includes('"Adicionar serviço"') && js.includes("corpo.itens = itens"), "vários serviços no mesmo encaixe");
+  for (const t of ["O próprio cliente", "Filho ou filha", "Parente", "Outra pessoa"]) assert.ok(js.includes(t), t);
+  assert.ok(js.includes("x.paraQuem = l.para.value") && js.includes("x.paraNome = l.nome.value.trim()"), "para quem é cada serviço");
   for (const t of ["Toda semana", "A cada 15 dias", "A cada 3 semanas", "A cada 4 semanas (1 vez por mês)"]) assert.ok(js.includes(t), t);
   assert.ok(js.includes("corpo.repetir = { cada: Number(repetir.value), ate: ate.value }"), "envia a repetição");
   assert.ok(js.includes('"Este e os próximos"') && js.includes('corpo.serie = "proximos"'), "cancelar e remarcar a série");
-  assert.ok(js.includes("↻ Repete"), "selo no cartão");
-  const sql = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "supabase", "fase36-recorrente.sql"), "utf8");
-  assert.ok(sql.includes("create table if not exists public.pedido_series") && sql.includes("add column if not exists serie_id"), "fase 36 aditiva");
+  assert.ok(js.includes("↻ Repete") && js.includes('class: "para-quem"'), "selos no cartão");
+  const ler = (f) => require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "supabase", f), "utf8");
+  assert.ok(ler("fase36-recorrente.sql").includes("create table if not exists public.pedido_series"), "fase 36 aditiva");
+  assert.ok(/add column if not exists grupo_id[\s\S]*para_quem[\s\S]*para_nome/.test(ler("fase37-varios-servicos.sql")), "fase 37 aditiva");
+});
+
+test("encaixe com vários serviços: cada um com barbeiro, horário e para quem; confere tudo antes de gravar e liga o grupo", async () => {
+  const d = A.daquiA(1);
+  let ocupados = [{ profissional_id: UUIDS.rafael, horario: "10:40:00", duracao_min: 40 }];
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { padrao: /servicos_precos[?]barbearia_id=eq[.][^&]+&nome=eq[.][^&]+&select=nome/, resposta: { corpo: [{ nome: "x" }] } },
+    { padrao: /servicos_precos[?]barbearia_id=eq[.][^&]+&nome=eq[.][^&]+&select=preco/, resposta: { corpo: [{ preco: "40" }] } },
+    { padrao: /rest[/]v1[/]profissionais[?]id=eq[.]/, resposta: (u) => ({ corpo: [u.includes(UUIDS.rafael) ? { id: UUIDS.rafael, nome: "Rafael" } : { id: UUIDS.bruno, nome: "Bruno" }] }) },
+    { padrao: /rest[/]v1[/]barbearias[?]id=eq[.]/, resposta: { corpo: [{ slug: "gw-teste" }] } },
+    { padrao: /rest[/]v1[/]clientes[?]id=eq[.]/, resposta: { corpo: [{ id: CLIENTE }] } },
+    { padrao: /rest[/]v1[/]bloqueios[?]/, resposta: { corpo: [] } },
+    { metodo: "GET", padrao: /rest[/]v1[/]pedidos[?]barbearia_id=eq[.][^&]+&dia=eq[.]/, resposta: () => ({ corpo: ocupados }) },
+    { padrao: /rest[/]v1[/]rpc[/]criar_pedido/, resposta: (u, o, c) => ({ corpo: { id: "id-" + c.p.profissional + "-" + c.p.horario.replace(":", "") } }) },
+    { metodo: "PATCH", padrao: /rest[/]v1[/]pedidos[?]id=/, resposta: { status: 204 } },
+    { padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: { corpo: [pedidoBase({ status: "avulso" })] } },
+  ]);
+  const corpo = {
+    acao: "avulso", cliente: "Claudio Melo", clienteId: CLIENTE, dia: d,
+    itens: [
+      { servico: "Corte", profissionalId: UUIDS.bruno, horario: "10:40", duracao: 40 },
+      { servico: "Barba", profissionalId: UUIDS.bruno, horario: "11:20", duracao: 30 },
+      { servico: "Corte infantil", profissionalId: UUIDS.rafael, horario: "10:40", duracao: 40, paraQuem: "filho", paraNome: "Pedro" },
+    ],
+  };
+  let r = await A.chamar(pedido, { metodo: "POST", corpo, token: "token-dono" });
+  assert.equal(r.statusCode, 409, "o Rafael já tem cliente às 10:40");
+  assert.deepEqual([r.body.conflito, r.body.podeSobrepor], [true, true]);
+  assert.match(r.body.message, /^Rafael: este horário já está ocupado/);
+  assert.ok(!chamadas.some((c) => c.url.includes("criar_pedido")), "nada gravado antes de conferir tudo");
+  ocupados = [];
+  r = await A.chamar(pedido, { metodo: "POST", corpo, token: "token-dono" });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  assert.equal(r.body.criados, 3);
+  const criados = chamadas.filter((c) => c.url.includes("criar_pedido")).map((c) => [c.corpo.p.servico, c.corpo.p.profissional, c.corpo.p.horario, c.corpo.p.duracao_min, c.corpo.p.cliente]);
+  assert.deepEqual(criados, [["Corte", "Bruno", "10:40", 40, "Claudio Melo"], ["Barba", "Bruno", "11:20", 30, "Claudio Melo"], ["Corte infantil", "Rafael", "10:40", 40, "Claudio Melo"]]);
+  const patches = chamadas.filter((c) => c.metodo === "PATCH");
+  assert.deepEqual(patches.find((c) => c.corpo.para_quem).corpo, { cliente_id: CLIENTE, para_quem: "filho", para_nome: "Pedro" }, "o do filho fica na ficha do pai, com o nome dele");
+  assert.ok(patches.some((c) => c.corpo.grupo_id && c.url.includes("id=in.(")), "os três no mesmo grupo");
+  // Duas linhas com o mesmo barbeiro se sobrepondo também pedem confirmação
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, itens: [corpo.itens[0], { ...corpo.itens[1], horario: "11:00" }] }, token: "token-dono" });
+  assert.equal(r.statusCode, 409);
+  assert.match(r.body.message, /^Bruno: este horário já está ocupado \(das 10:40\)/);
+  // No máximo 6 serviços por vez
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, itens: Array.from({ length: 7 }, () => corpo.itens[0]) }, token: "token-dono" });
+  assert.equal(r.statusCode, 400);
 });

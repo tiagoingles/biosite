@@ -336,3 +336,10 @@ test("busca da carteira no encaixe: pelo nome ou pelo final do telefone, só par
   const js = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "painel-agenda.js"), "utf8");
   assert.ok(js.includes("area=clientes&busca=") && js.includes("corpo.clienteId = escolhido.id"), "o encaixe busca e liga o cliente");
 });
+
+test("encaixe: cliente que não está na carteira é cadastrado ali mesmo, com o WhatsApp, e o encaixe vai para a ficha dele", () => {
+  const js = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "painel-agenda.js"), "utf8");
+  assert.ok(js.includes("+ Cadastrar cliente novo"), "botão de cliente novo na busca");
+  assert.ok(js.includes('acao: "salvar", nome: corpo.cliente, telefone: novoTel.value.trim()'), "cadastra na carteira antes");
+  assert.ok(js.includes("corpo.clienteId = j.cliente.id; mandar();"), "e liga o encaixe ao cliente novo");
+});

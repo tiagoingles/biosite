@@ -353,7 +353,26 @@
     var cliente = h("input", { name: "cliente", maxlength: 80, autocomplete: "off", placeholder: ctx.dono ? "Nome ou final do telefone" : "Nome do cliente", required: true });
     // Dono: busca na carteira pelo nome ou pelo final do telefone; escolhido, o encaixe fica na ficha do cliente
     var escolhido = null, sugestoes = h("div", { class: "sugestoes" }), espera = null;
+    // Cliente novo (não achou na carteira): cadastra ali mesmo, com o WhatsApp, e o encaixe já fica na ficha dele
+    var novo = false;
+    var novoTel = h("input", { type: "tel", inputmode: "tel", maxlength: 20, autocomplete: "off", placeholder: "(81) 99999-9999" });
+    var novoBox = h("div", { class: "grade" }, [
+      h("label", { class: "campo" }, ["WhatsApp do cliente novo (opcional)", novoTel]),
+      h("p", { class: "nota p", texto: "Ele entra na carteira de clientes com o nome e o WhatsApp, e este encaixe já fica na ficha dele." }),
+    ]);
+    novoBox.hidden = true;
+    function cadastrarNovo() {
+      var t = cliente.value.trim();
+      novo = true;
+      escolhido = null;
+      // Digitou o telefone na busca: ele vai para o campo do WhatsApp e o nome fica para escrever
+      if (/^[\d\s().+-]+$/.test(t)) { novoTel.value = t; cliente.value = ""; }
+      novoBox.hidden = false;
+      P.trocar(sugestoes, h("p", { class: "nota p", texto: "Cliente novo: escreva o nome e, se tiver, o WhatsApp." }));
+      (cliente.value ? novoTel : cliente).focus();
+    }
     if (ctx.dono) cliente.addEventListener("input", function () {
+      if (novo) return;
       if (escolhido && cliente.value !== escolhido.nome) escolhido = null;
       clearTimeout(espera);
       var t = cliente.value.trim();
@@ -362,13 +381,14 @@
         P.api("/api/equipe?area=clientes&busca=" + encodeURIComponent(t)).then(function (j) {
           if (cliente.value.trim() !== t) return; // já digitou outra coisa
           var lista = j.clientes || [];
-          P.trocar(sugestoes, lista.length ? lista.map(function (c) {
+          var botaoNovo = h("button", { type: "button", class: "sugestao novo", onclick: cadastrarNovo }, [h("b", { texto: "+ Cadastrar cliente novo" })]);
+          P.trocar(sugestoes, (lista.length ? lista.map(function (c) {
             return h("button", { type: "button", class: "sugestao", onclick: function () {
               escolhido = c;
               cliente.value = c.nome;
               P.trocar(sugestoes, h("p", { class: "nota p", texto: "Cliente da carteira" + (c.final ? " · WhatsApp final " + c.final : "") + ". O encaixe fica na ficha dele." }));
             } }, [h("b", { texto: c.nome }), c.final ? h("span", { texto: " · final " + c.final }) : null]);
-          }) : h("p", { class: "nota p", texto: "Nenhum cliente com esse nome ou telefone. Escreva o nome para registrar assim mesmo." }));
+          }) : [h("p", { class: "nota p", texto: "Nenhum cliente com esse nome ou telefone na carteira." })]).concat([botaoNovo]));
         }).catch(function () { P.limpar(sugestoes); });
       }, 250);
     });
@@ -382,13 +402,17 @@
         h("label", { class: "campo" }, ["Serviço", servico]),
         h("label", { class: "campo" }, ["Cliente", cliente]),
         sugestoes,
+        novoBox,
         prof ? h("label", { class: "campo" }, ["Barbeiro", prof]) : null,
         h("div", { class: "grade d3" }, [h("label", { class: "campo" }, ["Dia", dia]), h("label", { class: "campo" }, ["Horário", hora]), h("label", { class: "campo" }, ["Duração", dur])]),
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Registrar encaixe", classe: "principal", valor: "ok" }],
       validar: function () {
-        var t = cliente.value.trim();
-        return t.length < 2 ? "Informe o nome do cliente." : !escolhido && /^[\d\s().+-]+$/.test(t) ? "Escolha o cliente na lista ou escreva o nome." : !hora.value ? "Informe o horário." : "";
+        var t = cliente.value.trim(), d = novoTel.value.replace(/\D/g, "");
+        if (t.length < 2) return novo ? "Escreva o nome do cliente novo." : "Informe o nome do cliente.";
+        if (!escolhido && /^[\d\s().+-]+$/.test(t)) return novo ? "Escreva o nome do cliente novo." : "Escolha o cliente na lista ou escreva o nome.";
+        if (novo && d && (d.length < 10 || d.length > 13)) return "Confira o WhatsApp: DDD e número.";
+        return !hora.value ? "Informe o horário." : "";
       },
     }).then(function (r) {
       if (r.valor !== "ok") return;
@@ -397,10 +421,14 @@
       if (escolhido) corpo.clienteId = escolhido.id;
       // Horário ocupado: o dono pode confirmar e marcar os dois no mesmo horário (fase 34)
       var mandar = function () {
-        P.api("/api/pedido", { corpo: corpo }).then(function () { P.toast("Encaixe registrado na agenda.", "ok"); ctx.recarregar(); })
+        P.api("/api/pedido", { corpo: corpo }).then(function () { P.toast(novo ? "Cliente cadastrado e encaixe registrado na agenda." : "Encaixe registrado na agenda.", "ok"); ctx.recarregar(); })
           .catch(function (e) { P.sobrepor(e, function () { corpo.sobrepor = true; mandar(); }, erro); });
       };
-      mandar();
+      if (!novo) { mandar(); return; }
+      // Cliente novo: primeiro entra na carteira, depois o encaixe vai para a ficha dele
+      P.api("/api/equipe?area=clientes", { corpo: { acao: "salvar", nome: corpo.cliente, telefone: novoTel.value.trim() } })
+        .then(function (j) { corpo.clienteId = j.cliente.id; mandar(); })
+        .catch(function (e) { P.toast(e.message + " Busque pelo final do telefone para escolher quem já está na carteira.", "erro"); });
     });
   }
 

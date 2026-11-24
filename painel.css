@@ -612,3 +612,4 @@ html.q-sem-rolagem, html.q-sem-rolagem body { overflow: hidden; }
 .sugestoes:empty { display: none; }
 .sugestao { text-align: left; padding: 10px 12px; border: 1px solid var(--linha, #e7e5e4); border-radius: 10px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .sugestao span { opacity: .7; }
+.sugestao.novo { border-style: dashed; color: var(--cor, #a16207); }

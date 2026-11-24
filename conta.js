@@ -146,7 +146,8 @@
       await renovar();
       res = await chamar();
     }
-    if (!res.ok) throw new Error(res.j.message || "Erro " + res.status);
+    // O erro leva a situação e a resposta inteira (ex.: conflito de horário que o dono pode confirmar)
+    if (!res.ok) { var falha = new Error(res.j.message || "Erro " + res.status); falha.status = res.status; falha.dados = res.j; throw falha; }
     return res.j;
   }
 

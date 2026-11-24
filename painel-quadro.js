@@ -369,7 +369,8 @@
       if (r.valor !== "ok") { q.redesenhar(); return; }
       var corpo = { acao: "remarcar", id: p.id, dia: p.dia, horario: para, duracao: duracao(p), avisar: avisar.checked, whatsapp: zap.checked };
       if (outroBarbeiro) corpo.profissionalId = destino.id;
-      P.api("/api/pedido", { corpo: corpo }).then(function (res) {
+      // Horário ocupado: o dono pode confirmar e deixar os dois no mesmo horário (fase 34)
+      var mandar = function () { P.api("/api/pedido", { corpo: corpo }).then(function (res) {
         var msg = "Movido para " + para + (outroBarbeiro ? " com " + destino.nome : "") + "." + (res.avisados ? " Cliente avisado no celular." : "");
         var novoPedido = Object.assign({}, p, res.pedido || {}, { horario: para, profissional: outroBarbeiro ? destino.nome : p.profissional });
         var extra = { link: res.link ? location.origin + res.link : "", era: P.horarioAnterior(p, p.dia) };
@@ -379,7 +380,10 @@
         if (res.avisados) { P.toast(msg, "ok", { texto: "WhatsApp também", acao: function () { P.abrirWhats(P.mensagem("remarcado", novoPedido, ctx.barbearia, extra), tel); } }); return; }
         P.toast(msg, "ok");
         P.oferecerWhats("remarcado", novoPedido, ctx, "Mandar a mudança no WhatsApp", extra);
-      }).catch(function (e) { P.toast(e.message, "erro"); q.redesenhar(); ctx.recarregar(); });
+      }).catch(function (e) {
+        P.sobrepor(e, function () { corpo.sobrepor = true; mandar(); }, function (e2) { P.toast(e2.message, "erro"); q.redesenhar(); ctx.recarregar(); }, function () { q.redesenhar(); });
+      }); };
+      mandar();
     });
   }
 

@@ -14,6 +14,12 @@ async function rotaEquipe({ res, q, metodo, b, json }) {
         return json(res, 200, { configurado: true, assinatura: D.assinaturaPrevia, oferta: { promocao: true, vagasRestantes: 7, mensal: 39.9, normal: 89.9, implantacao: 120, diasAtePrimeiraCobranca: 60 } });
       }
       if (q.area === "clientes") {
+        // Busca do encaixe (lib/clientes.js buscar): nome ou final do telefone
+        if (metodo === "GET" && q.busca !== undefined) {
+          const t = String(q.busca).trim().toLowerCase(), dig = t.replace(/[^0-9]/g, "");
+          const achados = D.clientesPrev.filter((c) => (dig.length >= 3 && dig.length === t.replace(/[^0-9a-z]/g, "").length ? String(c.telefone || "").endsWith(dig) : c.nome.toLowerCase().includes(t))).slice(0, 8);
+          return json(res, 200, { clientes: achados.map((c) => ({ id: c.id, nome: c.nome, final: String(c.telefone || "").slice(-4) })) });
+        }
         if (metodo === "GET" && q.id) {
           const c = D.clientesPrev.find((x) => x.id === q.id);
           if (!c) return json(res, 404, { message: "Cliente não encontrado." });

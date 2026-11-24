@@ -190,6 +190,8 @@ const servidor = http.createServer(async (req, res) => {
         const resumo = lista.map((x) => { const de = x.horario.slice(0, 5); const m = Number(x.horario.slice(0, 2)) * 60 + Number(x.horario.slice(3, 5)) + Number(b.minutos); x.horario = String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); return { id: x.id, cliente: x.cliente, servico: x.servico, profissional: x.profissional, codigo: x.codigo, dia: x.dia, de, para: x.horario, telefone: (x.clientes && x.clientes.telefone) || "", avisado: !!b.avisar && x.cliente !== "Pedrinho", link: b.avisar || b.whatsapp ? LINK_PREVIA : "" }; });
         return json(res, 200, { movidos: lista.length, falhas: [], avisados: resumo.filter((x) => x.avisado).length, lista: resumo });
       }
+      // Conflito de horário (fase 34): o dono confirma e marca os dois no mesmo horário
+      if (b.acao === "avulso" && !b.sobrepor && pedidos.some((x) => x.dia === b.dia && x.horario === b.horario && (x.profissional_id || "b1") === (b.profissionalId || "b1") && ["pendente", "confirmado", "avulso"].includes(x.status))) return json(res, 409, { message: "Este horário já está ocupado (das " + b.horario + ").", conflito: true, podeSobrepor: true });
       if (b.acao === "avulso") { const n = P({ servico: b.servico, cliente: b.cliente, dia: b.dia, horario: b.horario, status: "avulso", duracao_min: b.duracao }); pedidos.push(n); return json(res, 201, { pedido: n }); }
       // Pedido feito no site (prévia): assinante do clube pelo WhatsApp cadastrado
       if (metodo === "POST" && b.slug) {

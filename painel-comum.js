@@ -217,6 +217,13 @@
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: rotulo || "Confirmar", classe: perigo ? "perigo" : "principal", valor: "ok" }],
     }).then(function (r) { return r.valor === "ok"; });
   };
+  // Conflito de horário (fase 34): o dono pode marcar mesmo assim, os dois no mesmo horário; os outros só veem o erro
+  P.sobrepor = function (e, refazer, falhou, desistiu) {
+    var d = e && e.dados;
+    if (!d || !d.conflito || !d.podeSobrepor) return falhou(e);
+    P.confirmar("Horário ocupado", e.message + " Marcar mesmo assim, os dois no mesmo horário? Só o dono consegue; pelo site o cliente continua sem poder.", "Marcar mesmo assim")
+      .then(function (ok) { if (ok) refazer(); else if (desistiu) desistiu(); });
+  };
   // Forma de pagamento (fase 31): no atendimento realizado e na venda de produto
   P.FORMAS = [["dinheiro", "Dinheiro"], ["pix", "Pix"], ["debito", "Débito"], ["credito", "Crédito"]];
   P.formaNome = function (v) { var f = P.FORMAS.filter(function (x) { return x[0] === v; })[0]; return f ? f[1] : ""; };

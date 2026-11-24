@@ -18,9 +18,15 @@ test("coletor: o código vale 2 horas, só o hash fica no banco, e a vitrine nã
   const chamadas = A.instalarFetch([
     { padrao: /\/rest\/v1\/barbearias\?id=eq\./, resposta: (url) => ({ corpo: [{ id: BARB, nome: "Dom Manolo", slug: "dom-manolo", demonstracao: url.includes(UUIDS.outraBarbearia) ? "vitrine" : null }] }) },
     { metodo: "POST", padrao: /\/rest\/v1\/migracoes/, resposta: { status: 201 } },
+    // Já migrada: o último atendimento do histórico que entrou foi em 19/11
+    { padrao: /\/rest\/v1\/atendimentos_externos\?/, resposta: { corpo: [{ dia: "2026-11-19" }] } },
   ]);
   const r = await migracao.criar({ barbeariaId: BARB, userId: UUIDS.adminUser });
   assert.match(r.token, /^[0-9a-f]{48}$/);
+  // Coleta de novo: o histórico vem só a partir de 30 dias antes do último que entrou (o resto não duplica)
+  assert.deepEqual([r.origem, r.historicoDesde], ["booksy", "2026-10-20"]);
+  assert.ok(chamadas.some((c) => c.url.includes("atendimentos_externos?barbearia_id=eq." + BARB + "&externo=like.booksy:*")), "só o histórico do mesmo aplicativo");
+  await assert.rejects(migracao.criar({ barbeariaId: BARB, userId: UUIDS.adminUser, origem: "trinks" }), /aplicativo/, "aplicativo sem coletor é recusado");
   const ins = chamadas.find((c) => c.metodo === "POST" && c.url.includes("/migracoes"));
   assert.equal(ins.corpo.token_hash, hash(r.token));
   assert.ok(!JSON.stringify(ins.corpo).includes(r.token), "o código em si não é guardado");
@@ -388,7 +394,14 @@ test("recebimento do histórico: parte a parte, e o resumo da coleta soma as par
 test("coletor do histórico: ano a ano, só atendido e não compareceu, depois de todos os clientes; dá para mandar só o histórico", () => {
   const c = ler("coletor-booksy.js");
   assert.match(c, /if \(b\.status !== "F" && b\.status !== "N"\) return;/);
-  assert.match(c, /calendar\?start_date=" \+ ano \+ "-01-01&end_date=" \+ fim/);
+  assert.match(c, /calendar\?start_date=" \+ comeco \+ "&end_date=" \+ fim/);
+  // Coleta de novo: começa em M.desde (barbearia já migrada), senão em 2016
+  assert.match(c, /var comeco = DESDE && ano === inicio \? DESDE : ano \+ "-01-01";/);
+  assert.match(c, /var inicio = DESDE \? Number\(DESDE\.slice\(0, 4\)\) : ANO_INICIO;/);
+  const app = ler("app.html");
+  assert.match(app, /desde:'" \+ desde \+ "'/, "o favorito leva a data de início do histórico");
+  assert.match(app, /id="migOrigem"/, "escolhe o aplicativo de origem");
+  assert.ok(app.indexOf('["a migração"') < app.indexOf('["os sites"'), "a migração monta antes do resto da tela");
   assert.match(c, /historicoParte: parte/);
   assert.match(c, /if \(s\.parcial\) \{ encerrar\(/, "com clientes faltando, o histórico espera a próxima coleta");
   assert.match(c, /if \(M\.so === "historico"\)/);

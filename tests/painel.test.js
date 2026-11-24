@@ -275,3 +275,64 @@ test("forma de pagamento: realizado grava a forma; dá para corrigir depois; for
   const fin = fs.readFileSync(require("node:path").join(__dirname, "..", "financeiro.html"), "utf8");
   assert.ok(fin.includes('acao: "apagar"') && fin.includes("Como entrou"), "Financeiro: apagar produto e entradas por forma");
 });
+
+// Fase 34 (pedido do Manolo): o dono marca dois clientes no mesmo horário; o encaixe acha o cliente na carteira
+test("encaixe e remarcar: no conflito, só o dono pode confirmar e marcar os dois no mesmo horário; o cliente da carteira fica ligado", async () => {
+  let conflito = true;
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { padrao: /servicos_precos[?]barbearia_id=eq[.][^&]+&nome=eq[.]Corte&select=nome/, resposta: { corpo: [{ nome: "Corte" }] } },
+    { padrao: /servicos_precos[?]barbearia_id=eq[.][^&]+&nome=eq[.]Corte&select=preco/, resposta: { corpo: [{ preco: "40" }] } },
+    { padrao: /rest[/]v1[/]profissionais[?]id=eq[.]/, resposta: { corpo: [{ id: UUIDS.bruno, nome: "Bruno" }] } },
+    { padrao: /rest[/]v1[/]barbearias[?]id=eq[.]/, resposta: { corpo: [{ slug: "gw-teste" }] } },
+    { padrao: /rest[/]v1[/]clientes[?]id=eq[.]/, resposta: (url) => ({ corpo: url.includes(UUIDS.cliente || "c1c1c1c1") ? [{ id: "x" }] : [] }) },
+    { padrao: /rest[/]v1[/]bloqueios[?]/, resposta: { corpo: [] } },
+    { padrao: /rest[/]v1[/]rpc[/]criar_pedido/, resposta: (u, o, c) => ({ corpo: conflito && !c.p.permitir_sobreposicao ? { erro: "conflito", horario: "10:00" } : { id: UUIDS.pedido } }) },
+    { padrao: /rest[/]v1[/]rpc[/]remarcar_pedido/, resposta: (u, o, c) => ({ corpo: !c.p.permitir_sobreposicao ? { erro: "conflito", horario: "15:00" } : { pedido: pedidoBase({ dia: A.daquiA(2), horario: "15:00" }) } }) },
+    { metodo: "PATCH", padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: { status: 204 } },
+    { padrao: /rest[/]v1[/]pedidos[?]id=eq[.]/, resposta: { corpo: [pedidoBase({ status: "confirmado" })] } },
+  ]);
+  const corpo = { acao: "avulso", servico: "Corte", cliente: "João", dia: HOJE, horario: "10:00", duracao: 40, profissionalId: UUIDS.bruno };
+  let r = await A.chamar(pedido, { metodo: "POST", corpo, token: "token-dono" });
+  assert.equal(r.statusCode, 409);
+  assert.deepEqual([r.body.conflito, r.body.podeSobrepor], [true, true], "o painel do dono pergunta se marca mesmo assim");
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, sobrepor: true }, token: "token-bruno" });
+  assert.equal(r.statusCode, 409, "barbeiro não sobrepõe");
+  assert.equal(r.body.podeSobrepor, false);
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, sobrepor: true }, token: "token-dono" });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  assert.equal(chamadas.filter((c) => c.url.includes("criar_pedido")).pop().corpo.p.permitir_sobreposicao, true);
+  // Cliente escolhido na busca: precisa ser desta barbearia e fica ligado ao encaixe
+  conflito = false;
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...corpo, clienteId: "d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4" }, token: "token-dono" });
+  assert.equal(r.statusCode, 404, "cliente de outra barbearia");
+  // Remarcar: o mesmo para o dono; o barbeiro continua barrado
+  const base = { acao: "remarcar", id: UUIDS.pedido, dia: A.daquiA(2), horario: "15:00" };
+  r = await A.chamar(pedido, { metodo: "POST", corpo: base, token: "token-dono" });
+  assert.deepEqual([r.statusCode, r.body.conflito, r.body.podeSobrepor], [409, true, true]);
+  r = await A.chamar(pedido, { metodo: "POST", corpo: { ...base, sobrepor: true }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.equal(chamadas.filter((c) => c.url.includes("remarcar_pedido")).pop().corpo.p.permitir_sobreposicao, true);
+  const sql = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "supabase", "fase34-dono-sobrepor.sql"), "utf8");
+  assert.ok(sql.includes("permitir_sobreposicao") && sql.includes("remarcar_pedido") && sql.includes("criar_pedido"));
+});
+
+test("busca da carteira no encaixe: pelo nome ou pelo final do telefone, só para o dono", async () => {
+  const equipe = require("../api/equipe");
+  const chamadas = A.instalarFetch([
+    ...A.rotasDeConta(),
+    { padrao: /rest[/]v1[/]clientes[?]barbearia_id=eq[.]/, resposta: { corpo: [{ id: "c1", nome: "João Pedro", telefone: "81987871234" }] } },
+  ]);
+  let r = await A.chamar(equipe, { query: { area: "clientes", busca: "1234" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.clientes, [{ id: "c1", nome: "João Pedro", final: "1234" }], "só o final do WhatsApp");
+  assert.ok(chamadas.some((c) => c.url.includes("telefone=like.*1234")), "final do telefone");
+  r = await A.chamar(equipe, { query: { area: "clientes", busca: "joão" }, token: "token-dono" });
+  assert.ok(chamadas.some((c) => c.url.includes("nome=ilike.*" + encodeURIComponent("joão") + "*")), "nome");
+  r = await A.chamar(equipe, { query: { area: "clientes", busca: "jo,(x)" }, token: "token-dono" });
+  assert.ok(!chamadas.some((c) => c.url.includes("(x)")), "sem caracteres que quebram o filtro");
+  r = await A.chamar(equipe, { query: { area: "clientes", busca: "joão" }, token: "token-bruno" });
+  assert.equal(r.statusCode, 403, "a carteira é do dono");
+  const js = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "painel-agenda.js"), "utf8");
+  assert.ok(js.includes("area=clientes&busca=") && js.includes("corpo.clienteId = escolhido.id"), "o encaixe busca e liga o cliente");
+});

@@ -137,11 +137,47 @@
     });
   }
 
-  // Colocar na lista quem pediu pelo telefone ou no balcão
+  // Colocar na lista quem pediu pelo telefone ou no balcão. O cliente vem da carteira, buscando pelo nome ou pelo
+  // final do telefone (como no encaixe): o WhatsApp sai do cadastro. Quem não está na carteira: nome e WhatsApp.
   function colocar() {
     var ctx = op.ctx || {};
-    var nome = h("input", { maxlength: 80, autocomplete: "off", placeholder: "Nome do cliente" });
+    var nome = h("input", { maxlength: 80, autocomplete: "off", placeholder: "Nome ou final do telefone" });
     var zap = h("input", { type: "tel", inputmode: "tel", maxlength: 20, autocomplete: "off", placeholder: "(81) 99999-9999" });
+    var boxZap = h("label", { class: "campo" }, ["WhatsApp", zap]);
+    var sugestoes = h("div", { class: "sugestoes" });
+    var escolhido = null, espera = null;
+    function escolher(c) {
+      escolhido = c;
+      nome.value = c.nome;
+      boxZap.hidden = !!c.final; // com WhatsApp no cadastro, a barbearia chama por ele
+      P.trocar(sugestoes, h("p", { class: "nota p", texto: c.final ? "Cliente da carteira · WhatsApp final " + c.final + ". É por esse número que a barbearia chama." : "Cliente da carteira sem WhatsApp no cadastro: digite o número para poder chamar." }));
+      if (!c.final) zap.focus();
+    }
+    function clienteNovo() {
+      var t = nome.value.trim();
+      escolhido = null;
+      boxZap.hidden = false;
+      // Digitou o telefone na busca: ele vai para o campo do WhatsApp e o nome fica para escrever
+      if (/^[\d\s().+-]+$/.test(t)) { zap.value = t; nome.value = ""; }
+      P.trocar(sugestoes, h("p", { class: "nota p", texto: "Cliente novo: escreva o nome e o WhatsApp." }));
+      (nome.value ? zap : nome).focus();
+    }
+    nome.addEventListener("input", function () {
+      if (escolhido && nome.value !== escolhido.nome) { escolhido = null; boxZap.hidden = false; }
+      clearTimeout(espera);
+      var t = nome.value.trim();
+      if (escolhido || (t.length < 2 && t.replace(/\D/g, "").length < 3)) { P.limpar(sugestoes); return; }
+      espera = setTimeout(function () {
+        P.api("/api/equipe?area=clientes&busca=" + encodeURIComponent(t)).then(function (j) {
+          if (nome.value.trim() !== t) return; // já digitou outra coisa
+          var lista = j.clientes || [];
+          var novo = h("button", { type: "button", class: "sugestao novo", onclick: clienteNovo }, [h("b", { texto: "+ Cliente novo (não está na carteira)" })]);
+          P.trocar(sugestoes, (lista.length ? lista.map(function (c) {
+            return h("button", { type: "button", class: "sugestao", onclick: function () { escolher(c); } }, [h("b", { texto: c.nome }), c.final ? h("span", { texto: " · final " + c.final }) : null]);
+          }) : [h("p", { class: "nota p", texto: "Ninguém com esse nome ou telefone na carteira." })]).concat([novo]));
+        }).catch(function () { P.limpar(sugestoes); });
+      }, 250);
+    });
     var servicos = (ctx.servicos || []).map(function (s) { return s.nome; });
     var servico = servicos.length ? h("select", null, servicos.map(function (n) { return h("option", { value: n, texto: n }); })) : h("input", { maxlength: 200, placeholder: "Ex.: Corte" });
     var dia = h("input", { type: "date", value: P.hoje(), min: P.hoje() });
@@ -152,8 +188,9 @@
     P.janela({
       titulo: "Colocar na lista de espera",
       conteudo: h("div", { class: "grade" }, [
-        h("label", { class: "campo" }, ["Nome", nome]),
-        h("label", { class: "campo" }, ["WhatsApp", zap]),
+        h("label", { class: "campo" }, ["Cliente", nome]),
+        sugestoes,
+        boxZap,
         h("label", { class: "campo" }, ["Serviço", servico]),
         h("label", { class: "campo" }, ["Dia", dia]),
         h("div", { class: "grade d2" }, [h("label", { class: "campo" }, ["Pode de", de]), h("label", { class: "campo" }, ["até", ate])]),
@@ -163,9 +200,11 @@
       ]),
       acoes: [{ texto: "Voltar", valor: "cancelar" }, { texto: "Colocar na lista", classe: "principal", valor: "ok" }],
       validar: function () {
-        if (nome.value.trim().length < 2) return "Informe o nome.";
+        var t = nome.value.trim();
+        if (t.length < 2) return "Informe o nome do cliente.";
+        if (!escolhido && /^[\d\s().+-]+$/.test(t)) return "Escolha o cliente na lista ou escreva o nome.";
         var d = zap.value.replace(/\D/g, "");
-        if (d && (d.length < 10 || d.length > 13)) return "Confira o WhatsApp: DDD e número.";
+        if (!boxZap.hidden && d && (d.length < 10 || d.length > 13)) return "Confira o WhatsApp: DDD e número.";
         if (!dia.value) return "Escolha o dia.";
         return ate.value <= de.value ? "O \"até\" precisa ser depois do \"de\"." : "";
       },
@@ -175,9 +214,9 @@
       // O tempo do serviço é o do site (o mesmo que o cliente vê ao marcar); sem ele, 30 min
       var tempos = P.temposDosServicos ? P.temposDosServicos(ctx.slug).catch(function () { return {}; }) : Promise.resolve({});
       tempos.then(function (mapa) {
-        return api({ acao: "nova", nome: nome.value.trim(), telefone: zap.value.trim(), servico: s, duracao: (mapa || {})[s.toLowerCase()] || 30, dia: dia.value, de: de.value, ate: ate.value, profissionalId: prof.value || undefined, observacao: obs.value.trim() });
+        return api({ acao: "nova", nome: nome.value.trim(), clienteId: escolhido ? escolhido.id : undefined, telefone: boxZap.hidden ? "" : zap.value.trim(), servico: s, duracao: (mapa || {})[s.toLowerCase()] || 30, dia: dia.value, de: de.value, ate: ate.value, profissionalId: prof.value || undefined, observacao: obs.value.trim() });
       })
-        .then(function () { P.toast("Na lista de espera.", "ok"); return carregar(); })
+        .then(function (j) { P.toast(j && j.atualizado ? "Já estava na lista desse dia: atualizado, sem perder a vez." : "Na lista de espera.", "ok"); return carregar(); })
         .catch(function (x) { P.toast(x.message, "erro"); });
     });
   }

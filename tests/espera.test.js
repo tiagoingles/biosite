@@ -20,6 +20,15 @@ const E2 = "e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e2e2";
 const E3 = "e3e3e3e3-e3e3-4e3e-8e3e-e3e3e3e3e3e3";
 const E4 = "e4e4e4e4-e4e4-4e4e-8e4e-e4e4e4e4e4e4";
 const E5 = "e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5";
+// Carteira de clientes do banco falso (busca do painel: o dono escolhe pelo nome ou pelo final do telefone)
+const C_PEDRO = "c0c0c0c0-0000-4000-8000-000000000001";
+const C_SEM_ZAP = "c0c0c0c0-0000-4000-8000-000000000002";
+const C_DE_FORA = "c0c0c0c0-0000-4000-8000-000000000003";
+const CARTEIRA = [
+  { id: C_PEDRO, barbearia_id: UUIDS.barbearia, nome: "Pedro Henrique", telefone: "5581999990021" },
+  { id: C_SEM_ZAP, barbearia_id: UUIDS.barbearia, nome: "Sem Zap", telefone: null },
+  { id: C_DE_FORA, barbearia_id: UUIDS.outraBarbearia, nome: "De Fora", telefone: "81955554444" },
+];
 const entrada = (extra = {}) => ({ dia: AMANHA, de: "10:00", ate: "12:00", nome: "Pedro Henrique", servico: "Corte", whatsapp: "(81) 99999-0021", duracao: 40, ...extra });
 const naLista = (id, extra) => ({ id, barbearia_id: UUIDS.barbearia, dia: AMANHA, nome: "Cliente", telefone: "81900000000", servico: "Corte", duracao_min: 30, de: "10:00", ate: "12:00", profissional_id: null, status: "esperando", criado_em: "2026-01-01T10:00:00Z", ...extra });
 
@@ -77,6 +86,7 @@ function banco({ lista = [], pedidos = [], demonstracao = null, recentes = 0 } =
       padrao: /rest[/]v1[/]profissionais[?]barbearia_id=eq[.]/,
       resposta: { corpo: [{ id: UUIDS.bruno, nome: "Bruno", ativo: true }, { id: UUIDS.rafael, nome: "Rafael", ativo: true }, { id: UUIDS.estranho, nome: "Saiu", ativo: false }] },
     },
+    { metodo: "GET", padrao: /rest[/]v1[/]clientes[?]id=eq[.]/, resposta: (u) => ({ corpo: filtrar(u, CARTEIRA) }) },
     { metodo: "GET", padrao: /rest[/]v1[/]clientes[?]/, resposta: (u) => ({ corpo: u.includes("telefone=eq.81999990021") ? [{ id: "cliente-pedro" }] : [] }) },
     { metodo: "GET", padrao: /rest[/]v1[/]pedidos[?]/, resposta: (u) => ({ corpo: filtrar(u, pedidos) }) },
     {
@@ -230,7 +240,7 @@ test("painel: o dono coloca quem pediu pelo telefone e marca chamado, marcado ou
   const b = banco({ lista: [naLista(E1, { nome: "Pedro", telefone: "81999990021" })] });
   const chamadas = A.instalarFetch(b.rotas);
   const post = (corpo, token = "token-dono") => A.chamar(equipe, { metodo: "POST", query: { area: "espera" }, token, corpo });
-  let r = await post({ acao: "nova", nome: "Pedro Henrique", telefone: "(81) 99999-0021", servico: "Corte", duracao: 40, dia: AMANHA, de: "14:00", ate: "16:00", profissionalId: UUIDS.bruno });
+  let r = await post({ acao: "nova", nome: "Pedro Henrique", telefone: "(81) 99999-0021", servico: "Corte", duracao: 40, dia: A.daquiA(2), de: "14:00", ate: "16:00", profissionalId: UUIDS.bruno });
   assert.equal(r.statusCode, 201, JSON.stringify(r.body));
   assert.equal(r.body.entrada.pelo_site, false);
   assert.equal(r.body.entrada.cliente_id, "cliente-pedro");
@@ -266,6 +276,43 @@ test("painel: o dono coloca quem pediu pelo telefone e marca chamado, marcado ou
   r = await post({ acao: "status", id: E1, status: "saiu" }, "token-bruno");
   assert.equal(r.statusCode, 403, "a lista é do dono");
   assert.equal(b.lista[0].status, "marcado");
+});
+
+test("painel: o cliente vem da busca na carteira, com o WhatsApp do cadastro; de novo no mesmo dia, só atualiza", async () => {
+  const b = banco();
+  A.instalarFetch(b.rotas);
+  const post = (corpo) => A.chamar(equipe, { metodo: "POST", query: { area: "espera" }, token: "token-dono", corpo: { acao: "nova", servico: "Corte", dia: AMANHA, de: "14:00", ate: "16:00", ...corpo } });
+  let r = await post({ nome: "Pedro Henrique", clienteId: C_PEDRO, telefone: "" });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  assert.equal(r.body.entrada.cliente_id, C_PEDRO);
+  assert.equal(r.body.entrada.telefone, "81999990021", "o WhatsApp sai do cadastro (o painel só vê o final do número)");
+  assert.equal(r.body.entrada.pelo_site, false);
+  // De novo, no mesmo dia: atualiza o horário, sem duplicar e sem perder a vez
+  r = await post({ nome: "Pedro Henrique", clienteId: C_PEDRO, de: "15:00", ate: "18:00" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.equal(r.body.atualizado, true);
+  assert.equal(b.lista.length, 1);
+  assert.equal(b.lista[0].de, "15:00");
+  // Cliente da carteira sem WhatsApp: vale o número digitado; colocado de novo sem número, o número fica
+  r = await post({ nome: "Sem Zap", clienteId: C_SEM_ZAP, telefone: "(81) 97777-6666" });
+  assert.equal(r.statusCode, 201, JSON.stringify(r.body));
+  assert.equal(r.body.entrada.telefone, "81977776666");
+  r = await post({ nome: "Sem Zap", clienteId: C_SEM_ZAP, telefone: "", de: "10:00", ate: "11:00" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  assert.equal(b.lista.length, 2);
+  assert.equal(b.lista[1].telefone, "81977776666");
+  assert.equal(b.lista[1].de, "10:00");
+  // Cliente de outra barbearia ou id inventado
+  r = await post({ nome: "De Fora", clienteId: C_DE_FORA });
+  assert.equal(r.statusCode, 400);
+  assert.equal(r.body.message, "Cliente não encontrado na carteira.");
+  r = await post({ nome: "X", clienteId: "abc" });
+  assert.equal(r.statusCode, 400);
+  // A tela: a mesma busca do encaixe, e manda o cliente escolhido
+  const aba = ler("painel-espera.js");
+  assert.ok(aba.includes('"/api/equipe?area=clientes&busca="'), "busca pelo nome ou pelo final do telefone");
+  assert.ok(aba.includes("clienteId: escolhido ? escolhido.id : undefined"), "manda o cliente escolhido");
+  assert.ok(aba.includes("+ Cliente novo (não está na carteira)"));
 });
 
 test("cancelar: o dono recebe quem da lista cabe no horário, na ordem de chegada; o barbeiro não", async () => {

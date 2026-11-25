@@ -173,7 +173,17 @@ async function rotaEquipe({ res, q, metodo, b, json }) {
       if (q.area === "espera") {
         const { cabeNaVaga } = require("../lib/espera");
         if (metodo === "POST" && b.acao === "status") { const e = esperaPrev.find((x) => x.id === b.id); if (!e) return json(res, 404, { message: "Registro não encontrado." }); e.status = b.status; if (b.status === "contatado") e.contatado_em = new Date().toISOString(); return json(res, 200, { entrada: e }); }
-        if (metodo === "POST" && b.acao === "nova") { const e = { id: "e" + Date.now(), cliente_id: null, nome: b.nome, telefone: soNumeros(b.telefone), servico: b.servico, duracao_min: Number(b.duracao) || 30, profissional_id: b.profissionalId || null, dia: b.dia, de: b.de, ate: b.ate, observacao: b.observacao || "", status: "esperando", contatado_em: null, pelo_site: false, criado_em: new Date().toISOString() }; esperaPrev.push(e); return json(res, 201, { entrada: e }); }
+        if (metodo === "POST" && b.acao === "nova") {
+          // Cliente escolhido na busca da carteira: o WhatsApp vem do cadastro; quem já está no dia é atualizado
+          const c = b.clienteId ? D.clientesPrev.find((x) => x.id === b.clienteId) : null;
+          if (b.clienteId && !c) return json(res, 400, { message: "Cliente não encontrado na carteira." });
+          const dadosE = { cliente_id: c ? c.id : null, nome: b.nome || (c && c.nome), telefone: soNumeros(b.telefone) || (c ? soNumeros(c.telefone) : ""), servico: b.servico, duracao_min: Number(b.duracao) || 30, profissional_id: b.profissionalId || null, dia: b.dia, de: b.de, ate: b.ate, observacao: b.observacao || "" };
+          const ja = esperaPrev.find((x) => x.dia === b.dia && ["esperando", "contatado"].includes(x.status) && ((dadosE.telefone && x.telefone === dadosE.telefone) || (c && x.cliente_id === c.id)));
+          if (ja) { Object.assign(ja, dadosE); return json(res, 200, { entrada: ja, atualizado: true }); }
+          const e = { id: "e" + Date.now(), ...dadosE, status: "esperando", contatado_em: null, pelo_site: false, criado_em: new Date().toISOString() };
+          esperaPrev.push(e);
+          return json(res, 201, { entrada: e });
+        }
         const lista = esperaPrev.filter((e) => e.dia >= hoje && ["esperando", "contatado"].includes(e.status)).sort((a, z) => (a.dia + a.criado_em).localeCompare(z.dia + z.criado_em));
         const nome = (id) => ({ b1: "Bruno", b2: "Rafael" })[id] || "";
         // Horário que vagou e ninguém ocupou de novo (mesma regra do servidor)

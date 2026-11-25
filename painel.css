@@ -330,6 +330,11 @@ dialog.dlg::backdrop { background: rgba(12, 10, 9, 0.55); -webkit-backdrop-filte
 .dlg-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .dlg-acoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .dlg-acoes .botao { flex: 1 1 140px; }
+/* Os botões ficam sempre à vista, presos embaixo da janela: com pouca altura (celular deitado, agenda em tela
+   cheia), o conteúdo rola por cima deles em vez de empurrar os botões para fora da tela */
+dialog.dlg { max-height: min(92vh, calc(100dvh - 12px)); overscroll-behavior: contain; }
+.dlg-corpo:has(> .dlg-acoes) { padding-bottom: 0; }
+.dlg-corpo > .dlg-acoes { position: sticky; bottom: 0; z-index: 2; background: var(--cartao); margin: -8px -18px 0; padding: 8px 18px calc(18px + env(safe-area-inset-bottom, 0px)); }
 dialog.dlg[open] { animation: sobe 0.35s cubic-bezier(.2, .7, .2, 1); }
 @keyframes sobe { from { transform: translateY(24px); opacity: 0; } }
 

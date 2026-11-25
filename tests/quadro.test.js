@@ -71,6 +71,10 @@ test("quadro no celular: não alarga a página, Atrasar só com o ícone e tela 
   assert.match(css, /\.q-nome > \.q-quem \{/, "a regra do nome não estica o avatar");
   assert.match(css, /\.q-cheio \{\n  position: fixed; inset: 0;/, "a tela cheia cobre o topo e as abas");
   assert.match(css, /html\.q-sem-rolagem, html\.q-sem-rolagem body \{ overflow: hidden; \}/);
+  // Celular deitado na tela cheia (pouca altura): os botões da janela (Mover, Abrir WhatsApp) ficam presos embaixo,
+  // à vista; o conteúdo rola por cima deles e a janela não passa da altura visível
+  assert.match(css, /\.dlg-corpo > \.dlg-acoes \{ position: sticky; bottom: 0;/);
+  assert.match(css, /dialog\.dlg \{ max-height: min\(92vh, calc\(100dvh - 12px\)\);/);
   const q = ler("painel-quadro.js");
   assert.match(q, /requestFullscreen\(\{ navigationUI: "hide" \}\)/, "no Android, some também a barra do navegador");
   assert.match(q, /window\.addEventListener\("hashchange", fecharTelaCheia\)/, "trocar de aba sai da tela cheia");

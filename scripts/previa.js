@@ -37,6 +37,8 @@ const servidor = http.createServer(async (req, res) => {
 <button onclick="ir('novo','app.html')">Conta sem barbearia (app.html)</button><button onclick="ir('novo','app.html?convite=abc123')">Convite (app.html)</button>
 <script>function ir(p,pag){localStorage.setItem("bio_sessao",JSON.stringify({access_token:"previa",refresh_token:"previa",expira:Date.now()+864e5}));fetch("/__papel?p="+p).then(function(){location.href="/"+(pag||"painel-"+p+".html")})}</script>`);
   }
+  // Prévia do aviso "cadastre o cartão" (implantação paga por fora, ainda sem assinatura): /__cartao?ligar=1 ou 0
+  if (u.pathname === "/__cartao") { D.assinaturaPrevia = q.ligar === "0" ? null : { status: "incompleta", plano: "lancamento", valor_mensal: 39.9, implantacao_paga_em: "2026-11-17T15:00:00.000Z" }; return json(res, 200, { assinatura: D.assinaturaPrevia }); }
   if (u.pathname === "/__papel") { D.papel = ["barbeiro", "admin", "novo"].includes(q.p) ? q.p : "dono"; return json(res, 200, { papel: D.papel }); }
   if (u.pathname === "/__google") { D.googleAtivo = q.ativo === "1"; return json(res, 200, { googleAtivo: D.googleAtivo }); }
   if (u.pathname === "/falso/auth/v1/settings") return json(res, 200, { external: { email: true, google: D.googleAtivo }, disable_signup: false });

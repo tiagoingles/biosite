@@ -318,6 +318,7 @@
     });
     carregar();
     window.Espera.contar();
+    verificarCartao();
     P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#caixa") window.Caixa.carregar(); if (location.hash === "#espera") window.Espera.carregar(); else window.Espera.contar(); }, 30000);
   }).catch(function (e) { $("sub").textContent = e.message; });
 
@@ -372,6 +373,7 @@
       var lista = repor.slice(0, 3).map(function (p) { return p.nome + (p.estoque <= 0 ? " (acabou)" : " (restam " + p.estoque + ")"); });
       alertas.push(h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: "Hora de repor: " + lista.join(", ") + (repor.length > 3 ? " e mais " + (repor.length - 3) : "") + "." }), h("a", { href: P.link("financeiro.html") + "#secProdutos", class: "botao p principal", texto: "Ver estoque" })]));
     }
+    if (cartaoPendente) alertas.unshift(faixaCartao());
     P.trocar($("alertas"), alertas);
 
     P.trocar($("kpis"), [
@@ -1326,7 +1328,7 @@
       mostrarTile("tileAssinatura", "secAssinatura");
       var a = j.assinatura, o = j.oferta;
       var vigente = a && VIGENTES_ASS.indexOf(a.status) > -1;
-      var s = a ? (SITUACAO_ASS[a.status] || [a.status, "neutro"]) : ["Não contratada", "neutro"];
+      var s = j.pendenteCartao ? ["Falta o cartão", "alerta"] : a ? (SITUACAO_ASS[a.status] || [a.status, "neutro"]) : ["Não contratada", "neutro"];
       P.trocar($("seloAssinatura"), h("span", { class: "selo selo-" + s[1], texto: s[0] }));
       if (vigente) {
         var linhas = [
@@ -1339,6 +1341,18 @@
           a.cancelar_no_fim ? h("p", { class: "aviso-faixa alerta", texto: "A assinatura termina no fim do período atual." }) : null,
           h("ul", { class: "mini-lista" }, linhas.map(function (l) { return h("li", null, [h("span", { texto: l[0] }), h("b", { texto: l[1] })]); })),
           h("button", { type: "button", class: "botao", onclick: function (ev) { abrirStripe(ev.currentTarget, "portal"); } }, [P.icone("dinheiro"), "Cartão, recibos e cancelamento"]),
+        ]);
+      } else if (j.pendenteCartao) {
+        // Implantação já paga: hoje o Stripe só guarda o cartão; a mensalidade começa 60 dias depois da implantação
+        P.trocar($("assinatura"), [
+          h("p", { class: "aviso-faixa alerta", texto: "Falta cadastrar o cartão. Nada é cobrado hoje." }),
+          h("ul", { class: "mini-lista" }, [
+            h("li", null, [h("span", { texto: "Implantação" }), h("b", { texto: "paga em " + dataCurta(j.implantacaoPagaEm) })]),
+            h("li", null, [h("span", { texto: "Primeira mensalidade" }), h("b", { texto: dataCurta(j.primeiraCobrancaEm) })]),
+            h("li", null, [h("span", { texto: "Mensalidade" }), h("b", { texto: P.brl(j.mensalDaBarbearia) })]),
+          ]),
+          h("p", { class: "nota p", texto: "Sem fidelidade: cancele quando quiser." }),
+          j.podeContratar ? h("button", { type: "button", class: "botao principal", onclick: function (ev) { abrirStripe(ev.currentTarget, "checkout"); } }, [P.icone("dinheiro"), "Cadastrar cartão"]) : null,
         ]);
       } else {
         P.trocar($("assinatura"), [
@@ -1362,6 +1376,47 @@
   // Pagamento e troca de cartão acontecem no ambiente seguro do Stripe
   function abrirStripe(botao, acao) {
     P.acao(botao, P.api("/api/equipe?area=assinatura", { corpo: { acao: acao } }).then(function (j) { location.href = j.url; }).catch(function (e) { P.toast(e.message, "erro"); }));
+  }
+
+  // Implantação paga e cartão ainda não cadastrado (o primeiro cliente pagou a implantação por fora, em 17/11/2026):
+  // a cada vez que o painel abre, a janela pede o cartão, e a faixa fica na tela Hoje até a assinatura começar.
+  // Hoje não se cobra nada: a primeira mensalidade vence 60 dias depois da implantação.
+  var cartaoPendente = null;
+  function textoCartao(j) {
+    return "A implantação foi paga em " + dataCurta(j.implantacaoPagaEm) + ". Hoje não é cobrado nada: a primeira mensalidade, de " + P.brl(j.mensalDaBarbearia) + ", só vence em " + dataCurta(j.primeiraCobrancaEm) + " (60 dias depois da implantação).";
+  }
+  function faixaCartao() {
+    var b = h("button", { type: "button", class: "botao p principal", texto: "Cadastrar cartão" });
+    b.onclick = function () { abrirStripe(b, "checkout"); };
+    return h("div", { class: "aviso-faixa alerta" }, [h("span", { texto: "Falta cadastrar o cartão da assinatura. Nada é cobrado hoje: a primeira mensalidade só vence em " + dataCurta(cartaoPendente.primeiraCobrancaEm) + "." }), b]);
+  }
+  function verificarCartao() {
+    P.api("/api/equipe?area=assinatura").then(function (j) {
+      if (!j.configurado || !j.pendenteCartao || !j.podeContratar) return;
+      cartaoPendente = j;
+      if (painel) desenharHoje(painel);
+      // Voltando do Stripe, o aviso do pagamento pode levar alguns segundos: não pede de novo
+      if (!/[?&]assinatura=ok/.test(location.search)) pedirCartao(j);
+    }).catch(function () {});
+  }
+  function pedirCartao(j) {
+    P.janela({
+      titulo: "Cadastre o cartão da assinatura",
+      conteudo: h("div", { class: "grade" }, [
+        h("p", { class: "nota", texto: textoCartao(j) }),
+        h("ul", { class: "mini-lista" }, [
+          h("li", null, [h("span", { texto: "Cobrado hoje" }), h("b", { texto: "R$ 0,00" })]),
+          h("li", null, [h("span", { texto: "Primeira mensalidade" }), h("b", { texto: dataCurta(j.primeiraCobrancaEm) })]),
+          h("li", null, [h("span", { texto: "Mensalidade" + (j.mensalDaBarbearia < j.oferta.normal ? " (preço de lançamento, para sempre)" : "") }), h("b", { texto: P.brl(j.mensalDaBarbearia) })]),
+        ]),
+        h("p", { class: "nota p", texto: "O cartão fica guardado no Stripe, o sistema de pagamento. Sem fidelidade: dá para cancelar quando quiser." }),
+      ]),
+      acoes: [{ texto: "Lembrar depois", valor: "depois" }, { texto: "Cadastrar cartão", classe: "principal", valor: "ok" }],
+    }).then(function (r) {
+      if (r.valor !== "ok") return;
+      P.toast("Abrindo o pagamento seguro do Stripe…");
+      P.api("/api/equipe?area=assinatura", { corpo: { acao: "checkout" } }).then(function (x) { location.href = x.url; }).catch(function (e) { P.toast(e.message, "erro"); });
+    });
   }
 
   // Saúde do sistema: só a conta da plataforma vê

@@ -124,6 +124,41 @@ test("assinatura: pagamento abre no Stripe com implantação agora e mensalidade
   desligarStripe();
 });
 
+test("assinatura: implantação já paga por fora: só a mensalidade, 60 dias depois da implantação, e o painel pede o cartão", async () => {
+  ligarStripe();
+  const stripe = [];
+  const paga = new Date(Date.now() - 8 * 864e5).toISOString();
+  const atual = { barbearia_id: UUIDS.barbearia, plano: "lancamento", status: "incompleta", implantacao_paga_em: paga, stripe_customer_id: null };
+  // Vagas esgotadas: quem já garantiu a vaga do lançamento continua com esse preço
+  A.instalarFetch(rotas({ vagas: 10, atual, stripe }));
+  let r = await A.chamar(equipe, { metodo: "GET", query: { area: "assinatura" }, token: "token-dono" });
+  assert.equal(r.body.pendenteCartao, true);
+  assert.equal(r.body.podeContratar, true);
+  assert.equal(r.body.mensalDaBarbearia, 39.9);
+  assert.equal(r.body.implantacaoPagaEm, paga);
+  assert.equal(r.body.primeiraCobrancaEm, new Date(new Date(paga).getTime() + 60 * 864e5).toISOString());
+  r = await A.chamar(equipe, { metodo: "POST", query: { area: "assinatura" }, corpo: { acao: "checkout" }, token: "token-dono" });
+  assert.equal(r.statusCode, 200, JSON.stringify(r.body));
+  const s = stripe.find((c) => /checkout\/sessions$/.test(c.url)).f;
+  assert.equal(s["line_items[0][price]"], "price_bio_mensal_lancamento_3990");
+  assert.ok(!("line_items[1][price]" in s), "a implantação não é cobrada de novo");
+  assert.equal(Number(s["subscription_data[trial_end]"]), Math.floor((new Date(paga).getTime() + 60 * 864e5) / 1000), "primeira mensalidade 60 dias depois da implantação");
+  // Os 60 dias já passaram: a mensalidade começa no dia da contratação (sem período grátis)
+  stripe.length = 0;
+  A.instalarFetch(rotas({ vagas: 10, atual: { ...atual, implantacao_paga_em: new Date(Date.now() - 70 * 864e5).toISOString() }, stripe }));
+  await A.chamar(equipe, { metodo: "POST", query: { area: "assinatura" }, corpo: { acao: "checkout" }, token: "token-dono" });
+  assert.ok(!("subscription_data[trial_end]" in stripe.find((c) => /checkout\/sessions$/.test(c.url)).f));
+  // Com a assinatura em vigor, o painel não pede mais o cartão
+  A.instalarFetch(rotas({ atual: { ...atual, status: "em_teste" } }));
+  r = await A.chamar(equipe, { metodo: "GET", query: { area: "assinatura" }, token: "token-dono" });
+  assert.equal(r.body.pendenteCartao, false);
+  // A tela: a janela a cada vez que o painel abre e a faixa na tela Hoje
+  const dono = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "painel-dono.html"), "utf8");
+  assert.ok(dono.includes("verificarCartao();") && dono.includes("Cadastre o cartão da assinatura"));
+  assert.ok(dono.includes("if (cartaoPendente) alertas.unshift(faixaCartao());"));
+  desligarStripe();
+});
+
 test("assinatura: não abre segundo pagamento; troca de cartão só com assinatura", async () => {
   ligarStripe();
   const stripe = [];

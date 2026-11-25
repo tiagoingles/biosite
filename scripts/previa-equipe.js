@@ -9,9 +9,19 @@ const { PORTA, hoje, somaDias, caixaMovPrev, esperaPrev, pedidos, clubePlanos, c
 async function rotaEquipe({ res, q, metodo, b, json }) {
       // Assinatura do Bio Site (Stripe): oferta de lançamento; contratar simula o retorno do Stripe
       if (q.area === "assinatura") {
-        if (metodo === "POST" && b.acao === "checkout") { D.assinaturaPrevia = { status: "em_teste", plano: "lancamento", valor_mensal: 39.9, implantacao_paga_em: new Date().toISOString(), primeira_cobranca_em: new Date(Date.now() + 60 * 864e5).toISOString(), proxima_cobranca_em: new Date(Date.now() + 60 * 864e5).toISOString(), cancelar_no_fim: false, stripe_customer_id: "cus_previa" }; return json(res, 200, { url: "/painel-dono.html?assinatura=ok#mais" }); }
+        if (metodo === "POST" && b.acao === "checkout") {
+          // Como no Stripe: a implantação já paga continua com a data dela, e a 1ª mensalidade vem 60 dias depois dela
+          const paga = (D.assinaturaPrevia && D.assinaturaPrevia.implantacao_paga_em) || new Date().toISOString();
+          const primeira = new Date(new Date(paga).getTime() + 60 * 864e5).toISOString();
+          D.assinaturaPrevia = { status: "em_teste", plano: "lancamento", valor_mensal: 39.9, implantacao_paga_em: paga, primeira_cobranca_em: primeira, proxima_cobranca_em: primeira, cancelar_no_fim: false, stripe_customer_id: "cus_previa" };
+          return json(res, 200, { url: "/painel-dono.html?assinatura=ok#mais" });
+        }
         if (metodo === "POST") return json(res, 200, { url: "/painel-dono.html#mais" });
-        return json(res, 200, { configurado: true, assinatura: D.assinaturaPrevia, oferta: { promocao: true, vagasRestantes: 7, mensal: 39.9, normal: 89.9, implantacao: 120, diasAtePrimeiraCobranca: 60 } });
+        // A mesma conta do servidor (lib/assinatura.js): implantação paga e sem assinatura em vigor, o painel pede o cartão
+        const a = D.assinaturaPrevia;
+        const vigente = !!a && ["em_teste", "ativa", "atrasada", "pausada"].includes(a.status);
+        const base = a && a.implantacao_paga_em ? new Date(a.implantacao_paga_em).getTime() : Date.now();
+        return json(res, 200, { configurado: true, assinatura: a, oferta: { promocao: true, vagasRestantes: 7, mensal: 39.9, normal: 89.9, implantacao: 120, diasAtePrimeiraCobranca: 60 }, pendenteCartao: !!(a && a.implantacao_paga_em && !vigente), podeContratar: D.papel !== "admin", mensalDaBarbearia: 39.9, implantacaoPagaEm: (a && a.implantacao_paga_em) || null, primeiraCobrancaEm: new Date(base + 60 * 864e5).toISOString() });
       }
       if (q.area === "clientes") {
         // Busca do encaixe (lib/clientes.js buscar): nome ou final do telefone

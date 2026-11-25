@@ -21,6 +21,7 @@ const { origemDe, falha, corpoDe, UUID, bloqueadoPorTentativas, registrarErroDeS
 const sinal = require("../lib/sinal");
 const clube = require("../lib/clube");
 const clientes = require("../lib/clientes");
+const espera = require("../lib/espera");
 
 const DIAS_A_FRENTE = 60; // até quantos dias à frente o cliente pode agendar
 // Limites contra abuso (robô ou pessoa enchendo a agenda de pedidos falsos)
@@ -121,6 +122,8 @@ module.exports = async (req, res) => {
     if (req.method === "POST") return clientes.conviteSalvar(req, res);
     return erro(res, 405, "Método não permitido.");
   }
+  // Lista de espera pelo site (fase 39, público): quem não achou horário diz de que horas até que horas pode
+  if (req.query && req.query.espera !== undefined) return espera.entrar(req, res);
   if (req.method === "GET" || req.method === "PATCH") return painel(req, res);
   const b = corpoDe(req);
   // Ações do painel (atendimento espontâneo, remarcar...) exigem login

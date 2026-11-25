@@ -102,15 +102,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ---------- abas: embaixo no celular, no topo no computador ---------- */
 .abas {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   background: var(--cartao); border-top: 1px solid var(--linha);
   padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
 }
 .abas a {
-  position: relative; display: grid; justify-items: center; gap: 2px; padding: 6px 4px;
+  position: relative; display: grid; justify-items: center; gap: 2px; padding: 6px 4px; min-width: 0;
   color: var(--fraco); text-decoration: none; font-size: 12px; font-weight: 600; border-radius: 12px;
 }
 .abas a svg { width: 22px; height: 22px; }
+/* Com muitas abas (até 7) o menu cabe no celular: o nome encolhe um pouco e, no limite, termina em "…" */
+.abas a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 420px) { .abas a { padding: 6px 1px; font-size: 11px; } }
 .abas a[aria-current="page"] { color: var(--acento); background: var(--acento-fundo); }
 .abas .bolinha {
   position: absolute; top: 2px; right: calc(50% - 22px); min-width: 18px; height: 18px; padding: 0 5px;
@@ -647,3 +650,15 @@ html.q-sem-rolagem, html.q-sem-rolagem body { overflow: hidden; }
 .enc-linha { border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
 .enc-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; }
 .pedido .meta .para-quem { font-weight: 700; color: var(--acento-forte); }
+
+/* Lista de espera (fase 39): horários que vagaram em cima, a fila do dia com a posição */
+.esp-vaga { display: grid; gap: 6px; padding: 12px; border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--linha)); border-radius: 14px; background: color-mix(in srgb, var(--ok-fundo) 45%, var(--cartao)); }
+.esp-vaga > small { color: var(--suave); }
+.esp-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--linha); border-radius: 12px; background: var(--cartao-2); }
+.esp-item .cresce { display: grid; gap: 4px; }
+.esp-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.esp-topo .botao.mini { margin: -6px -8px 0 0; }
+.esp-item small { color: var(--suave); font-size: 13px; }
+.esp-item .selo { justify-self: start; }
+.esp-pos { flex: none; min-width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; font-weight: 800; background: var(--acento-fundo); color: var(--acento-forte); }
+.esp-dia { font-size: 15px; margin: 4px 0 0; }

@@ -124,10 +124,10 @@ test("aviso: só o dono manda; mensagem vazia ou grupo inventado é recusado; {n
   assert.equal(personalizar("Olá, {nome}! Sentimos sua falta.", "Ana"), "Olá, Ana! Sentimos sua falta.");
 });
 
-test("painel do dono: 6 abas (Caixa desde a fase 35), Mais em ícones com telas próprias e atalhos na tela Hoje", () => {
+test("painel do dono: 7 abas (Caixa desde a fase 35, Espera desde a 39), Mais em ícones com telas próprias e atalhos na tela Hoje", () => {
   const dono = ler("painel-dono.html");
   const abas = [...dono.matchAll(/<a href="#(\w+)" data-aba="\1"/g)].map((m) => m[1]);
-  assert.deepEqual(abas, ["hoje", "agenda", "clientes", "protese", "caixa", "mais"]);
+  assert.deepEqual(abas, ["hoje", "agenda", "espera", "clientes", "protese", "caixa", "mais"]);
   for (const t of ["equipe", "clube", "ajuste-agendamento", "ajuste-sinal", "ajuste-protese", "ajuste-avisos", "ajuste-assinatura", "ajuste-saude"]) {
     assert.match(dono, new RegExp('data-tela="' + t + '" data-pai="mais"'), t + " abre pelo Mais");
   }

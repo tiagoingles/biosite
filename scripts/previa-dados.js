@@ -19,6 +19,8 @@ const presencaPrev = { status: "confirmado", resposta: "", anterior: null, dia: 
 // Caixa do dia (lib/caixa.js): estado em memória
 let caixaPrev = null;
 const caixaMovPrev = [];
+// Lista de espera (lib/espera.js, fase 39): duas pessoas amanhã; a primeira cabe no horário que vagou às 10:40
+const esperaPrev = [];
 const LINK_PREVIA = "/gw-barbearia?confirmar=8c484a0d-d00c-4915-971c-39f2a6c1e1c9.Qf4Fh7ASDkUGPZZY";
 const P = (extra) => ({ id: "p" + seq++, codigo: "K" + (100 + seq), servico: "Corte degradê", profissional: "Bruno", profissional_id: "b1", dia: hoje, horario: "10:00", horario_fim: "10:40", duracao_min: 40, cliente: "Carlos Souza", observacao: "", status: "confirmado", motivo: null, valor: 40, comissao_pct: null, simulado: false, ...extra });
 let pedidos = [
@@ -31,6 +33,8 @@ let pedidos = [
   P({ dia: somaDias(hoje, -1), horario: "17:00", horario_fim: "17:30", duracao_min: 30, cliente: "Diego Ramos", status: "confirmado", valor: 35 }),
   // Assinante do clube: não paga no balcão, comissão fixa
   P({ horario: "16:30", horario_fim: "17:10", cliente: "Pedrinho", status: "confirmado", valor: 0, comissao_valor: 15, clube_assinante_id: "a1", clube_assinantes: { nome: "Pedro Henrique" } }),
+  // Cancelado amanhã: vira "Horário que vagou" na aba Espera
+  P({ dia: somaDias(hoje, 1), horario: "10:40", horario_fim: "11:20", duracao_min: 40, cliente: "Felipe Souza", status: "cancelado" }),
   P({ dia: somaDias(hoje, 1), horario: "10:00", cliente: "Mateus Silva", status: "confirmado", cliente_id: "c13", clientes: { nome: "Mateus Silva", telefone: "81999990013" } }),
   P({ dia: somaDias(hoje, 2), horario: "15:30", horario_fim: "16:00", duracao_min: 30, servico: "Corte social", cliente: "João Pedro", status: "confirmado", valor: 35, cliente_id: "c8", clientes: { nome: "João Pedro", telefone: "81999990008" } }),
   P({ dia: somaDias(hoje, 3), horario: "18:00", cliente: "Vinícius Rocha", status: "confirmado", profissional: "Rafael", profissional_id: "b2", cliente_id: "c14", clientes: { nome: "Vinícius Rocha", telefone: "81999990014" } }),
@@ -266,7 +270,12 @@ function semana(de, n) {
   return { de, ate: somaDias(de, (Number(n) || 7) - 1), dias };
 }
 
-module.exports = { PORTA, hoje, somaDias, presencaPrev, caixaMovPrev, LINK_PREVIA, P, pedidos, clubePlanos, clubeAssinantes, regrasPrevia, clubePrevia, campanhasPrev, visitasDe, clientesPrevia, soNumeros, convitesPrev, automacoesPrev, premiumPrevia, maisUmMesPrevia, valorPrevia, financeiroPrevia, formPrev, produtosPrev, vendasPrev, protesePrev, leads, painel, semana };
+esperaPrev.push(
+  { id: "e1", cliente_id: null, nome: "Pedro Henrique", telefone: "81999990021", servico: "Corte degradê", duracao_min: 40, profissional_id: null, dia: somaDias(hoje, 1), de: "10:00", ate: "12:00", observacao: "", status: "esperando", contatado_em: null, pelo_site: true, criado_em: new Date(Date.now() - 3 * 36e5).toISOString() },
+  { id: "e2", cliente_id: null, nome: "Marcos Lima", telefone: "81999990022", servico: "Corte social", duracao_min: 30, profissional_id: "b1", dia: somaDias(hoje, 1), de: "09:00", ate: "11:30", observacao: "Prefere o Bruno", status: "esperando", contatado_em: null, pelo_site: false, criado_em: new Date(Date.now() - 2 * 36e5).toISOString() }
+);
+
+module.exports = { PORTA, hoje, somaDias, presencaPrev, caixaMovPrev, esperaPrev, LINK_PREVIA, P, pedidos, clubePlanos, clubeAssinantes, regrasPrevia, clubePrevia, campanhasPrev, visitasDe, clientesPrevia, soNumeros, convitesPrev, automacoesPrev, premiumPrevia, maisUmMesPrevia, valorPrevia, financeiroPrevia, formPrev, produtosPrev, vendasPrev, protesePrev, leads, painel, semana };
 Object.defineProperty(module.exports, "papel", { get: () => papel, set: (v) => { papel = v; }, enumerable: true });
 Object.defineProperty(module.exports, "googleAtivo", { get: () => googleAtivo, set: (v) => { googleAtivo = v; }, enumerable: true });
 Object.defineProperty(module.exports, "seq", { get: () => seq, set: (v) => { seq = v; }, enumerable: true });

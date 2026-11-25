@@ -21,6 +21,7 @@
 <nav class="abas" aria-label="Seções">
   <a href="#hoje" data-aba="hoje"></a>
   <a href="#agenda" data-aba="agenda"></a>
+  <a href="#espera" data-aba="espera"></a>
   <a href="#clientes" data-aba="clientes"></a>
   <a href="#protese" data-aba="protese" hidden></a>
   <a href="#caixa" data-aba="caixa"></a>
@@ -166,6 +167,9 @@
   <!-- ===== Caixa do dia (painel-caixa.js): abrir, retirada, reforço, fechar ===== -->
   <section class="tela duas" data-tela="caixa" id="telaCaixa" hidden></section>
 
+  <!-- ===== Lista de espera (painel-espera.js) ===== -->
+  <section class="tela duas" data-tela="espera" id="telaEspera" hidden></section>
+
   <!-- ===== Mais: o que não é do dia a dia, em ícones. Cada ícone abre a sua tela, com "‹ Mais" para voltar ===== -->
   <section class="tela" data-tela="mais" hidden>
     <div class="mais" id="maisGrade"></div>
@@ -252,13 +256,14 @@
 <script src="/painel-premium.js"></script>
 <script src="/painel-protese.js"></script>
 <script src="/painel-caixa.js"></script>
+<script src="/painel-espera.js"></script>
 <script>
 (function () {
   var P = window.Painel, h = P.h, $ = P.$;
   if (!P.exigirLogin()) return;
   P.monitorar();
 
-  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["clientes", "clientes", "Clientes"], ["protese", "protese", "Prótese"], ["caixa", "dinheiro", "Caixa"], ["mais", "mais", "Mais"]].forEach(function (a) {
+  [["hoje", "hoje", "Hoje"], ["agenda", "agenda", "Agenda"], ["espera", "relogio", "Espera"], ["clientes", "clientes", "Clientes"], ["protese", "protese", "Prótese"], ["caixa", "dinheiro", "Caixa"], ["mais", "mais", "Mais"]].forEach(function (a) {
     P.trocar(document.querySelector('[data-aba="' + a[0] + '"]'), [P.icone(a[1]), h("span", { texto: a[2] })]);
   });
   P.trocar($("atualizar"), P.icone("atualizar"));
@@ -274,7 +279,7 @@
   P.trocar($("btnConvidar"), [P.icone("email"), "Gerar convite"]);
   P.trocar($("virarBarbeiro"), [P.icone("tesoura"), "Também atendo clientes"]);
 
-  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false, proteseMontada = false, caixaMontado = false, lembretesDoClube = 0;
+  var eu = null, painel = null, dia = P.hoje(), filtro = "", diaDados = null, clientesMontado = false, proteseMontada = false, caixaMontado = false, esperaMontada = false, lembretesDoClube = 0;
   var ctx = { barbearia: "", equipe: [], servicos: [], dono: true, recarregar: function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#equipe") carregarEquipe(); } };
 
   P.api("/api/eu").then(function (d) {
@@ -295,6 +300,7 @@
     mostrarWhats(d.barbearia ? d.barbearia.whatsapp : null);
     mostrarProtese(!!(d.barbearia && d.barbearia.protese_ativa));
     window.Protese.configurar({ barbearia: ctx.barbearia, site: siteBarbearia, ctx: ctx });
+    window.Espera.configurar({ barbearia: ctx.barbearia, ctx: ctx });
     window.Premium.configurar({ barbearia: ctx.barbearia, site: siteBarbearia });
     window.Clientes.configurar({ dono: true, barbearia: ctx.barbearia, site: siteBarbearia, extra: window.Premium.cartao() });
     P.abas(function (aba) {
@@ -304,16 +310,18 @@
       if (aba === "clube") carregarClube();
       if (aba === "protese") { if (!proteseMontada) { window.Protese.montar($("telaProtese")); proteseMontada = true; } window.Protese.carregar(); }
       if (aba === "caixa") { if (!caixaMontado) { window.Caixa.montar($("telaCaixa")); caixaMontado = true; } window.Caixa.carregar(); }
+      if (aba === "espera") { if (!esperaMontada) { window.Espera.montar($("telaEspera")); esperaMontada = true; } window.Espera.carregar(); }
       if (aba === "mais") { montarMais(); carregarSaude(); carregarAssinatura(); }
       if (aba === "ajuste-sinal") montarSinal();
       if (aba === "ajuste-assinatura") carregarAssinatura();
       if (aba === "ajuste-saude") carregarSaude();
     });
     carregar();
-    P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#caixa") window.Caixa.carregar(); }, 30000);
+    window.Espera.contar();
+    P.manterAtualizado(function () { carregar(); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#caixa") window.Caixa.carregar(); if (location.hash === "#espera") window.Espera.carregar(); else window.Espera.contar(); }, 30000);
   }).catch(function (e) { $("sub").textContent = e.message; });
 
-  $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#caixa") window.Caixa.carregar(); };
+  $("atualizar").onclick = function () { P.acao($("atualizar"), carregar()); if (location.hash === "#agenda") carregarDia(); if (location.hash === "#caixa") window.Caixa.carregar(); if (location.hash === "#espera") window.Espera.carregar(); else window.Espera.contar(); };
 
   function kpi(rotulo, valor, detalhe, barra) {
     return h("div", { class: "kpi" }, [h("span", { texto: rotulo }), h("b", { texto: valor }), detalhe ? h("small", { texto: detalhe }) : null, barra != null ? h("div", { class: "barra" }, h("i", { style: "width:" + Math.max(0, Math.min(100, barra)) + "%" })) : null]);

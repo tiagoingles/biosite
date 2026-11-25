@@ -3,7 +3,7 @@
 const CL = require("../lib/clientes");
 const AUTO = require("../lib/automacoes");
 const D = require("./previa-dados");
-const { PORTA, hoje, somaDias, caixaMovPrev, pedidos, clubePlanos, clubeAssinantes, clubePrevia, campanhasPrev, visitasDe, clientesPrevia, soNumeros, convitesPrev, automacoesPrev, premiumPrevia, maisUmMesPrevia, valorPrevia, financeiroPrevia, produtosPrev, vendasPrev, protesePrev, semana } = D;
+const { PORTA, hoje, somaDias, caixaMovPrev, esperaPrev, pedidos, clubePlanos, clubeAssinantes, clubePrevia, campanhasPrev, visitasDe, clientesPrevia, soNumeros, convitesPrev, automacoesPrev, premiumPrevia, maisUmMesPrevia, valorPrevia, financeiroPrevia, produtosPrev, vendasPrev, protesePrev, semana } = D;
 
 // Sempre responde (a última linha responde { ok: true }): quem chama só repassa o retorno.
 async function rotaEquipe({ res, q, metodo, b, json }) {
@@ -168,6 +168,20 @@ async function rotaEquipe({ res, q, metodo, b, json }) {
           return json(res, 200, { lembrete_em: a.lembrete_em, lembrete_pago_ate: a.lembrete_pago_ate });
         }
         return json(res, 400, { message: "Ação desconhecida." });
+      }
+      // Lista de espera (lib/espera.js): a mesma conta de quem cabe no horário que vagou
+      if (q.area === "espera") {
+        const { cabeNaVaga } = require("../lib/espera");
+        if (metodo === "POST" && b.acao === "status") { const e = esperaPrev.find((x) => x.id === b.id); if (!e) return json(res, 404, { message: "Registro não encontrado." }); e.status = b.status; if (b.status === "contatado") e.contatado_em = new Date().toISOString(); return json(res, 200, { entrada: e }); }
+        if (metodo === "POST" && b.acao === "nova") { const e = { id: "e" + Date.now(), cliente_id: null, nome: b.nome, telefone: soNumeros(b.telefone), servico: b.servico, duracao_min: Number(b.duracao) || 30, profissional_id: b.profissionalId || null, dia: b.dia, de: b.de, ate: b.ate, observacao: b.observacao || "", status: "esperando", contatado_em: null, pelo_site: false, criado_em: new Date().toISOString() }; esperaPrev.push(e); return json(res, 201, { entrada: e }); }
+        const lista = esperaPrev.filter((e) => e.dia >= hoje && ["esperando", "contatado"].includes(e.status)).sort((a, z) => (a.dia + a.criado_em).localeCompare(z.dia + z.criado_em));
+        const nome = (id) => ({ b1: "Bruno", b2: "Rafael" })[id] || "";
+        // Horário que vagou e ninguém ocupou de novo (mesma regra do servidor)
+        const { minutos, sobrepoe } = require("../lib/horarios");
+        const fim = (x) => minutos(x.horario.slice(0, 5)) + (x.duracao_min || 30);
+        const ocupada = (c) => pedidos.some((a) => ["pendente", "confirmado", "avulso", "realizado"].includes(a.status) && a.profissional_id === c.profissional_id && a.dia === c.dia && sobrepoe(minutos(c.horario.slice(0, 5)), fim(c), minutos(a.horario.slice(0, 5)), fim(a)));
+        const vagas = pedidos.filter((p) => p.status === "cancelado" && p.dia >= hoje && !ocupada(p)).map((p) => ({ id: p.id, dia: p.dia, horario: p.horario.slice(0, 5), duracao_min: p.duracao_min || 30, profissional_id: p.profissional_id, profissional: p.profissional, servico: p.servico, fila: lista.filter((e) => cabeNaVaga(e, p)).map((e) => e.id) })).filter((v) => v.fila.length);
+        return json(res, 200, { hoje, lista: lista.map((e) => ({ ...e, profissional: e.profissional_id ? nome(e.profissional_id) : "" })), vagas, profissionais: [{ id: "b1", nome: "Bruno" }, { id: "b2", nome: "Rafael" }] });
       }
       if (q.area === "caixa") {
         const { calcularCaixa } = require("../lib/caixa");

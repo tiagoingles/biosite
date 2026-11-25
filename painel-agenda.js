@@ -296,7 +296,10 @@
         .then(function (res) {
           P.toast(res && res.cancelados > 1 ? res.cancelados + " horários cancelados: este e os próximos." : "Horário cancelado.", "ok");
           ctx.recarregar();
-          return oferecerWhats("cancelado", p, ctx, "Cancelado");
+          // Lista de espera (fase 39): depois do aviso ao cliente, quem da lista cabe no horário que vagou, na ordem
+          return oferecerWhats("cancelado", p, ctx, "Cancelado").then(function () {
+            if (res && res.espera && res.espera.length && window.Espera) return window.Espera.oferecerVaga(p, res.espera, ctx);
+          });
         })
         .catch(erro);
     });
@@ -402,7 +405,7 @@
   // Encaixe: cliente que chegou sem agendar (vai direto para a agenda, sem confirmação).
   // Vários serviços de uma vez (fase 37): cada linha diz para quem é (o próprio cliente, filho ou filha, parente
   // ou outra pessoa), o serviço, o barbeiro, o horário e o tempo. O cliente da marcação é quem recebe os avisos.
-  // padrao (opcional): { dia, horario, profissionalId, servico }
+  // padrao (opcional): { dia, horario, profissionalId, servico, duracao, cliente, clienteId, telefone, aoRegistrar }
   var PARA = [["", "O próprio cliente"], ["filho", "Filho ou filha"], ["parente", "Parente"], ["outro", "Outra pessoa"]];
   var MAX_LINHAS = 6;
   function encaixe(ctx, padrao) {
@@ -454,6 +457,20 @@
         }).catch(function () { P.limpar(sugestoes); });
       }, 250);
     });
+    // Vindo da lista de espera (fase 39): o cliente já vem preenchido (e ligado à ficha, se tiver).
+    // Sem ficha e com WhatsApp: entra na carteira como cliente novo, com o número que deixou na lista.
+    if (padrao.cliente) {
+      cliente.value = padrao.cliente;
+      if (padrao.clienteId) {
+        escolhido = { id: padrao.clienteId, nome: padrao.cliente };
+        P.trocar(sugestoes, h("p", { class: "nota p", texto: "Cliente da carteira. O encaixe fica na ficha dele." }));
+      } else if (padrao.telefone && ctx.dono) {
+        novo = true;
+        novoTel.value = padrao.telefone;
+        novoBox.hidden = false;
+        P.trocar(sugestoes, h("p", { class: "nota p", texto: "Cliente novo: entra na carteira com o WhatsApp que deixou na lista de espera." }));
+      }
+    }
     var dia = h("input", { type: "date", name: "dia", value: padrao.dia || P.hoje() });
     var equipe = ctx.equipe || [];
     // Tempo de cada serviço no site (fase 36): vale para todas as linhas
@@ -523,10 +540,17 @@
       linhas.push(l);
       caixaLinhas.appendChild(l.el);
       tempoDoServico(l);
+      if (base.duracao) { usarDuracao(l.dur, base.duracao); l.durMexida = true; }
       atualizarLinhas();
       return l;
     }
-    novaLinha({ servico: padrao.servico, profissionalId: padrao.profissionalId, horario: padrao.horario || String(Math.floor(arred / 60) % 24).padStart(2, "0") + ":" + String(arred % 60).padStart(2, "0") });
+    // Serviço que veio junto ("Corte + Barba", da lista de espera): uma linha para cada, um depois do outro
+    var partes = String(padrao.servico || "").split(" + ").filter(function (n) { return ctx.servicos.some(function (s) { return s.nome === n; }); });
+    novaLinha({ servico: partes[0] || padrao.servico, profissionalId: padrao.profissionalId, horario: padrao.horario || String(Math.floor(arred / 60) % 24).padStart(2, "0") + ":" + String(arred % 60).padStart(2, "0"), duracao: partes.length > 1 ? null : padrao.duracao });
+    partes.slice(1).forEach(function (n) {
+      var ult = linhas[linhas.length - 1];
+      novaLinha({ servico: n, profissionalId: ult.prof ? ult.prof.value : null, horario: horaMais(ult.hora.value, ult.dur.value), horaAuto: true });
+    });
     // Mais um serviço: o mesmo da linha anterior, com o mesmo barbeiro, logo depois (muda o que precisar)
     adicionar.addEventListener("click", function () {
       var ult = linhas[linhas.length - 1];
@@ -612,6 +636,8 @@
           : res && res.criados > 1 ? (novo ? "Cliente cadastrado. " : "") + res.criados + " serviços marcados na agenda."
           : novo ? "Cliente cadastrado e encaixe registrado na agenda." : "Encaixe registrado na agenda.", "ok");
         ctx.recarregar();
+        // Quem abriu o encaixe pela lista de espera tira o cliente da lista
+        if (padrao.aoRegistrar) padrao.aoRegistrar(res);
         if (s && s.pulados && s.pulados.length) avisarPulados(s.pulados);
       };
       // Horário ocupado: o dono pode confirmar e marcar os dois no mesmo horário (fase 34)
@@ -749,6 +775,7 @@
 
   P.cartaoPedido = cartaoPedido;
   P.encaixe = encaixe;
+  P.temposDosServicos = temposDosServicos; // a aba Espera usa para saber o tempo do serviço
   P.oferecerHorarios = oferecerHorarios;
   P.venderProduto = venderProduto;
   P.remarcar = remarcar;

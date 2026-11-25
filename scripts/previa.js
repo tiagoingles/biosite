@@ -162,6 +162,12 @@ const servidor = http.createServer(async (req, res) => {
       return json(res, 200, { horarios: ["10:00", "10:30", "14:00", "15:30", "17:00"] });
     }
     if (u.pathname === "/api/pedido") {
+      // Lista de espera pelo site (fase 39): entra no fim da fila do dia
+      if (q.espera !== undefined) {
+        if (soNumeros(b.whatsapp).length < 10) return json(res, 400, { message: "Informe seu WhatsApp com DDD: é por ele que a barbearia chama você." });
+        D.esperaPrev.push({ id: "e" + Date.now(), cliente_id: null, nome: b.nome, telefone: soNumeros(b.whatsapp), servico: b.servico, duracao_min: Number(b.duracao) || 30, profissional_id: b.profissionalId || null, dia: b.dia, de: b.de, ate: b.ate, observacao: b.observacao || "", status: "esperando", contatado_em: null, pelo_site: true, criado_em: new Date().toISOString() });
+        return json(res, 201, { ok: true, posicao: D.esperaPrev.filter((e) => e.dia === b.dia && ["esperando", "contatado"].includes(e.status)).length });
+      }
       // Cadastro do cliente pelo link de convite (página cadastro.html)
       if (q.convite !== undefined) {
         const cv = convitesPrev[q.convite];
@@ -192,7 +198,13 @@ const servidor = http.createServer(async (req, res) => {
         lista.forEach((x) => { x.status = "cancelado"; });
         return json(res, 200, { pedido: p, cancelados: lista.length });
       }
-      if (b.acao === "cancelar" && p) { p.status = "cancelado"; return json(res, 200, { pedido: p }); }
+      if (b.acao === "cancelar" && p) {
+        p.status = "cancelado";
+        const { cabeNaVaga } = require("../lib/espera");
+        // Como no servidor: só o dono recebe a fila (o barbeiro não cuida da lista)
+        const espera = D.papel === "barbeiro" ? [] : D.esperaPrev.filter((e) => cabeNaVaga(e, p)).sort((a, z) => a.criado_em.localeCompare(z.criado_em)).slice(0, 6);
+        return json(res, 200, { pedido: p, espera });
+      }
       if (b.acao === "remarcar" && p) {
         const ini = Number(b.horario.slice(0, 2)) * 60 + Number(b.horario.slice(3, 5)), dur = Number(b.duracao) || p.duracao_min || 30, prof = b.profissionalId || p.profissional_id;
         const conflito = pedidos.find((x) => x.id !== p.id && x.dia === b.dia && x.profissional_id === prof && ["pendente", "confirmado", "avulso", "realizado"].includes(x.status) && (() => { const a = Number(x.horario.slice(0, 2)) * 60 + Number(x.horario.slice(3, 5)); return a < ini + dur && ini < a + (x.duracao_min || 30); })());

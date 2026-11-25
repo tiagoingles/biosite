@@ -1,7 +1,7 @@
 # Simulador de prótese capilar na câmera: plano em sprints
 
 Plano refeito em 25/11/2026. Substitui a ideia anterior (IA gerando uma foto, commit 2bdd890).
-Situação: **planejado, aguardando o OK do Tiago. Nada construído.**
+Situação: **planejado e aprovado pelo Tiago em 25/11 (as 5 decisões abaixo seguem as recomendações). Nada construído.**
 
 ## O que é
 
@@ -56,7 +56,7 @@ conferidos de novo na documentação oficial no começo do Sprint 0, antes de fi
 - **Caminho mínimo:** S0 + S1 + S2 + S3 entregam o filtro publicado no site com o modelo indo no agendamento,
   ligado só na Barbearia Modelo. S4 vai para a semana seguinte se a cota apertar.
 
-## Decisões para o Tiago
+## Decisões (aprovadas pelo Tiago em 25/11)
 
 | # | Decisão | Recomendação |
 |---|---------|--------------|

@@ -153,7 +153,7 @@
 
   // Faixa da demonstração no topo das páginas do painel: dados de exemplo, nada é salvo, e os caminhos para
   // contratar (WhatsApp de vendas do Bio Site, o mesmo da página de vendas) ou sair da demonstração.
-  var WHATS_VENDAS = "5581997977699";
+  var WHATS_VENDAS = "5581999186042";
   function faixaDemo() {
     if (!demo() || !document.body || document.getElementById("faixaDemo")) return;
     var f = document.createElement("div");

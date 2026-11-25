@@ -204,7 +204,7 @@ test("site da vitrine (gerador v15): faixa de demonstração, WhatsApp de vendas
   const cfg = JSON.parse(html.match(/<script type="application\/json" id="bio-config">([\s\S]*?)<\/script>/)[1]);
   assert.equal(cfg.demonstracao, "vitrine");
   assert.equal(cfg.slug, "barbearia-exemplo");
-  assert.equal(cfg.whatsapp, "5581997977699", "o WhatsApp da vitrine é o de vendas do Bio Site");
+  assert.equal(cfg.whatsapp, "5581999186042", "o WhatsApp da vitrine é o de vendas do Bio Site");
   assert.ok(cfg.icones && cfg.icones.i192, "tem o ícone do app");
   assert.match(html, /class="demo-faixa"/);
   assert.match(html, /if\(demo\)\{pilha=\[\];etapa="demo";render\(\);return\}/, "não chama a API de pedido");

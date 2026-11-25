@@ -1,107 +1,116 @@
-# Simulador de implante (prótese capilar): plano em sprints
+# Simulador de prótese capilar na câmera: plano em sprints
 
-Criado em 25/11/2026. Situação: planejado, nada construído ainda.
+Plano refeito em 25/11/2026. Substitui a ideia anterior (IA gerando uma foto, commit 2bdd890).
+Situação: **planejado, aguardando o OK do Tiago. Nada construído.**
 
 ## O que é
 
-O barbeiro tira uma foto do cliente na cadeira e, em segundos, mostra como ele fica com a prótese capilar
-("implante capilar sem cirurgia"): antes e depois, para mandar no WhatsApp do cliente. O objetivo é fechar
-mais vendas de prótese. Começa no painel do dono (aba Prótese); o site público fica para depois.
+No site da barbearia, o cliente toca em "Experimentar na câmera", abre a câmera do celular e vê a prótese na
+cabeça dele em tempo real, como um filtro de Instagram. Troca entre alguns modelos e escolhe um. Ao enviar o
+agendamento, o modelo escolhido vai junto com o pedido e o barbeiro vê no painel.
+
+- Tudo roda no celular do cliente: o vídeo não sai do aparelho (bom para a LGPD) e não há custo por uso.
+- Não precisa de chave de IA nem de `SIMULADOR_CHAVE`. Nada para o Tiago cadastrar na Vercel.
+- É um filtro 2D, não uma foto pronta: a tela avisa "Simulação ilustrativa. O resultado real pode variar."
+
+## Desenho técnico
+
+Conferido em 25/11: o pacote `@mediapipe/tasks-vision` existe no jsDelivr (última versão estável 1.2.3) e o
+modelo `face_landmarker.task` (float16) responde no armazenamento do Google. Os nomes exatos das opções da
+biblioteca (`runningMode: "VIDEO"`, `outputFacialTransformationMatrixes: true`, `delegate: "GPU"`) devem ser
+conferidos de novo na documentação oficial no começo do Sprint 0, antes de fixar a versão.
+
+- **Rastreio do rosto:** MediaPipe Face Landmarker, versão fixa pelo jsDelivr. `detectForVideo` a cada quadro;
+  a matriz de transformação do rosto dá giro e escala. Se o Google mudar a URL do modelo, guardar o
+  `face_landmarker.task` (uns 4 MB) dentro do projeto.
+- **Desenho:** `<canvas>` por cima do `<video>` (câmera frontal, espelhada). A prótese é um PNG com fundo
+  transparente, ancorado nos pontos da testa e das têmporas. Ajustes do cliente: tamanho, giro, cor (mais
+  escura ou mais clara) e transparência.
+- **Arquivo próprio `simulador.js` na raiz**, carregado só quando o cliente toca em "Experimentar na câmera",
+  para o site continuar leve. A biblioteca e o modelo também só baixam nesse momento.
+- **Câmera:** `getUserMedia({ video: { facingMode: "user" } })`, vídeo com `playsinline` e `muted` (iPhone).
+  Sem câmera, ou em navegador de aplicativo que bloqueia (Instagram, WhatsApp): mensagem "Abra no navegador do
+  celular" e a opção de usar uma foto da galeria com o mesmo filtro (a foto fica só no aparelho).
+- **Botão no gerador** (`lib/gerador*.js`). Depois de mexer: aumentar `VERSAO`, rodar
+  `node scripts/sincronizar-criador.js` e regenerar só os 5 sites de barbearia.
+- **Agendamento:** campo novo `pedidos.protese_modelo` (migração só acrescentando, texto curto), enviado pelo
+  site junto com o pedido e validado em `api/pedido.js` (só aceita códigos de modelos conhecidos). Aparece no
+  cartão do pedido no painel e na ficha de prótese. Sem função nova na Vercel (já são 12 de 12).
+- **Testes:**
+  - a conta de posição, escala e giro a partir dos pontos do rosto é uma função pura (`lib` ou dentro do
+    `simulador.js`, exportável), com teste;
+  - testes de texto para o botão no gerador e para o campo no pedido;
+  - a câmera é conferida à mão; a prévia local usa uma foto no lugar da câmera.
 
 ## Orçamento de tokens (plano Pro)
 
-- Em 25/11, às 15h: cota semanal 72% usada; renova na segunda, 30/11, às 18h (Brasília). Restam 28 pontos.
-- O simulador usa no máximo metade: **14 pontos**. Os outros 14 ficam de reserva para o Manolo e correções.
+- Em 25/11, no começo desta sessão: cota semanal 73%; renova na segunda, 30/11, às 18h. Restam 27 pontos.
+- O simulador usa no máximo **14 pontos**. A outra metade fica de reserva para o Manolo e correções.
 - Teto por sprint, em pontos do medidor semanal: S0 = 2, S1 = 3, S2 = 4, S3 = 3, S4 = 2.
-- Regras para gastar pouco:
-  1. **Cada sprint numa sessão nova.** A sessão de 25/11 já tem 470 mil tokens de contexto: cada mensagem nela
-     custa caro. A sessão nova lê o CLAUDE.md e este arquivo, e mais nada além do que a sprint pede.
-  2. No começo e no fim da sprint, conferir o medidor (`get_usage`). Se chegar no teto: parar num ponto seguro
-     (testes verdes, commit), anotar no Registro onde parou e não publicar nada pela metade.
-  3. Ler trechos (grep, intervalo de linhas), não arquivos inteiros. Prévia no navegador só no fim, numa passada.
-  4. As sprints 3 e 4 são mais mecânicas: dá para rodar no Sonnet, que gasta menos da cota.
-- **Caminho mínimo**, se a cota apertar: S0 + S1 + S2 já entregam o simulador funcionando, publicado só para a
-  Barbearia Modelo. S3 e S4 podem ir para a semana seguinte.
+- Regras:
+  1. Cada sprint numa sessão nova, que lê só o CLAUDE.md e este arquivo.
+  2. `get_usage` no começo e no fim de cada sprint, anotado no Registro. Chegou no teto: parar num ponto
+     seguro (testes verdes, commit feito, nada publicado pela metade) e anotar onde parou.
+  3. Ler trechos (grep, intervalos de linhas), não arquivos inteiros. Prévia no navegador só no fim.
+  4. As sprints mais mecânicas (S3, S4) podem rodar no Sonnet.
+- **Caminho mínimo:** S0 + S1 + S2 + S3 entregam o filtro publicado no site com o modelo indo no agendamento,
+  ligado só na Barbearia Modelo. S4 vai para a semana seguinte se a cota apertar.
 
-## Decisões
+## Decisões para o Tiago
 
-| # | Decisão | Recomendação | Quem decide |
-|---|---------|--------------|-------------|
-| 1 | IA ou montagem manual (desenho de cabelo por cima da foto) | IA: o realismo é o que vende a prótese. A montagem manual fica como plano B se a IA decepcionar no Sprint 0. | Tiago |
-| 2 | Provedor de IA | Testar primeiro a edição de imagem do Google Gemini. Plano B: FLUX Kontext (Replicate) ou OpenAI. Critérios: rosto igual (só muda o cabelo), preço e termos de uso (não treinar com as fotos). | Sprint 0 |
-| 3 | Onde fica | Painel do dono, aba Prótese (cliente na cadeira). Site público depois: abuso, custo e LGPD pedem mais cuidado. | Tiago |
-| 4 | Quem paga | Só barbearias com o simulador ligado (como o WhatsApp Premium), com limite por mês (ex.: 100 simulações). O preço sai depois de saber o custo real. | Tiago |
-| 5 | Fotos | Não guardar por padrão. Guardar na ficha só se o cliente autorizar, com opção de apagar. | Tiago |
-
-## Antes do Sprint 0 (só o Tiago pode fazer)
-
-- Criar a conta no provedor (Google AI Studio, para o Gemini) com cobrança ativa (o plano pago não usa as fotos
-  para treinar a IA) e um limite de gasto por mês (ex.: US$ 10).
-- Gerar a chave da API e cadastrar na Vercel como variável `SIMULADOR_CHAVE` (Production e Preview).
-  O Claude não lê nem digita chaves: só confere se o nome da variável existe.
-- Separar 3 fotos de teste com autorização (pode ser a do próprio Tiago): de frente, com entradas ou calvície
-  à mostra.
+| # | Decisão | Recomendação |
+|---|---------|--------------|
+| 1 | De onde vêm as imagens dos modelos (PNG transparente) | **Gerar uma vez com uma IA de imagem** (custo único, baixo) e conferir no celular; se o resultado ficar feio, fotografar as próteses da Dom Manolo contra fundo liso e recortar (é o mais fiel ao produto real). Imagens compradas só se as outras duas falharem (licença e preço). No Sprint 0 usa-se uma imagem provisória. |
+| 2 | Quantos e quais modelos no começo | **4 modelos** com nomes simples: "Natural", "Volume", "Entradas" (preenche as entradas) e "Topo" (preenche o topo). Dá para começar com 3 e crescer. A lista fica num arquivo único, fácil de editar. |
+| 3 | Cliente pode mandar uma foto junto com o agendamento | **Não no começo.** Só o nome do modelo vai no pedido. Foto exige guardar imagem de rosto (LGPD, armazenamento, consentimento). Pode vir depois, com autorização. |
+| 4 | Limite de realismo | **Deixar claro na tela**: aviso fixo "Simulação ilustrativa em 2D. O resultado real pode variar", e o barbeiro mostra a prótese real na consulta. |
+| 5 | Onde liga | **Só na Barbearia Modelo** primeiro; depois Manolo com o seu OK. Ligar por sites que têm a seção de prótese. |
 
 ## Sprints
 
-### Sprint 0 · qui 26/11 · decisões e prova de conceito (teto: 2 pontos)
+### Sprint 0 · qui 26/11 · prova de conceito (teto: 2 pontos)
 
-Objetivo: saber se a IA entrega um resultado bom o bastante, a que custo e em quanto tempo.
-- Conferir na documentação oficial do provedor: nome do modelo, preço por imagem, tamanho máximo da foto e
-  termos de uso dos dados.
-- Script local `scripts/simulador-teste.js` (fora do deploy): manda uma foto mais a instrução e salva o
-  resultado na pasta temporária. Testar 3 fotos × 2 ou 3 versões da instrução (linha frontal natural,
-  volume médio, mesma cor do cabelo; manter rosto, pele, luz e fundo iguais).
-- Medir: tempo de resposta, custo por imagem e se o rosto ficou igual.
-- Conferir o tempo máximo das funções no plano da Vercel. Se a geração passar do limite, configurar
-  `maxDuration` de `api/equipe.js` no `vercel.json`.
-- Entrega: tabela de resultados neste arquivo, decisão 2 fechada e a instrução (prompt) escolhida.
-- Se nenhum provedor servir: parar e conversar com o Tiago (plano B: montagem manual).
+Objetivo: ver o filtro funcionando numa página de teste e fechar as decisões.
+- Conferir na documentação oficial: versão, nomes das opções, URL do modelo, suporte no iPhone (Safari).
+- Página local `scripts/simulador-teste.html` (fora do deploy, `.vercelignore`): câmera ou foto, Face
+  Landmarker, um PNG provisório ancorado na testa.
+- Função pura da conta (posição, escala, giro) com testes.
+- Medir: quadros por segundo e peso do download (biblioteca + modelo) num celular.
+- Entrega: resultado anotado aqui e decisões 1 e 2 fechadas.
+- Se o encaixe ficar ruim demais: parar e conversar com o Tiago.
 
-### Sprint 1 · sex 27/11 · servidor (teto: 3 pontos)
+### Sprint 1 · sex 27/11 · `simulador.js` completo (teto: 3 pontos)
 
-- Migração fase 40, só acrescentando: `barbearias.simulador_ativo boolean not null default false`; tabela
-  `simulacoes` (id, barbearia_id, profissional_id, protese_cliente_id, criado_em, provedor, ms, ok, erro).
-  Nenhuma foto no banco. RLS ligada, sem políticas (só o servidor).
-- `lib/simulador.js` e rota `POST /api/equipe?area=simulador`. Não criar função nova: já são 12 de 12.
-  Só o dono, e só de barbearia com o simulador ligado.
-- Entrada: foto JPEG em base64 (até uns 1,5 MB, já reduzida no navegador), opções {linha, volume, cor} e
-  `autorizou: true`. Saída: a imagem gerada, em base64. Nada fica guardado.
-- Limites: 3 por minuto e N por mês por barbearia (contando em `simulacoes`); 429 com mensagem clara.
-- Erro ou demora do provedor viram mensagem simples ("Não deu para gerar agora. Tente de novo.").
-- Testes com o provedor simulado: sucesso; foto grande demais; sem autorização; simulador desligado (403);
-  barbeiro e outra barbearia (403); limite (429); erro e demora do provedor.
-- Prévia local: resposta falsa (a própria foto com a marca "simulação").
+- `simulador.js` na raiz: abrir câmera, trocar modelo, ajustes (tamanho, giro, cor, transparência), tirar
+  "foto da tela" opcional, aviso de realismo, tela de erro e opção da galeria.
+- Lista de modelos (códigos, nomes, PNGs) em um arquivo só.
+- Mensagem para navegadores de aplicativo; permissão negada; sem câmera.
+- Prévia local com foto no lugar da câmera. Testes da parte pura.
 
-### Sprint 2 · sáb 28/11 · tela no painel (teto: 4 pontos)
+### Sprint 2 · sáb 28/11 · site e agendamento (teto: 4 pontos)
 
-- Aba Prótese: botão "Simular implante" no topo e "Simular" em cada ficha.
-- Janela: "Tirar foto" (câmera) ou "Escolher da galeria" → a foto aparece → caixa obrigatória "O cliente
-  autorizou usar a foto para a simulação" → opções em botões (linha frontal: natural, reta ou mais baixa;
-  volume: leve, médio ou cheio; cor: igual ao cabelo, mais escura ou mais clara) → "Gerar" (espera de 10 a
-  20 s, com aviso na tela).
-- No navegador: reduzir a foto para 1024 px em JPEG, sem dados de localização (EXIF) e na posição certa.
-- Resultado: antes e depois com barra de arrastar; "Compartilhar" (o compartilhar do celular leva a imagem ao
-  WhatsApp) e "Baixar"; "Gerar outra" com outras opções.
-- Publicar ligado só na Barbearia Modelo. Conferir no celular, em pé e deitado.
+- Migração `pedidos.protese_modelo` (texto curto, só acrescenta).
+- Botão "Experimentar na câmera" no gerador (seção de prótese), carregando `simulador.js` só no toque; o
+  modelo escolhido é enviado com o pedido e validado em `api/pedido.js`.
+- Painel: modelo no cartão do pedido e na ficha de prótese.
+- `VERSAO` mais alta, sincronizar o Criador, regenerar os 5 sites. Testes de texto.
+- Publicar ligado só na Barbearia Modelo.
 
-### Sprint 3 · dom 29/11 · guardar na ficha (teto: 3 pontos, se a cota deixar)
+### Sprint 3 · dom 29/11 · conferir no celular e ajustar (teto: 3 pontos)
 
-- "Guardar na ficha", só com a autorização do cliente: antes e depois no Storage do Supabase, em pasta
-  privada, abertos por link temporário.
-- A ficha de prótese mostra as simulações em miniatura, com "Mandar de novo" e "Apagar fotos".
-- Prazo de guarda (ex.: 1 ano ou até o cliente pedir) e o aviso de privacidade (LGPD) no painel.
-- Testes.
+- Conferir no iPhone e no Android, em pé e deitado, e em navegador de aplicativo.
+- Ajustar âncoras, tamanho e cor dos modelos finais (trocar o PNG provisório).
+- Corrigir o que o teste de mão achar.
 
 ### Sprint 4 · seg 30/11, até 18h · acabamento e lançamento (teto: 2 pontos)
 
-- Revisar textos, mensagens de erro e o custo real por simulação da semana.
-- Demonstrações (Modelo e Exemplo): um exemplo pronto, sem chamar a IA (custo zero).
-- Ligar para a Dom Manolo (com o OK do Tiago) e preparar a mensagem para o Manolo.
+- Revisar textos e mensagens de erro. Demonstrações (Modelo e Exemplo) com o filtro.
+- Preparar a mensagem para o Manolo e ligar nele com o OK do Tiago.
 - Atualizar este arquivo e a memória.
 
 ## Registro
 
 | Sprint | Data | Medidor (início → fim) | Entregue | Commit |
 |--------|------|------------------------|----------|--------|
-| Planejamento | 25/11 | 72% → ver no fim | este arquivo | |
+| Planejamento (IA, antigo) | 25/11 | 72% → ? | plano anterior | 2bdd890 |
+| Replanejamento (câmera) | 25/11 | 73% → ? | este arquivo | |
